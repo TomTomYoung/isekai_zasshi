@@ -4,11 +4,7 @@
 
 ---
 
-## 1. インタビュー記事 (インタビュー.html)
-> **Prompt:**
-> A conceptual illustration of a scandalous interview in a fantasy gossip magazine. A shadowy interviewer holding a pen and notepad is confronting a sweating, defensive celebrity (a knight or mage). The celebrity looks uncomfortable, perhaps hiding their face. Background is a cluttered office or a dim cafe. "Top Secret" or "Scandal" stamps floating in the air. Textures of old paper and ink. Satirical and slightly dark atmosphere. Comic book style influence.
-
-## 2. ギルド勢力図 (ギルド.html)
+## 1. ギルド勢力図 (ギルド.html)
 > **Prompt:**
 > A political map or diagram style illustration showing different factions of guilds in a fantasy city. "Ironman Association" (gloomy, mafia-like), "Cave King" (elite explorers), "Blue Wing" (official looking), and others being represented by their distinct emblems or headquarters. The "Ironman Association" building casts a large shadow over the others. Detailed fantasy architecture. Isometric view or strategic map style.
 
@@ -99,6 +95,16 @@
 ## 24. 羅睺星事件 (鉄人会事件史/荒くれパーティー羅睺星（らごうせい）事件.html)
 > **Prompt:**
 > A violent bar brawl scene in a fantasy tavern. A rough-looking adventurer group is flipping tables and attacking staff. Broken glass and spilled ale everywhere. In the chaos, a symbol of a "Black Star" (or some gang insignia) is visible on one of the attacker's armor. Dynamic action shot.
+
+## 25. オルステッド村事件 (鉄人会事件史/オルステッド村封印ダンジョン事件.html)
+> **Prompt:**
+> A melancholic landscape illustration of three abandoned villages surrounding a mountain. The houses are decaying and overgrown with vines. In the background, the mountain entrance is sealed with massive magical chains and "Keep Out" barriers. The sky is grey and overcast. A "Ghost Town" atmosphere showing the aftermath of a disaster.
+
+## 26. 芸能ゴシップ (芸能.html)
+> **Prompt:**
+> A collage of scandalous paparazzi photos in a fantasy world. 1. A diva singing on stage, but her back is open revealing a magical speaker device. 2. A handsome actor's face peeling off like a mask during a play. 3. A group of village girls in cheap succubus costumes shaking hands with otaku adventurers. Tabloid aesthetic with "SCOOP!" text.
+
+
 
 
 
