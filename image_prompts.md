@@ -1,4 +1,4 @@
-# Image Generation Prompts for "Ironman Association Executive Attack Incident"
+# Image Generation Prompts for Ironman Association Executive Attack Incident
 
 Here are two sets of prompts: one for **Realistic/Detailed** output, and one for **Atmospheric/Concept Art** style.
 
@@ -17,7 +17,7 @@ Here are two sets of prompts: one for **Realistic/Detailed** output, and one for
 
 ### Pattern C: The Aftermath (Cinematic Detail)
 > **Prompt:**
-> A close-up, impactful shot of a VIP lounge floor in a fantasy nightclub. A shattered glass of expensive wine lies on the rich carpet, the red liquid spilling out like blood. Beside it lies a broken emblem or badge representing the "Ironman Association" (mafia guild). In the background, out of focus, legs of rushing people or overturned furniture can be seen. A mood of sudden violence and mystery. The lighting is dim and moody. Detailed texture, shallow depth of field, storytelling composition.
+> A close-up, impactful shot of a VIP lounge floor in a fantasy nightclub. A shattered glass of expensive wine lies on the rich carpet, the red liquid spilling out like blood. Beside it lies a broken emblem or badge representing the Ironman Association (mafia guild). In the background, out of focus, legs of rushing people or overturned furniture can be seen. A mood of sudden violence and mystery. The lighting is dim and moody. Detailed texture, shallow depth of field, storytelling composition.
 
 ---
 
