@@ -1,7 +1,10 @@
 import os
 import re
+import zipfile
+import uuid
+import datetime
 
-def parse_markdown(text):
+def parse_markdown_to_xhtml(text):
     lines = text.split('\n')
     html_lines = []
     in_list = False
@@ -39,7 +42,7 @@ def parse_markdown(text):
             html_lines.append(f'<h3>{content}</h3>')
         # HR
         elif line.startswith('---'):
-            html_lines.append('<hr>')
+            html_lines.append('<hr />')
         # Normal Paragraphs
         else:
             # Bold processing
@@ -51,28 +54,14 @@ def parse_markdown(text):
         
     return '\n'.join(html_lines)
 
-def convert_file(file_path, root_dir):
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    # Extract Title (first h1 or just filename)
-    title_match = re.search(r'^# (.*)', content, re.MULTILINE)
-    title = title_match.group(1) if title_match else os.path.basename(file_path).replace('.md', '')
-    
-    body_html = parse_markdown(content)
-    
-    # Determine CSS path relative to file
-    rel_path = os.path.relpath(file_path, root_dir)
-    depth = rel_path.count(os.sep)
-    css_path = '../' * depth + 'style.css' if depth > 0 else 'style.css'
-    
-    template = f"""<!DOCTYPE html>
-<html lang="ja">
+def create_xhtml_content(title, body_html, css_filename='style.css'):
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
     <title>{title}</title>
-    <link rel="stylesheet" href="{css_path}">
+    <link rel="stylesheet" href="{css_filename}" type="text/css" />
 </head>
 <body>
     <article>
@@ -84,67 +73,150 @@ def convert_file(file_path, root_dir):
     </article>
 </body>
 </html>"""
+
+def generate_container_xml():
+    return """<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+    <rootfiles>
+        <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+    </rootfiles>
+</container>"""
+
+def generate_content_opf(articles, uid, title="異世界ゴシップ誌"):
+    # articles is list of (filename, title, id)
+    manifest_items = []
+    spine_items = []
     
-    html_path = file_path.replace('.md', '.html')
-    with open(html_path, 'w', encoding='utf-8') as f:
-        f.write(template)
+    # Add standard items
+    manifest_items.append('<item id="style" href="style.css" media-type="text/css"/>')
+    manifest_items.append('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>')
     
-    return title, html_path
+    for filename, art_title, art_id in articles:
+        manifest_items.append(f'<item id="{art_id}" href="{filename}" media-type="application/xhtml+xml"/>')
+        spine_items.append(f'<itemref idref="{art_id}"/>')
+        
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="3.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
+        <dc:title>{title}</dc:title>
+        <dc:language>ja</dc:language>
+        <dc:identifier id="BookID">urn:uuid:{uid}</dc:identifier>
+        <meta property="dcterms:modified">{datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')}</meta>
+    </metadata>
+    <manifest>
+        {chr(10).join(manifest_items)}
+    </manifest>
+    <spine toc="ncx">
+        {chr(10).join(spine_items)}
+    </spine>
+</package>"""
+
+def generate_toc_ncx(articles, uid, title="異世界ゴシップ誌"):
+    navpoints = []
+    for i, (filename, art_title, art_id) in enumerate(articles):
+        navpoints.append(f"""
+        <navPoint id="navPoint-{i+1}" playOrder="{i+1}">
+            <navLabel>
+                <text>{art_title}</text>
+            </navLabel>
+            <content src="{filename}"/>
+        </navPoint>""")
+        
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+    <head>
+        <meta name="dtb:uid" content="urn:uuid:{uid}"/>
+        <meta name="dtb:depth" content="1"/>
+        <meta name="dtb:totalPageCount" content="0"/>
+        <meta name="dtb:maxPageNumber" content="0"/>
+    </head>
+    <docTitle>
+        <text>{title}</text>
+    </docTitle>
+    <navMap>
+        {''.join(navpoints)}
+    </navMap>
+</ncx>"""
 
 def main():
     root_dir = os.getcwd()
-    all_files = []
+    output_epub = 'isekai_zasshi.epub'
+    book_uid = str(uuid.uuid4())
     
-    for dirpath, dirnames, filenames in os.walk(root_dir):
-        # Skip .git or other hidden dirs
-        if '.git' in dirpath:
-            continue
-            
-        for filename in filenames:
-            if filename.endswith('.md') and filename != 'image_prompts.md' and filename != 'prompts.md' and filename != 'README.md':
-                file_path = os.path.join(dirpath, filename)
-                title, html_path = convert_file(file_path, root_dir)
-                
-                # Store relative path for index
-                rel_html_path = os.path.relpath(html_path, root_dir)
-                all_files.append((title, rel_html_path))
-                print(f"Converted: {filename} -> {os.path.basename(html_path)}")
+    articles = [] # (filename, title, id)
+    
+    # 1. Collect and Process Markdown Files
+    processed_files = [] # (filename, content_bytes)
+    
+    # Find style.css
+    css_content = ""
+    if os.path.exists('style.css'):
+        with open('style.css', 'r', encoding='utf-8') as f:
+            css_content = f.read()
+    else:
+        # Default CSS if missing
+        css_content = "body { font-family: sans-serif; }"
+    processed_files.append(('OEBPS/style.css', css_content.encode('utf-8')))
 
-    # Generate Index (目次.html)
-    index_html_lines = [
-        '<!DOCTYPE html>',
-        '<html lang="ja">',
-        '<head>',
-        '    <meta charset="UTF-8">',
-        '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
-        '    <title>異世界ゴシップ誌 - 目次</title>',
-        '    <link rel="stylesheet" href="style.css">',
-        '</head>',
-        '<body>',
-        '    <article>',
-        '        <header>',
-        '            <span class="scoop-tag">目次</span>',
-        '            <h1>異世界ゴシップ誌 記事一覧</h1>',
-        '        </header>',
-        '        <div class="lead-block">',
-        '            <p>本号のラインナップをお届けします。</p>',
-        '        </div>',
-        '        <ul>'
-    ]
+    file_counter = 1
+    # Sort files to ensure stable order, walking can be arbitrary
+    all_md_files = []
+    for dirpath, dirnames, filenames in os.walk(root_dir):
+        if '.git' in dirpath: continue
+        for filename in filenames:
+             if filename.endswith('.md') and filename not in ['image_prompts.md', 'prompts.md', 'README.md', 'epub_plan.md', 'task.md', 'implementation_plan.md']:
+                 all_md_files.append(os.path.join(dirpath, filename))
     
-    for title, path in sorted(all_files):
-        index_html_lines.append(f'            <li><a href="{path}"><strong>{title}</strong></a></li>')
+    all_md_files.sort()
+
+    for file_path in all_md_files:
+        filename = os.path.basename(file_path)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            md_content = f.read()
         
-    index_html_lines.extend([
-        '        </ul>',
-        '    </article>',
-        '</body>',
-        '</html>'
-    ])
+        # Extract Title
+        title_match = re.search(r'^# (.*)', md_content, re.MULTILINE)
+        title = title_match.group(1) if title_match else filename.replace('.md', '')
+        
+        xhtml_body = parse_markdown_to_xhtml(md_content)
+        xhtml_full = create_xhtml_content(title, xhtml_body)
+        
+        # Use a safe internal filename
+        safe_filename = f"article_{file_counter:03d}.xhtml"
+        art_id = f"art_{file_counter:03d}"
+        
+        articles.append((safe_filename, title, art_id))
+        processed_files.append((f'OEBPS/{safe_filename}', xhtml_full.encode('utf-8')))
+        
+        print(f"Processed: {filename} -> {safe_filename}")
+        file_counter += 1
+
+    # 2. Generate Control Files
+    # Mimetype
+    processed_files.append(('mimetype', b'application/epub+zip'))
     
-    with open('目次.html', 'w', encoding='utf-8') as f:
-        f.write('\n'.join(index_html_lines))
-    print("Created: 目次.html")
+    # Container
+    processed_files.append(('META-INF/container.xml', generate_container_xml().encode('utf-8')))
+    
+    # OPF
+    opf_content = generate_content_opf(articles, book_uid)
+    processed_files.append(('OEBPS/content.opf', opf_content.encode('utf-8')))
+    
+    # NCX
+    ncx_content = generate_toc_ncx(articles, book_uid)
+    processed_files.append(('OEBPS/toc.ncx', ncx_content.encode('utf-8')))
+    
+    # 3. Create EPUB (Zip)
+    with zipfile.ZipFile(output_epub, 'w', zipfile.ZIP_DEFLATED) as epub:
+        # Mimetype MUST be first and uncompressed
+        epub.writestr('mimetype', b'application/epub+zip', compress_type=zipfile.ZIP_STORED)
+        
+        # Write other files
+        for path, content in processed_files:
+            if path == 'mimetype': continue
+            epub.writestr(path, content)
+            
+    print(f"\nSuccessfully created EPUB: {output_epub}")
 
 if __name__ == '__main__':
     main()
