@@ -245,3 +245,68 @@ figcaption {
     margin-top: 40px;
     font-weight: bold;
 }
+
+/* Job Advertisement Block */
+.job-ad {
+    margin-top: 50px;
+    padding: 25px;
+    background-color: #ffeef8;
+    border: 3px dashed #ff66b2;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(255, 102, 178, 0.2);
+    font-family: inherit;
+}
+
+.job-ad-header {
+    text-align: center;
+    color: #cc0066;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #ff99cc;
+    padding-bottom: 10px;
+}
+
+.job-ad-header span {
+    font-size: 1rem;
+    background-color: #ff3399;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+.job-ad-content {
+    font-size: 1rem;
+    color: #333;
+}
+
+.job-ad-content p {
+    margin: 10px 0;
+}
+
+.job-ad-content strong {
+    background: linear-gradient(transparent 60%, #ffccff 60%);
+    color: #c9005a;
+}
+
+.job-ad-list {
+    margin-top: 15px;
+    padding-left: 20px;
+    font-weight: bold;
+    color: #d00;
+}
+
+.job-ad-list li {
+    margin-bottom: 8px;
+}
+
+.job-ad-footer {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #ff3399;
+}
