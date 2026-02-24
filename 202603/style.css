@@ -310,3 +310,36 @@ figcaption {
     font-weight: bold;
     color: #ff3399;
 }
+
+/* Column Box Layout (Exclusive Articles) */
+.column-box {
+    background: #2a2a2a;
+    color: #f1f1f1;
+    border: 3px double #d00;
+    padding: 30px;
+    margin: 40px 0;
+    border-radius: 5px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.column-box h2 {
+    background: transparent;
+    color: #ff4444;
+    border-left: none;
+    border-bottom: 2px dashed #ff4444;
+    padding: 0 0 10px 0;
+    margin-top: 0;
+    font-size: 1.4rem;
+}
+
+.column-box p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #e0e0e0;
+}
+
+.column-box strong {
+    background: transparent;
+    color: #ffbbbb;
+    font-size: 1.05rem;
+}
