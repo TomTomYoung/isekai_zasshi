@@ -343,3 +343,161 @@ figcaption {
     color: #ffbbbb;
     font-size: 1.05rem;
 }
+
+/* Racing/Gambling Prediction Section */
+.prediction-section {
+    margin: 50px 0;
+    padding: 30px;
+    background-color: #f4f1ea;
+    /* Newspaper paper-like color */
+    border: 1px solid #ccc;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05) inset, 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    position: relative;
+}
+
+.prediction-section::before {
+    content: "SPECIAL PREDICTION";
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background: #d00;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 2px 10px;
+    font-family: sans-serif;
+    letter-spacing: 1px;
+}
+
+.prediction-section h3 {
+    text-align: center;
+    font-size: 1.5rem;
+    color: #222;
+    border-bottom: 3px double #333;
+    padding-bottom: 15px;
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-weight: bold;
+    background: transparent;
+    border-left: none;
+}
+
+.prediction-section table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+    background-color: #fff;
+    border: 4px solid #111;
+    min-width: 600px;
+}
+
+.prediction-section th,
+.prediction-section td {
+    border: 1px solid #333;
+    padding: 12px 10px;
+    font-size: 0.95rem;
+    vertical-align: middle;
+}
+
+.prediction-section thead th {
+    background-color: #eee;
+    border-bottom: 4px solid #111;
+    font-weight: bold;
+    text-align: center;
+    color: #111;
+}
+
+/* Waku Styles (1st column) */
+.prediction-section tbody td:nth-child(1) {
+    font-weight: bold;
+    font-size: 1.2rem;
+    width: 40px;
+    text-align: center;
+}
+
+.prediction-section tbody tr:nth-child(1) td:nth-child(1) {
+    background-color: #fff;
+    color: #000;
+}
+
+.prediction-section tbody tr:nth-child(2) td:nth-child(1) {
+    background-color: #222;
+    color: #fff;
+}
+
+.prediction-section tbody tr:nth-child(3) td:nth-child(1) {
+    background-color: #d00;
+    color: #fff;
+}
+
+.prediction-section tbody tr:nth-child(4) td:nth-child(1) {
+    background-color: #0055cc;
+    color: #fff;
+}
+
+/* Mark Styles (2nd column) */
+.prediction-section tbody td:nth-child(2) {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #d00;
+    text-align: center;
+    width: 50px;
+}
+
+/* Name Styles (3rd column) */
+.prediction-section tbody td:nth-child(3) {
+    font-size: 1.05rem;
+    color: #111;
+}
+
+/* Columns for comments */
+.prediction-columns {
+    display: flex;
+    gap: 20px;
+    min-width: 600px;
+}
+
+.prediction-column {
+    flex: 1;
+    background: #fff;
+    border: 2px solid #222;
+    padding: 20px;
+    position: relative;
+    box-shadow: 3px 3px 0 #ccc;
+}
+
+.prediction-column h4 {
+    margin-top: 0;
+    font-size: 1.1rem;
+    color: #fff;
+    background: #222;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    display: inline-block;
+    border-left: none;
+}
+
+.prediction-column p {
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.7;
+    color: #333;
+}
+
+@media (max-width: 768px) {
+    .prediction-columns {
+        flex-direction: column;
+        min-width: 100%;
+    }
+
+    .prediction-section table {
+        min-width: 100%;
+    }
+
+    .prediction-section th,
+    .prediction-section td {
+        padding: 8px 5px;
+        font-size: 0.85rem;
+    }
+}
