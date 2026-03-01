@@ -578,6 +578,104 @@ figcaption {
     .illegal-item-img {
         flex: auto;
         border-right: none;
-        border-bottom: 2px solid #8b0000;
     }
+}
+
+/* 武器屋春雨 チラシ風デザイン */
+.flyer-ad {
+    border: 4px dashed #ff0000;
+    background-color: #ffffcc;
+    padding: 20px;
+    margin: 30px 0;
+    color: #333;
+    font-family: 'Arial', sans-serif;
+    position: relative;
+    box-shadow: 5px 5px 0px rgba(0, 0, 0, 0.8);
+}
+
+.flyer-ad-header {
+    background-color: #ff0000;
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: -20px -20px 20px -20px;
+    letter-spacing: 2px;
+}
+
+.flyer-ad-intro {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+}
+
+.flyer-ad-product {
+    background-color: #fff;
+    border: 2px solid #333;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.flyer-ad-image {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.flyer-ad-image img {
+    max-width: 100%;
+    height: auto;
+    border: 2px solid #333;
+}
+
+.flyer-ad-product-name {
+    font-size: 1.6rem;
+    color: #ff0000;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 2px double #333;
+    padding-bottom: 5px;
+    background: transparent;
+    border-left: none;
+}
+
+.flyer-ad-price {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #000;
+    background-color: #ffff00;
+    display: inline-block;
+    padding: 5px 10px;
+    border: 1px dashed #000;
+    margin-bottom: 15px;
+}
+
+.flyer-ad h3 {
+    color: #000;
+    background-color: #ffcccc;
+    padding: 5px 10px;
+    border-left: 5px solid #ff0000;
+    margin-top: 20px;
+    font-size: 1.2rem;
+}
+
+.flyer-ad ul,
+.flyer-ad ol {
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.flyer-ad li {
+    margin-bottom: 5px;
+}
+
+.flyer-ad-footer {
+    border-top: 2px solid #333;
+    padding-top: 15px;
+    font-style: italic;
+    background-color: #eee;
+    padding: 15px;
+    font-weight: bold;
 }
