@@ -3,6 +3,66 @@ import re
 import zipfile
 import uuid
 import datetime
+import html
+
+
+EPUB_READING_CSS = """
+
+/* EPUB reading overrides: keep each article as an independent page/section. */
+body {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+.magazine-article {
+    break-before: page;
+    page-break-before: always;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.magazine-article:first-of-type {
+    break-before: auto;
+    page-break-before: auto;
+}
+
+.article-header {
+    margin-top: 3em;
+    margin-bottom: 2em;
+    padding-bottom: 1em;
+    border-bottom: 3px double #333;
+}
+
+.article-header h1 {
+    font-size: 1.5em;
+    line-height: 1.5;
+}
+
+.epub-toc {
+    break-before: page;
+    page-break-before: always;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.epub-toc ol {
+    padding-left: 1.5em;
+}
+
+.epub-toc li {
+    margin: 0.75em 0;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+""".strip()
 
 def parse_markdown_to_xhtml(text):
     lines = text.split('\n')
@@ -55,19 +115,20 @@ def parse_markdown_to_xhtml(text):
     return '\n'.join(html_lines)
 
 def create_xhtml_content(title, body_html, css_filename='style.css'):
+    escaped_title = html.escape(title, quote=False)
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="ja">
 <head>
     <meta charset="UTF-8" />
-    <title>{title}</title>
+    <title>{escaped_title}</title>
     <link rel="stylesheet" href="{css_filename}" type="text/css" />
 </head>
 <body>
-    <article>
-        <header>
+    <article class="magazine-article">
+        <header class="article-header">
             <span class="scoop-tag">記事</span>
-            <h1>{title}</h1>
+            <h1>{escaped_title}</h1>
         </header>
         {body_html}
     </article>
@@ -82,14 +143,48 @@ def generate_container_xml():
     </rootfiles>
 </container>"""
 
+def build_epub_css(base_css):
+    """Append EPUB-specific reading rules after the source stylesheet."""
+    return f"{base_css.rstrip()}\n\n{EPUB_READING_CSS}\n"
+
+def generate_toc_xhtml(articles, title="異世界ゴシップ誌"):
+    toc_items = []
+    for filename, art_title, _art_id in articles:
+        escaped_title = html.escape(art_title, quote=False)
+        escaped_href = html.escape(filename, quote=True)
+        toc_items.append(f'        <li><a href="{escaped_href}">{escaped_title}</a></li>')
+
+    escaped_book_title = html.escape(title, quote=False)
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <title>{escaped_book_title} 目次</title>
+    <link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+<body>
+    <nav class="epub-toc" epub:type="toc" id="toc">
+        <h1>{escaped_book_title} 目次</h1>
+        <ol>
+{chr(10).join(toc_items)}
+        </ol>
+    </nav>
+</body>
+</html>"""
+
 def generate_content_opf(articles, uid, title="異世界ゴシップ誌"):
     # articles is list of (filename, title, id)
+    escaped_title = html.escape(title, quote=False)
+    modified = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     manifest_items = []
     spine_items = []
     
     # Add standard items
     manifest_items.append('<item id="style" href="style.css" media-type="text/css"/>')
+    manifest_items.append('<item id="toc" href="toc.xhtml" media-type="application/xhtml+xml" properties="nav"/>')
     manifest_items.append('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>')
+    spine_items.append('<itemref idref="toc"/>')
     
     for filename, art_title, art_id in articles:
         manifest_items.append(f'<item id="{art_id}" href="{filename}" media-type="application/xhtml+xml"/>')
@@ -98,10 +193,10 @@ def generate_content_opf(articles, uid, title="異世界ゴシップ誌"):
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="3.0">
     <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
-        <dc:title>{title}</dc:title>
+        <dc:title>{escaped_title}</dc:title>
         <dc:language>ja</dc:language>
         <dc:identifier id="BookID">urn:uuid:{uid}</dc:identifier>
-        <meta property="dcterms:modified">{datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')}</meta>
+        <meta property="dcterms:modified">{modified}</meta>
     </metadata>
     <manifest>
         {chr(10).join(manifest_items)}
@@ -112,14 +207,17 @@ def generate_content_opf(articles, uid, title="異世界ゴシップ誌"):
 </package>"""
 
 def generate_toc_ncx(articles, uid, title="異世界ゴシップ誌"):
+    escaped_book_title = html.escape(title, quote=False)
     navpoints = []
     for i, (filename, art_title, art_id) in enumerate(articles):
+        escaped_title = html.escape(art_title, quote=False)
+        escaped_src = html.escape(filename, quote=True)
         navpoints.append(f"""
         <navPoint id="navPoint-{i+1}" playOrder="{i+1}">
             <navLabel>
-                <text>{art_title}</text>
+                <text>{escaped_title}</text>
             </navLabel>
-            <content src="{filename}"/>
+            <content src="{escaped_src}"/>
         </navPoint>""")
         
     return f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -131,7 +229,7 @@ def generate_toc_ncx(articles, uid, title="異世界ゴシップ誌"):
         <meta name="dtb:maxPageNumber" content="0"/>
     </head>
     <docTitle>
-        <text>{title}</text>
+        <text>{escaped_book_title}</text>
     </docTitle>
     <navMap>
         {''.join(navpoints)}
@@ -156,7 +254,7 @@ def main():
     else:
         # Default CSS if missing
         css_content = "body { font-family: sans-serif; }"
-    processed_files.append(('OEBPS/style.css', css_content.encode('utf-8')))
+    processed_files.append(('OEBPS/style.css', build_epub_css(css_content).encode('utf-8')))
 
     file_counter = 1
     # Sort files to ensure stable order, walking can be arbitrary
@@ -197,6 +295,10 @@ def main():
     
     # Container
     processed_files.append(('META-INF/container.xml', generate_container_xml().encode('utf-8')))
+    
+    # XHTML table of contents for readers that expose EPUB 3 navigation.
+    toc_xhtml_content = generate_toc_xhtml(articles)
+    processed_files.append(('OEBPS/toc.xhtml', toc_xhtml_content.encode('utf-8')))
     
     # OPF
     opf_content = generate_content_opf(articles, book_uid)
