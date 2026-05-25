@@ -7,7 +7,7 @@
   - Kindle / EPUBリーダーで崩れやすい指定を減らす
   - 記事分割はCSSではなく Pandoc の --split-level=1 に任せる
   - 画像とキャプションが別ページに割れにくいようにする
-  - 縦長画像は表示領域の55%以内に抑える
+  - vh指定が効かない環境を想定し、画像の表示幅を70%に抑える
 */
 
 body {
@@ -106,25 +106,21 @@ figure {
 }
 
 figure img {
-    max-width: 100%;
-    max-height: 55vh;
-    width: auto;
+    width: 70%;
+    max-width: 70%;
     height: auto;
     display: block;
     margin: 0 auto 0.5em auto;
-    object-fit: contain;
     page-break-after: avoid;
     break-after: avoid;
 }
 
 img {
-    max-width: 100%;
-    max-height: 55vh;
-    width: auto;
+    width: 70%;
+    max-width: 70%;
     height: auto;
     display: block;
     margin: 0 auto 0.5em auto;
-    object-fit: contain;
     page-break-inside: avoid;
     break-inside: avoid;
     page-break-after: avoid;
