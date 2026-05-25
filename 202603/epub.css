@@ -6,6 +6,7 @@
   - Web表示用の余白・影・中央寄せコンテナを避ける
   - Kindle / EPUBリーダーで崩れやすい指定を減らす
   - 記事分割はCSSではなく Pandoc の --split-level=1 に任せる
+  - 画像とキャプションが別ページに割れにくいようにする
 */
 
 body {
@@ -89,17 +90,38 @@ li {
     padding: 0;
 }
 
+/*
+  画像ブロック。
+  figure > img + figcaption を推奨する。
+  page-break-inside / break-inside はリーダー依存だが、Kindle Previewer等での分割抑制に効く場合がある。
+*/
 figure {
     margin: 1.5em 0;
     padding: 0;
     text-align: center;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+}
+
+figure img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto 0.5em auto;
+    page-break-after: avoid;
+    break-after: avoid;
 }
 
 img {
     max-width: 100%;
     height: auto;
     display: block;
-    margin: 0 auto;
+    margin: 0 auto 0.5em auto;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
 }
 
 figcaption {
@@ -108,6 +130,19 @@ figcaption {
     color: #555;
     margin: 0.5em 0 0 0;
     padding: 0;
+    page-break-before: avoid;
+    break-before: avoid;
+}
+
+/*
+  既存記事には <p><img ...><br>本文...</p> 形式が残っている。
+  その段落内で画像と直後テキストが割れにくいようにする。
+  長文段落には効きすぎる可能性があるため、最終的には figure 化を推奨。
+*/
+p:has(img) {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
 }
 
 hr {
