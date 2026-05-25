@@ -8,6 +8,7 @@
   - 記事分割はCSSではなく Pandoc の --split-level=1 に任せる
   - 画像とキャプションが別ページに割れにくいようにする
   - vh指定が効かない環境を想定し、画像の表示幅を70%に抑える
+  - 既存記事内のカード、コラム、カタログ、観光ガイド用クラスをEPUB向けに整える
 */
 
 body {
@@ -42,7 +43,8 @@ header {
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
     font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, "MS PGothic", sans-serif;
     font-weight: bold;
 }
@@ -58,17 +60,25 @@ h2 {
     font-size: 1.2em;
     line-height: 1.5;
     margin: 2em 0 1em 0;
-    padding: 0.4em 0.6em;
-    border-left: 0.4em solid #333;
-    background: #eee;
+    padding: 0.45em 0.65em;
+    border-left: 0.5em solid #111;
+    border-bottom: 1px solid #999;
+    background: #f0f0f0;
     color: #111;
 }
 
 h3 {
-    font-size: 1.1em;
+    font-size: 1.05em;
     line-height: 1.5;
-    margin: 1.8em 0 1em 0;
-    padding: 0;
+    margin: 1.8em 0 0.8em 0;
+    padding: 0 0 0.2em 0;
+    border-bottom: 1px dotted #999;
+}
+
+h4 {
+    font-size: 1em;
+    line-height: 1.5;
+    margin: 1.5em 0 0.7em 0;
 }
 
 p {
@@ -91,12 +101,61 @@ li {
     padding: 0;
 }
 
+/* 記事冒頭・引用・補足 */
+.lead,
+.lead-block .lead,
+.mika-intro {
+    font-weight: bold;
+    font-size: 1.05em;
+    border-left: 0.35em solid #333;
+    padding: 0.8em 0 0.8em 0.9em;
+    margin: 1.2em 0 1.5em 0;
+    background: #f5f5f5;
+}
+
+.lead-block {
+    margin: 1.2em 0 1.8em 0;
+}
+
+.subtitle {
+    font-size: 1.05em;
+    font-weight: bold;
+    margin: -0.5em 0 0.5em 0;
+    color: #444;
+}
+
+.quote,
+blockquote {
+    margin: 1.5em 0;
+    padding: 0.8em 0 0.8em 1em;
+    border-left: 0.35em solid #999;
+    background: #f7f7f7;
+}
+
+.note-box,
+.warning-box,
+.summary-box,
+.push-point {
+    border: 1px solid #999;
+    padding: 0.9em;
+    margin: 1.5em 0;
+    background: #f7f7f7;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.warning-box {
+    border: 2px solid #333;
+    font-weight: bold;
+}
+
 /*
   画像ブロック。
   figure > img + figcaption を推奨する。
   page-break-inside / break-inside はリーダー依存だが、Kindle Previewer等での分割抑制に効く場合がある。
 */
-figure {
+figure,
+.photo-block {
     margin: 1.5em 0;
     padding: 0;
     text-align: center;
@@ -105,7 +164,8 @@ figure {
     -webkit-column-break-inside: avoid;
 }
 
-figure img {
+figure img,
+.photo-block img {
     width: 70%;
     max-width: 70%;
     height: auto;
@@ -127,7 +187,23 @@ img {
     break-after: avoid;
 }
 
-figcaption {
+.img-main {
+    width: 70%;
+    max-width: 70%;
+}
+
+.img-small {
+    width: 55%;
+    max-width: 55%;
+}
+
+.img-wide {
+    width: 100%;
+    max-width: 100%;
+}
+
+figcaption,
+.photo-block figcaption {
     font-size: 0.9em;
     line-height: 1.6;
     color: #555;
@@ -148,13 +224,93 @@ p:has(img) {
     -webkit-column-break-inside: avoid;
 }
 
-hr {
-    border: none;
-    border-top: 1px solid #999;
-    margin: 2em 0;
+/* カード型記事をEPUB向けに縦積み化 */
+.column-box,
+.dungeon-card,
+.illegal-item,
+.flyer-ad,
+.job-ad,
+.prediction-section,
+.danger-box {
+    border: 1px solid #999;
+    padding: 1em;
+    margin: 1.5em 0;
+    background: #f8f8f8;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.column-box h2,
+.dungeon-card h2,
+.illegal-item h2,
+.flyer-ad h2,
+.job-ad h2,
+.prediction-section h2,
+.danger-box h2 {
+    margin-top: 0.3em;
+}
+
+.dungeon-card img,
+.dungeon-img,
+.illegal-item img,
+.illegal-item-img img,
+.flyer-ad img,
+.job-ad img {
+    width: 75%;
+    max-width: 75%;
+    height: auto;
+    margin: 0 auto 0.8em auto;
+}
+
+.dungeon-content,
+.illegal-item-content,
+.job-ad-content,
+.flyer-ad-product,
+.flyer-ad-content {
+    margin: 0;
     padding: 0;
 }
 
+.illegal-catalog-list {
+    margin: 1.5em 0;
+    padding: 0;
+}
+
+.illegal-item-img {
+    margin: 0 0 1em 0;
+    padding: 0;
+    text-align: center;
+}
+
+.illegal-item-title {
+    font-size: 1.1em;
+    line-height: 1.5;
+    margin: 0.8em 0 0.8em 0;
+    padding: 0.4em 0.6em;
+    border-left: 0.4em solid #333;
+    border-bottom: 1px solid #999;
+    background: #eee;
+}
+
+.illegal-item-details {
+    margin: 1em 0 1em 1.5em;
+    padding: 0;
+}
+
+.tag,
+.badge-date,
+.badge-recommend,
+.badge-money {
+    display: inline-block;
+    border: 1px solid #999;
+    padding: 0.1em 0.45em;
+    margin: 0 0.3em 0.4em 0;
+    font-size: 0.85em;
+    line-height: 1.4;
+    background: #fff;
+}
+
+/* 表組み */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -168,10 +324,11 @@ td {
     vertical-align: top;
 }
 
-blockquote {
-    margin: 1.5em 0;
-    padding: 0 0 0 1em;
-    border-left: 0.3em solid #999;
+hr {
+    border: none;
+    border-top: 1px solid #999;
+    margin: 2em 0;
+    padding: 0;
 }
 
 /* 目次用 */
