@@ -1,0 +1,163 @@
+/*
+  EPUB専用CSS
+  対象: 202603 各記事フォルダ内の *_epub.html
+
+  方針:
+  - Web表示用の余白・影・中央寄せコンテナを避ける
+  - Kindle / EPUBリーダーで崩れやすい指定を減らす
+  - 記事分割はCSSではなく Pandoc の --split-level=1 に任せる
+*/
+
+body {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "MS PMincho", serif;
+    line-height: 1.8;
+    color: #111;
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+.chapter {
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    border-bottom: 3px double #333;
+    margin: 0 0 1.5em 0;
+    padding: 0 0 1em 0;
+}
+
+.scoop-tag {
+    display: inline-block;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, "MS PGothic", sans-serif;
+    font-weight: bold;
+    font-size: 0.9em;
+    border: 1px solid #333;
+    padding: 0.2em 0.6em;
+    margin: 0 0 0.8em 0;
+}
+
+h1,
+h2,
+h3 {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, "MS PGothic", sans-serif;
+    font-weight: bold;
+}
+
+h1 {
+    font-size: 1.5em;
+    line-height: 1.5;
+    margin: 0.5em 0 1em 0;
+    padding: 0;
+}
+
+h2 {
+    font-size: 1.2em;
+    line-height: 1.5;
+    margin: 2em 0 1em 0;
+    padding: 0.4em 0.6em;
+    border-left: 0.4em solid #333;
+    background: #eee;
+    color: #111;
+}
+
+h3 {
+    font-size: 1.1em;
+    line-height: 1.5;
+    margin: 1.8em 0 1em 0;
+    padding: 0;
+}
+
+p {
+    margin: 0 0 1em 0;
+    padding: 0;
+}
+
+strong {
+    font-weight: bold;
+}
+
+ul,
+ol {
+    margin: 1em 0 1em 1.5em;
+    padding: 0;
+}
+
+li {
+    margin: 0 0 0.5em 0;
+    padding: 0;
+}
+
+figure {
+    margin: 1.5em 0;
+    padding: 0;
+    text-align: center;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+figcaption {
+    font-size: 0.9em;
+    line-height: 1.6;
+    color: #555;
+    margin: 0.5em 0 0 0;
+    padding: 0;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #999;
+    margin: 2em 0;
+    padding: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5em 0;
+}
+
+th,
+td {
+    border: 1px solid #999;
+    padding: 0.4em;
+    vertical-align: top;
+}
+
+blockquote {
+    margin: 1.5em 0;
+    padding: 0 0 0 1em;
+    border-left: 0.3em solid #999;
+}
+
+/* 目次用 */
+.epub-toc {
+    margin: 0;
+    padding: 0;
+}
+
+.epub-toc h1 {
+    border-bottom: 3px double #333;
+    padding-bottom: 0.5em;
+}
+
+.epub-toc ol,
+.epub-toc ul {
+    margin-left: 1.5em;
+}
+
+.epub-toc li {
+    margin-bottom: 0.75em;
+}
+
+/*
+  注意:
+  .chapter に page-break-before / break-before は指定しない。
+  記事ごとの区切りは Pandoc の --split-level=1 で行う。
+*/
