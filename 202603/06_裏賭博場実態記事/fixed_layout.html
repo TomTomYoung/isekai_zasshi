@@ -12,17 +12,45 @@
   </main>
   <script>
     (async () => {
+      const page = document.querySelector('.fixed-page');
       const root = document.getElementById('article-root');
-      const folderName = decodeURIComponent(location.pathname.split('/').filter(Boolean).slice(-2, -1)[0] || '');
+      const parts = decodeURIComponent(location.pathname).split('/').filter(Boolean);
+      const folderName = parts.slice(-2, -1)[0] || '';
+      const articleNo = (folderName.match(/^(\d+)_/) || [null, '00'])[1];
       const source = folderName.replace(/^\d+_/, '') + '.html';
+
+      page.classList.add('article-no-' + articleNo);
+      root.dataset.articleNo = articleNo;
+      root.dataset.source = source;
+
       const res = await fetch(source);
       const text = await res.text();
       const doc = new DOMParser().parseFromString(text, 'text/html');
       const title = doc.querySelector('title');
       if (title) document.title = title.textContent + '｜固定レイアウト版';
+
       const article = doc.querySelector('article, .chapter, main, body');
       root.innerHTML = article ? article.innerHTML : text;
       root.querySelectorAll('script, style, link[rel="stylesheet"]').forEach(el => el.remove());
+
+      const h1 = root.querySelector('h1');
+      if (h1) {
+        const slug = document.createElement('div');
+        slug.className = 'gossip-slug';
+        slug.textContent = '本誌独占　異世界ゴシップ総力取材班';
+        h1.before(slug);
+      }
+
+      const firstFigure = root.querySelector('figure, .photo-block');
+      if (firstFigure) firstFigure.classList.add('hero-photo');
+
+      root.querySelectorAll('h2').forEach((h2, i) => {
+        h2.dataset.index = String(i + 1).padStart(2, '0');
+      });
+
+      root.querySelectorAll('figcaption').forEach(caption => {
+        caption.classList.add('tabloid-caption');
+      });
     })();
   </script>
 </body>
