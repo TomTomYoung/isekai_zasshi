@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1456, initial-scale=1.0">
+  <title>固定レイアウト版</title>
+  <link rel="stylesheet" href="fixed_layout.css">
+</head>
+<body>
+  <main class="fixed-page">
+    <section class="article-sheet" id="article-root"></section>
+  </main>
+  <script>
+    (async () => {
+      const root = document.getElementById('article-root');
+      const folderName = decodeURIComponent(location.pathname.split('/').filter(Boolean).slice(-2, -1)[0] || '');
+      const source = folderName.replace(/^\d+_/, '') + '.html';
+      const res = await fetch(source);
+      const text = await res.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const title = doc.querySelector('title');
+      if (title) document.title = title.textContent + '｜固定レイアウト版';
+      const article = doc.querySelector('article, .chapter, main, body');
+      root.innerHTML = article ? article.innerHTML : text;
+      root.querySelectorAll('script, style, link[rel="stylesheet"]').forEach(el => el.remove());
+    })();
+  </script>
+</body>
+</html>

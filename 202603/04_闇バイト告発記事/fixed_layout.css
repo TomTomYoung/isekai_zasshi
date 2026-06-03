@@ -1,0 +1,193 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #d8d2c4;
+  color: #111;
+}
+
+body {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "MS PMincho", serif;
+}
+
+.fixed-page {
+  width: 1456px;
+  min-height: 2056px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 72px 76px;
+  background: #f7f1df;
+  position: relative;
+  overflow: hidden;
+}
+
+.fixed-page::before {
+  content: "週刊・異世界ゴシップ";
+  position: absolute;
+  top: 26px;
+  left: 76px;
+  right: 76px;
+  height: 34px;
+  border-bottom: 6px solid #111;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.article-sheet {
+  column-count: 2;
+  column-gap: 48px;
+  column-rule: 2px solid #111;
+  font-size: 25px;
+  line-height: 1.64;
+  padding-top: 34px;
+}
+
+header,
+.lead,
+.lead-block,
+h1,
+h2,
+h3,
+figure,
+.photo-block,
+.note-box,
+.warning-box,
+.summary-box,
+.push-point,
+.column-box,
+.dungeon-card,
+.illegal-item,
+.flyer-ad,
+.job-ad,
+.prediction-section,
+.danger-box {
+  break-inside: avoid;
+}
+
+header {
+  column-span: all;
+  border-top: 10px solid #111;
+  border-bottom: 3px solid #111;
+  padding: 18px 0 22px;
+  margin: 0 0 28px;
+}
+
+.scoop-tag {
+  display: inline-block;
+  padding: 5px 14px;
+  background: #111;
+  color: #fff;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
+  font-weight: 900;
+  line-height: 1.18;
+}
+
+h1 {
+  font-size: 64px;
+  margin: 16px 0 0;
+  letter-spacing: -0.04em;
+}
+
+h2 {
+  font-size: 36px;
+  margin: 26px 0 14px;
+  padding: 8px 12px;
+  background: #111;
+  color: #fff;
+}
+
+h3 {
+  font-size: 30px;
+  margin: 24px 0 10px;
+  border-bottom: 3px solid #111;
+}
+
+p {
+  margin: 0 0 1em;
+  text-align: justify;
+}
+
+.lead,
+.lead-block .lead,
+.mika-intro {
+  font-size: 30px;
+  line-height: 1.55;
+  font-weight: 900;
+  border-left: 10px solid #111;
+  padding: 10px 16px;
+  background: #fff8d8;
+}
+
+figure,
+.photo-block {
+  margin: 18px 0 24px;
+  text-align: center;
+}
+
+img,
+figure img,
+.photo-block img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 8px;
+  border: 3px solid #111;
+  box-sizing: border-box;
+}
+
+figcaption,
+.photo-block figcaption {
+  font-size: 20px;
+  line-height: 1.45;
+  text-align: left;
+  color: #222;
+}
+
+hr {
+  border: 0;
+  border-top: 4px solid #111;
+  margin: 24px 0;
+}
+
+blockquote,
+.quote,
+.note-box,
+.warning-box,
+.summary-box,
+.push-point,
+.column-box,
+.dungeon-card,
+.illegal-item,
+.flyer-ad,
+.job-ad,
+.prediction-section,
+.danger-box {
+  border: 3px solid #111;
+  background: #fff9e8;
+  padding: 14px;
+  margin: 18px 0;
+}
+
+ul,
+ol {
+  margin: 0 0 1em 1.2em;
+  padding: 0;
+}
+
+@media screen and (max-width: 1456px) {
+  .fixed-page {
+    transform-origin: top left;
+  }
+}
