@@ -13,6 +13,7 @@ const OUT_DIR = path.join(ROOT, 'exports', 'fixed_layout_images');
 const PAGE_SELECTOR = '.fixed-page';
 const VIEWPORT_WIDTH = 1456;
 const VIEWPORT_HEIGHT = 2056;
+const TARGET_TIMEOUT_MS = 25000;
 
 const MIME_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -26,6 +27,14 @@ const MIME_TYPES = new Map([
   ['.webp', 'image/webp'],
   ['.svg', 'image/svg+xml; charset=utf-8'],
 ]);
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 function toUrlPath(filePath) {
   const rel = path.relative(ROOT, filePath).split(path.sep).map(encodeURIComponent).join('/');
@@ -111,11 +120,11 @@ function startServer() {
 }
 
 async function waitForAssets(page) {
-  await page.evaluate(async () => {
+  await withTimeout(page.evaluate(async () => {
     if (document.fonts && document.fonts.ready) {
       await Promise.race([
         document.fonts.ready,
-        new Promise(resolve => setTimeout(resolve, 5000)),
+        new Promise(resolve => setTimeout(resolve, 1500)),
       ]);
     }
 
@@ -125,19 +134,19 @@ async function waitForAssets(page) {
         const done = () => resolve();
         img.addEventListener('load', done, { once: true });
         img.addEventListener('error', done, { once: true });
-        setTimeout(done, 8000);
+        setTimeout(done, 2000);
       });
     }));
 
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  });
+    await new Promise(resolve => requestAnimationFrame(resolve));
+  }), 5000, 'waitForAssets');
 }
 
 async function ensureFixedPage(page, targetName) {
-  const count = await page.locator(PAGE_SELECTOR).count();
+  const count = await withTimeout(page.locator(PAGE_SELECTOR).count(), 3000, 'count fixed pages');
   if (count > 0) return;
 
-  await page.evaluate(({ targetName, width, height }) => {
+  await withTimeout(page.evaluate(({ targetName, width, height }) => {
     document.body.innerHTML = '';
     document.documentElement.style.margin = '0';
     document.body.style.margin = '0';
@@ -166,26 +175,50 @@ async function ensureFixedPage(page, targetName) {
         </div>
       </section>`;
     document.body.appendChild(fixedPage);
-  }, { targetName, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT });
+  }, { targetName, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }), 5000, 'create fallback fixed page');
+}
+
+async function exportFallbackOnly(page, target, reason) {
+  const targetName = safeBaseName(target.dir);
+  console.warn(`fallback: ${targetName}: ${reason}`);
+  await page.setContent('<!doctype html><html><body></body></html>', { waitUntil: 'domcontentloaded', timeout: 5000 });
+  await ensureFixedPage(page, targetName);
+  const outputPath = path.join(OUT_DIR, outputName(target.dir, 0, 1));
+  await page.locator(PAGE_SELECTOR).first().screenshot({ path: outputPath, animations: 'disabled', timeout: 10000 });
+  return [outputPath];
 }
 
 async function exportTarget(page, baseUrl, target) {
   const url = baseUrl + toUrlPath(target.htmlPath);
   const targetName = safeBaseName(target.dir);
+  console.log(`start: ${targetName}`);
 
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForTimeout(1200);
-  await ensureFixedPage(page, targetName);
-  await waitForAssets(page);
+  try {
+    await withTimeout(page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 }), 12000, 'goto');
+    await page.waitForTimeout(500);
+    await ensureFixedPage(page, targetName);
 
-  const locators = await page.locator(PAGE_SELECTOR).all();
-  const outputs = [];
-  for (let i = 0; i < locators.length; i += 1) {
-    const outputPath = path.join(OUT_DIR, outputName(target.dir, i, locators.length));
-    await locators[i].screenshot({ path: outputPath, animations: 'disabled', timeout: 60000 });
-    outputs.push(outputPath);
+    try {
+      await waitForAssets(page);
+    } catch (error) {
+      console.warn(`asset wait skipped: ${targetName}: ${error.message}`);
+    }
+
+    const locators = await withTimeout(page.locator(PAGE_SELECTOR).all(), 5000, 'collect fixed pages');
+    if (locators.length === 0) {
+      return await exportFallbackOnly(page, target, 'no .fixed-page after fallback');
+    }
+
+    const outputs = [];
+    for (let i = 0; i < locators.length; i += 1) {
+      const outputPath = path.join(OUT_DIR, outputName(target.dir, i, locators.length));
+      await withTimeout(locators[i].screenshot({ path: outputPath, animations: 'disabled', timeout: 12000 }), 15000, `screenshot ${i + 1}`);
+      outputs.push(outputPath);
+    }
+    return outputs;
+  } catch (error) {
+    return await exportFallbackOnly(page, target, error.message);
   }
-  return outputs;
 }
 
 async function main() {
@@ -200,15 +233,19 @@ async function main() {
 
   try {
     const page = await browser.newPage({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }, deviceScaleFactor: 1 });
-    page.setDefaultTimeout(60000);
-    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(12000);
+    page.setDefaultNavigationTimeout(12000);
 
     page.on('pageerror', error => {
       console.warn(`page error: ${error.message}`);
     });
+    page.on('console', message => {
+      if (message.type() === 'error') console.warn(`browser console error: ${message.text()}`);
+    });
 
     for (const target of targets) {
-      const outputPaths = await exportTarget(page, baseUrl, target);
+      const outputPaths = await withTimeout(exportTarget(page, baseUrl, target), TARGET_TIMEOUT_MS, `export ${safeBaseName(target.dir)}`)
+        .catch(error => exportFallbackOnly(page, target, error.message));
       for (const outputPath of outputPaths) {
         console.log(`exported: ${path.relative(ROOT, outputPath)}`);
       }
