@@ -32,8 +32,14 @@ function toUrlPath(filePath) {
   return '/' + rel;
 }
 
-function safeOutputName(articleDir) {
-  return path.basename(articleDir).replace(/[\\/:*?"<>|]/g, '_') + '.png';
+function safeBaseName(articleDir) {
+  return path.basename(articleDir).replace(/[\\/:*?"<>|]/g, '_');
+}
+
+function outputName(articleDir, index, count) {
+  const base = safeBaseName(articleDir);
+  if (count <= 1) return `${base}_001.png`;
+  return `${base}_${String(index + 1).padStart(3, '0')}.png`;
 }
 
 async function exists(filePath) {
@@ -104,12 +110,7 @@ function startServer() {
   });
 }
 
-async function exportTarget(page, baseUrl, target) {
-  const url = baseUrl + toUrlPath(target.htmlPath);
-  const outputPath = path.join(OUT_DIR, safeOutputName(target.dir));
-
-  await page.goto(url, { waitUntil: 'networkidle' });
-  await page.waitForSelector(PAGE_SELECTOR, { state: 'visible' });
+async function waitForAssets(page) {
   await page.evaluate(async () => {
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;
@@ -122,10 +123,22 @@ async function exportTarget(page, baseUrl, target) {
       });
     }));
   });
+}
 
-  const element = page.locator(PAGE_SELECTOR);
-  await element.screenshot({ path: outputPath, animations: 'disabled' });
-  return outputPath;
+async function exportTarget(page, baseUrl, target) {
+  const url = baseUrl + toUrlPath(target.htmlPath);
+  await page.goto(url, { waitUntil: 'networkidle' });
+  await page.waitForSelector(PAGE_SELECTOR, { state: 'visible' });
+  await waitForAssets(page);
+
+  const locators = await page.locator(PAGE_SELECTOR).all();
+  const outputs = [];
+  for (let i = 0; i < locators.length; i += 1) {
+    const outputPath = path.join(OUT_DIR, outputName(target.dir, i, locators.length));
+    await locators[i].screenshot({ path: outputPath, animations: 'disabled' });
+    outputs.push(outputPath);
+  }
+  return outputs;
 }
 
 async function main() {
@@ -141,8 +154,10 @@ async function main() {
   try {
     const page = await browser.newPage({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }, deviceScaleFactor: 1 });
     for (const target of targets) {
-      const outputPath = await exportTarget(page, baseUrl, target);
-      console.log(`exported: ${path.relative(ROOT, outputPath)}`);
+      const outputPaths = await exportTarget(page, baseUrl, target);
+      for (const outputPath of outputPaths) {
+        console.log(`exported: ${path.relative(ROOT, outputPath)}`);
+      }
     }
   } finally {
     await browser.close();
