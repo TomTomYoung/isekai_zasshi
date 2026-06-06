@@ -119,6 +119,23 @@ function startServer() {
   });
 }
 
+function attachPageLogging(page, targetName) {
+  page.on('pageerror', error => {
+    console.warn(`page error: ${targetName}: ${error.message}`);
+  });
+  page.on('console', message => {
+    if (message.type() === 'error') console.warn(`browser console error: ${targetName}: ${message.text()}`);
+  });
+}
+
+async function newExportPage(browser, targetName) {
+  const page = await browser.newPage({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }, deviceScaleFactor: 1 });
+  page.setDefaultTimeout(12000);
+  page.setDefaultNavigationTimeout(12000);
+  attachPageLogging(page, targetName);
+  return page;
+}
+
 async function waitForAssets(page) {
   await withTimeout(page.evaluate(async () => {
     if (document.fonts && document.fonts.ready) {
@@ -178,21 +195,27 @@ async function ensureFixedPage(page, targetName) {
   }, { targetName, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }), 5000, 'create fallback fixed page');
 }
 
-async function exportFallbackOnly(page, target, reason) {
+async function exportFallbackOnly(browser, target, reason) {
   const targetName = safeBaseName(target.dir);
   console.warn(`fallback: ${targetName}: ${reason}`);
-  await page.setContent('<!doctype html><html><body></body></html>', { waitUntil: 'domcontentloaded', timeout: 5000 });
-  await ensureFixedPage(page, targetName);
-  const outputPath = path.join(OUT_DIR, outputName(target.dir, 0, 1));
-  await page.locator(PAGE_SELECTOR).first().screenshot({ path: outputPath, animations: 'disabled', timeout: 10000 });
-  return [outputPath];
+  const page = await newExportPage(browser, `${targetName}:fallback`);
+  try {
+    await page.goto('about:blank', { waitUntil: 'domcontentloaded', timeout: 5000 });
+    await ensureFixedPage(page, targetName);
+    const outputPath = path.join(OUT_DIR, outputName(target.dir, 0, 1));
+    await page.locator(PAGE_SELECTOR).first().screenshot({ path: outputPath, animations: 'disabled', timeout: 10000 });
+    return [outputPath];
+  } finally {
+    await page.close().catch(() => {});
+  }
 }
 
-async function exportTarget(page, baseUrl, target) {
+async function exportTarget(browser, baseUrl, target) {
   const url = baseUrl + toUrlPath(target.htmlPath);
   const targetName = safeBaseName(target.dir);
   console.log(`start: ${targetName}`);
 
+  const page = await newExportPage(browser, targetName);
   try {
     await withTimeout(page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 }), 12000, 'goto');
     await page.waitForTimeout(500);
@@ -206,7 +229,8 @@ async function exportTarget(page, baseUrl, target) {
 
     const locators = await withTimeout(page.locator(PAGE_SELECTOR).all(), 5000, 'collect fixed pages');
     if (locators.length === 0) {
-      return await exportFallbackOnly(page, target, 'no .fixed-page after fallback');
+      await page.close().catch(() => {});
+      return await exportFallbackOnly(browser, target, 'no .fixed-page after fallback');
     }
 
     const outputs = [];
@@ -216,8 +240,8 @@ async function exportTarget(page, baseUrl, target) {
       outputs.push(outputPath);
     }
     return outputs;
-  } catch (error) {
-    return await exportFallbackOnly(page, target, error.message);
+  } finally {
+    await page.close().catch(() => {});
   }
 }
 
@@ -232,20 +256,10 @@ async function main() {
   const browser = await chromium.launch();
 
   try {
-    const page = await browser.newPage({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }, deviceScaleFactor: 1 });
-    page.setDefaultTimeout(12000);
-    page.setDefaultNavigationTimeout(12000);
-
-    page.on('pageerror', error => {
-      console.warn(`page error: ${error.message}`);
-    });
-    page.on('console', message => {
-      if (message.type() === 'error') console.warn(`browser console error: ${message.text()}`);
-    });
-
     for (const target of targets) {
-      const outputPaths = await withTimeout(exportTarget(page, baseUrl, target), TARGET_TIMEOUT_MS, `export ${safeBaseName(target.dir)}`)
-        .catch(error => exportFallbackOnly(page, target, error.message));
+      const targetName = safeBaseName(target.dir);
+      const outputPaths = await withTimeout(exportTarget(browser, baseUrl, target), TARGET_TIMEOUT_MS, `export ${targetName}`)
+        .catch(error => exportFallbackOnly(browser, target, error.message));
       for (const outputPath of outputPaths) {
         console.log(`exported: ${path.relative(ROOT, outputPath)}`);
       }
