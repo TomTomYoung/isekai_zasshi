@@ -2,16 +2,18 @@
 
 ## 概要
 
-このリポジトリは、異世界雑誌の原稿・リフロー版HTML・固定レイアウト版HTML/CSS・画像・制作手順を管理するためのものです。
+このリポジトリは、異世界雑誌の原稿・固定レイアウト版HTML/CSS・リフロー版HTML・画像・制作手順を管理するためのものです。
 
-現在の主対象は、`202603` 号を以下の2系統で一区切りにすることです。
+現在の最優先対象は、`202603` 号の fixed_layout 版を一区切りまで持っていくことです。
 
 ```text
-reflow版
-= EPUB等のリフロー本文向け。読者環境に応じて本文が流れる版。
-
 fixed_layout版
 = 固定紙面向け。1456×2056pxの紙面をPNG画像として書き出す版。
+= 現在の最優先作業。
+
+reflow版
+= EPUB等のリフロー本文向け。読者環境に応じて本文が流れる版。
+= fixed_layout版の次に扱う。
 ```
 
 ---
@@ -19,8 +21,8 @@ fixed_layout版
 ## 現在の優先作業
 
 ```text
-異世界雑誌 202603号 reflow v1.0
-異世界雑誌 202603号 fixed_layout PNG export
+1. 異世界雑誌 202603号 fixed_layout PNG export
+2. 異世界雑誌 202603号 reflow v1.0
 ```
 
 v1.0 の目的は、完全版を作ることではありません。
@@ -29,7 +31,35 @@ v1.0 の目的は、完全版を作ることではありません。
 
 ---
 
+## fixed_layout 作業導線
+
+固定レイアウト版をPNG化するには、リポジトリ直下で以下を実行します。
+
+```bash
+./tools/export_fixed_layout_images.sh
+```
+
+出力先：
+
+```text
+exports/fixed_layout_images/
+```
+
+固定レイアウト版の主要ファイル：
+
+```text
+202603/*/fixed_layout.html
+202603/*/fixed_layout.css
+tools/export_fixed_layout_images.mjs
+tools/export_fixed_layout_images.sh
+exports/fixed_layout_images/
+```
+
+---
+
 ## reflow v1.0 作業導線
+
+reflow版は fixed_layout版の次に扱います。
 
 作業は以下の順に確認します。
 
@@ -55,6 +85,16 @@ docs/03_epub_v1_release_notes.md
 
 ## 重要ファイル
 
+### fixed_layout版
+
+```text
+202603/*/fixed_layout.html
+202603/*/fixed_layout.css
+tools/export_fixed_layout_images.mjs
+tools/export_fixed_layout_images.sh
+exports/fixed_layout_images/
+```
+
 ### reflow版
 
 ```text
@@ -72,16 +112,6 @@ tools/normalize_reflow_html.py
 202603/目次_epub.html
 202603/*/*_epub.html
 tools/normalize_epub_html.py
-```
-
-### fixed_layout版
-
-```text
-202603/*/fixed_layout.html
-202603/*/fixed_layout.css
-tools/export_fixed_layout_images.mjs
-tools/export_fixed_layout_images.sh
-exports/fixed_layout_images/
 ```
 
 ---
@@ -103,19 +133,17 @@ git diff -- 202603
 
 ---
 
-## fixed_layout PNG書き出し
+## fixed_layout版の完了条件
 
-固定レイアウト版をPNG化するには、リポジトリ直下で以下を実行します。
+以下を満たしたら、`202603` 号を fixed_layout 版として一区切りにします。
 
-```bash
-./tools/export_fixed_layout_images.sh
-```
-
-出力先：
-
-```text
-exports/fixed_layout_images/
-```
+- fixed_layout HTMLが開く
+- fixed_layout PNGが出力できる
+- 出力PNGが開ける
+- 主要記事が紙面として読める
+- 画像が表示される
+- キャプションが読める
+- 致命的な画像切れ・本文崩壊がない
 
 ---
 
