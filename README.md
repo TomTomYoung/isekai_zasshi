@@ -33,6 +33,11 @@ v1.0 の目的は、完全版を作ることではありません。
 
 ## fixed_layout 作業導線
 
+作業手順：
+
+1. [`docs/02_fixed_layout_build_steps.md`](docs/02_fixed_layout_build_steps.md)
+   - `fixed_layout.html` / `fixed_layout.css` の存在確認、PNG書き出し、出力枚数・サイズ・主要記事確認の手順。
+
 固定レイアウト版をPNG化するには、リポジトリ直下で以下を実行します。
 
 ```bash
