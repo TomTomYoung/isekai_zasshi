@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="760" viewBox="0 0 980 760" role="img" aria-label="異世界雑誌表紙用の王都ゴシップ風イラスト">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#241528"/>
+      <stop offset="0.52" stop-color="#6f1d2f"/>
+      <stop offset="1" stop-color="#d86d1f"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff6c8"/>
+      <stop offset="1" stop-color="#e7c76a"/>
+    </linearGradient>
+    <pattern id="halftone" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="2.2" fill="#111" opacity="0.16"/>
+      <circle cx="13" cy="13" r="1.8" fill="#111" opacity="0.12"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="8" dy="10" stdDeviation="0" flood-color="#111" flood-opacity="0.95"/>
+    </filter>
+  </defs>
+
+  <rect width="980" height="760" fill="url(#sky)"/>
+  <rect width="980" height="760" fill="url(#halftone)" opacity="0.55"/>
+
+  <!-- moon -->
+  <circle cx="800" cy="100" r="58" fill="#ffeaa0" stroke="#111" stroke-width="7"/>
+  <path d="M770 62 C810 86 818 132 786 159 C842 146 876 98 842 54 C823 31 790 31 770 62Z" fill="#6f1d2f" opacity="0.34"/>
+
+  <!-- city silhouette -->
+  <g fill="#17121a" stroke="#111" stroke-width="5">
+    <path d="M0 480 L50 480 L50 370 L90 370 L90 480 L145 480 L145 300 L195 250 L245 300 L245 480 L310 480 L310 340 L355 340 L355 480 L430 480 L430 270 L470 230 L510 270 L510 480 L560 480 L560 360 L610 360 L610 480 L682 480 L682 315 L745 270 L808 315 L808 480 L875 480 L875 350 L920 350 L920 480 L980 480 L980 760 L0 760 Z"/>
+    <path d="M180 255 L195 150 L210 255" fill="#17121a"/>
+    <path d="M455 236 L470 112 L485 236" fill="#17121a"/>
+    <path d="M720 286 L745 164 L770 286" fill="#17121a"/>
+  </g>
+
+  <!-- dungeon gate -->
+  <g transform="translate(58 424)" filter="url(#shadow)">
+    <path d="M0 250 L0 88 C0 32 46 0 104 0 L270 0 C328 0 374 32 374 88 L374 250 Z" fill="#4f4640" stroke="#111" stroke-width="9"/>
+    <path d="M78 250 L78 115 C78 62 122 34 187 34 C252 34 296 62 296 115 L296 250 Z" fill="#111" stroke="#ffd400" stroke-width="7"/>
+    <path d="M96 122 C138 96 235 96 278 122" fill="none" stroke="#c40018" stroke-width="9"/>
+    <text x="187" y="74" text-anchor="middle" font-family="sans-serif" font-size="31" font-weight="900" fill="#ffd400">危険地帯</text>
+  </g>
+
+  <!-- scandal photo frame -->
+  <g transform="translate(490 250) rotate(-5)" filter="url(#shadow)">
+    <rect x="0" y="0" width="382" height="286" fill="url(#paper)" stroke="#111" stroke-width="9"/>
+    <rect x="26" y="28" width="330" height="186" fill="#2a1826" stroke="#111" stroke-width="6"/>
+    <circle cx="150" cy="95" r="45" fill="#f2d5b8" stroke="#111" stroke-width="5"/>
+    <path d="M105 176 C118 126 184 126 198 176 Z" fill="#fff" stroke="#111" stroke-width="5"/>
+    <path d="M210 180 C230 125 300 128 318 180 Z" fill="#303030" stroke="#111" stroke-width="5"/>
+    <circle cx="270" cy="96" r="42" fill="#b87c50" stroke="#111" stroke-width="5"/>
+    <path d="M112 58 C136 20 186 35 193 75" fill="none" stroke="#ffd400" stroke-width="9"/>
+    <path d="M250 58 C278 28 326 52 315 94" fill="none" stroke="#7f31ff" stroke-width="9"/>
+    <rect x="26" y="228" width="330" height="35" fill="#c40018" stroke="#111" stroke-width="5"/>
+    <text x="191" y="254" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="900" fill="#fff">泥酔スクープ現場写真</text>
+  </g>
+
+  <!-- wanted / artifact papers -->
+  <g transform="translate(74 120) rotate(7)" filter="url(#shadow)">
+    <rect width="250" height="210" fill="#fff6c8" stroke="#111" stroke-width="8"/>
+    <text x="125" y="45" text-anchor="middle" font-family="serif" font-size="36" font-weight="900" fill="#111">号外</text>
+    <rect x="30" y="68" width="190" height="72" fill="#111"/>
+    <text x="125" y="113" text-anchor="middle" font-family="sans-serif" font-size="34" font-weight="900" fill="#ffd400">黒い噂</text>
+    <line x1="32" y1="158" x2="218" y2="158" stroke="#111" stroke-width="7"/>
+    <line x1="32" y1="182" x2="178" y2="182" stroke="#111" stroke-width="7"/>
+  </g>
+
+  <g transform="translate(680 532) rotate(9)" filter="url(#shadow)">
+    <rect width="220" height="150" fill="#f4ecd2" stroke="#111" stroke-width="7"/>
+    <text x="110" y="48" text-anchor="middle" font-family="sans-serif" font-size="31" font-weight="900" fill="#c40018">違法</text>
+    <text x="110" y="88" text-anchor="middle" font-family="sans-serif" font-size="30" font-weight="900" fill="#111">アーティファクト</text>
+    <circle cx="56" cy="115" r="18" fill="#00ffcc" stroke="#111" stroke-width="5"/>
+    <path d="M126 100 L160 130 L92 130 Z" fill="#ffd400" stroke="#111" stroke-width="5"/>
+  </g>
+
+  <!-- foreground headline slash -->
+  <g transform="translate(330 610) rotate(-4)">
+    <rect x="0" y="0" width="500" height="74" fill="#ffd400" stroke="#111" stroke-width="9"/>
+    <text x="250" y="50" text-anchor="middle" font-family="sans-serif" font-size="42" font-weight="900" fill="#111">王都の闇、全部載せ。</text>
+  </g>
+</svg>
