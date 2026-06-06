@@ -133,10 +133,49 @@ async function waitForAssets(page) {
   });
 }
 
+async function ensureFixedPage(page, targetName) {
+  const count = await page.locator(PAGE_SELECTOR).count();
+  if (count > 0) return;
+
+  await page.evaluate(({ targetName, width, height }) => {
+    document.body.innerHTML = '';
+    document.documentElement.style.margin = '0';
+    document.body.style.margin = '0';
+    document.body.style.background = '#c8beb0';
+
+    const fixedPage = document.createElement('main');
+    fixedPage.className = 'fixed-page export-fallback-page';
+    fixedPage.style.width = `${width}px`;
+    fixedPage.style.height = `${height}px`;
+    fixedPage.style.boxSizing = 'border-box';
+    fixedPage.style.margin = '0 auto';
+    fixedPage.style.padding = '86px 66px 72px';
+    fixedPage.style.overflow = 'hidden';
+    fixedPage.style.background = '#f4ecd2';
+    fixedPage.style.borderLeft = '14px solid #111';
+    fixedPage.style.borderRight = '14px solid #111';
+    fixedPage.innerHTML = `
+      <section class="article-sheet" style="font-family: sans-serif; font-size: 34px; line-height: 1.5;">
+        <header style="border: 8px solid #111; background: #fff4b8; padding: 24px; box-shadow: 10px 10px 0 #111;">
+          <div style="display:inline-block; padding:8px 16px; background:#c40018; color:white; font-weight:900;">固定レイアウト生成エラー</div>
+          <h1 style="font-size:64px; line-height:1.1;">${targetName}</h1>
+        </header>
+        <div style="margin-top:32px; padding:24px; border:6px solid #c40018; background:#ffe2df; font-weight:700;">
+          <p>.fixed-page が生成されなかったため、書き出し側でフォールバック紙面を生成しました。</p>
+          <p>該当記事の fixed_layout.html 内スクリプト、元記事HTML名、画像パスを確認してください。</p>
+        </div>
+      </section>`;
+    document.body.appendChild(fixedPage);
+  }, { targetName, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT });
+}
+
 async function exportTarget(page, baseUrl, target) {
   const url = baseUrl + toUrlPath(target.htmlPath);
+  const targetName = safeBaseName(target.dir);
+
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForSelector(PAGE_SELECTOR, { state: 'visible', timeout: 60000 });
+  await page.waitForTimeout(1200);
+  await ensureFixedPage(page, targetName);
   await waitForAssets(page);
 
   const locators = await page.locator(PAGE_SELECTOR).all();
@@ -163,6 +202,10 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }, deviceScaleFactor: 1 });
     page.setDefaultTimeout(60000);
     page.setDefaultNavigationTimeout(60000);
+
+    page.on('pageerror', error => {
+      console.warn(`page error: ${error.message}`);
+    });
 
     for (const target of targets) {
       const outputPaths = await exportTarget(page, baseUrl, target);
