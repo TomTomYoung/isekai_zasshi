@@ -36,13 +36,20 @@ v1.0 の目的は、完全版を作ることではありません。
 1. [`docs/01_isekai_zasshi_v1_checklist.md`](docs/01_isekai_zasshi_v1_checklist.md)
    - 収録記事、reflow構造、画像、目次、表紙、奥付、読了テストのチェックリスト。
 
-2. [`docs/02_epub_build_steps.md`](docs/02_epub_build_steps.md)
-   - 旧名のまま残っているreflow版ビルド手順。
-   - `tools/normalize_reflow_html.py` の実行、HTML正規化、目次・CSS・画像確認を含む。
+2. [`docs/02_reflow_build_steps.md`](docs/02_reflow_build_steps.md)
+   - reflow版ビルド手順。
+   - `tools/create_reflow_files.py` と `tools/normalize_reflow_html.py` の実行、HTML正規化、目次・CSS・画像確認を含む。
 
-3. [`docs/03_epub_v1_release_notes.md`](docs/03_epub_v1_release_notes.md)
-   - 旧名のまま残っているreflow v1.0リリースノート。
+3. [`docs/03_reflow_v1_release_notes.md`](docs/03_reflow_v1_release_notes.md)
+   - reflow v1.0リリースノート。
    - v1.0に含めるもの、v1.0では要求しない品質、v1.1以降に回すもの、タグ名案、リリース文案。
+
+互換用の旧文書：
+
+```text
+docs/02_epub_build_steps.md
+docs/03_epub_v1_release_notes.md
+```
 
 ---
 
@@ -53,6 +60,8 @@ v1.0 の目的は、完全版を作ることではありません。
 ```text
 202603/reflow.css
 202603/目次_reflow.html
+202603/*/*_reflow.html
+tools/create_reflow_files.py
 tools/normalize_reflow_html.py
 ```
 
@@ -61,6 +70,7 @@ tools/normalize_reflow_html.py
 ```text
 202603/epub.css
 202603/目次_epub.html
+202603/*/*_epub.html
 tools/normalize_epub_html.py
 ```
 
@@ -76,11 +86,12 @@ exports/fixed_layout_images/
 
 ---
 
-## reflow HTML正規化
+## reflow HTML生成・正規化
 
-reflow向けHTMLを正規化するには、リポジトリ直下で以下を実行します。
+旧 `*_epub.html` から `*_reflow.html` を生成するには、リポジトリ直下で以下を実行します。
 
 ```bash
+python tools/create_reflow_files.py
 python tools/normalize_reflow_html.py
 ```
 
