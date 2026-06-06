@@ -30,8 +30,33 @@
         return sheet;
       }
 
-      const res = await fetch(source);
-      const text = await res.text();
+      function renderError(sheet, message) {
+        sheet.innerHTML = `
+          <header>
+            <div class="gossip-slug">固定レイアウト読込エラー</div>
+            <h1>${source}</h1>
+          </header>
+          <div class="warning-box">
+            <p>${message}</p>
+            <p>元記事HTMLのファイル名、パス、画像読込、または本文構造を確認してください。</p>
+          </div>
+        `;
+      }
+
+      let sheet = makePage(0);
+      let text = '';
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch(source, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        text = await res.text();
+      } catch (error) {
+        renderError(sheet, `元記事HTMLを読み込めませんでした: ${error.message}`);
+        return;
+      }
+
       const doc = new DOMParser().parseFromString(text, 'text/html');
       const title = doc.querySelector('title');
       if (title) document.title = title.textContent + '｜固定レイアウト版';
@@ -64,7 +89,7 @@
         return node.nodeType !== Node.TEXT_NODE || node.textContent.trim();
       });
 
-      let sheet = makePage(0);
+      sheet.innerHTML = '';
       for (const node of nodes) {
         sheet.appendChild(node);
         if (sheet.scrollHeight > sheet.clientHeight && sheet.childNodes.length > 1) {
