@@ -1,0 +1,39 @@
+name: Audit Reflow Images
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/audit_reflow_images.py'
+      - '202603/**/*_reflow.html'
+      - '202603/**/*.png'
+      - '202603/**/*.jpg'
+      - '202603/**/*.jpeg'
+      - '202603/**/*.webp'
+      - '.github/workflows/audit-reflow-images.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Audit reflow image links
+        run: python tools/audit_reflow_images.py
+
+      - name: Commit image audit report
+        if: always()
+        run: |
+          if git diff --quiet -- docs/04_reflow_image_audit.md; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/04_reflow_image_audit.md
+          git commit -m "Update reflow image audit report"
+          git push
