@@ -10,9 +10,13 @@ body {
   font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "MS PMincho", serif;
 }
 
+.article-pages {
+  margin: 0 auto;
+}
+
 .fixed-page {
   width: 1456px;
-  min-height: 2056px;
+  height: 2056px;
   box-sizing: border-box;
   margin: 0 auto;
   padding: 86px 66px 72px;
@@ -25,6 +29,7 @@ body {
   overflow: hidden;
   border-left: 14px solid #111;
   border-right: 14px solid #111;
+  page-break-after: always;
 }
 
 .fixed-page::before {
@@ -69,6 +74,9 @@ body {
 }
 
 .article-sheet {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   column-count: 2;
   column-gap: 38px;
   column-rule: 5px double #111;
@@ -259,311 +267,80 @@ figure img,
   margin: 0 auto 8px;
   border: 6px solid #111;
   box-sizing: border-box;
-  background: #fff;
-  filter: contrast(1.08) saturate(1.08);
-}
-
-.hero-photo img {
-  border-width: 8px;
-  box-shadow: 12px 12px 0 #111;
 }
 
 figcaption,
-.photo-block figcaption,
+.caption,
 .tabloid-caption {
   display: inline-block;
-  margin-top: -2px;
-  padding: 7px 10px;
+  margin-top: 4px;
+  padding: 4px 10px;
   background: #111;
   color: #fff;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
   font-size: 20px;
-  line-height: 1.42;
-  text-align: left;
+  line-height: 1.35;
   font-weight: 700;
 }
 
-hr {
-  border: 0;
-  border-top: 7px solid #111;
-  margin: 24px 0;
+ul,
+ol {
+  margin: 0 0 1em 1.4em;
+  padding: 0;
+}
+
+li {
+  margin: 0 0 0.38em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  background: #fff;
+  font-size: 22px;
+  break-inside: avoid;
+}
+
+th,
+td {
+  border: 4px solid #111;
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+th {
+  background: #ffd400;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
+  font-weight: 900;
 }
 
 blockquote,
-.quote,
 .note-box,
 .warning-box,
 .summary-box,
 .push-point,
 .column-box,
-.dungeon-card,
-.illegal-item,
-.flyer-ad,
-.job-ad,
-.prediction-section,
 .danger-box {
-  border: 5px solid #111;
-  background: #fff9e8;
-  padding: 14px;
-  margin: 18px 0;
+  margin: 18px 0 22px;
+  padding: 14px 18px;
+  border: 6px solid #111;
+  background: #fff;
   box-shadow: 6px 6px 0 #111;
+  font-weight: 700;
 }
 
 .warning-box,
-.danger-box,
-.illegal-item {
-  background: #ffe1e1;
+.danger-box {
+  background: #ffe2df;
   border-color: #c40018;
 }
 
-.flyer-ad,
-.job-ad {
-  background: #fff;
-  border-style: dashed;
+.summary-box,
+.push-point {
+  background: #fff4b8;
 }
 
-ul,
-ol {
-  margin: 0 0 1em 1.2em;
-  padding: 0;
-}
-
-li::marker {
-  color: #c40018;
-  font-weight: 900;
-}
-
-.article-no-09 .article-sheet,
-.article-no-10 .article-sheet,
-.article-no-11 .article-sheet,
-.article-no-12 .article-sheet,
-.article-no-13 .article-sheet {
-  column-count: 3;
-  column-gap: 28px;
-  font-size: 22px;
-  line-height: 1.52;
-}
-
-.article-no-09 h1,
-.article-no-10 h1,
-.article-no-11 h1,
-.article-no-12 h1,
-.article-no-13 h1 {
-  font-size: 66px;
-}
-
-.article-no-17 .fixed-page,
-.article-no-18 .fixed-page,
-.article-no-19 .fixed-page,
-.article-no-20 .fixed-page,
-.article-no-21 .fixed-page,
-.article-no-22 .fixed-page,
-.article-no-23 .fixed-page {
-  background:
-    linear-gradient(90deg, rgba(0,0,0,0.06) 0 1px, transparent 1px 100%),
-    #ece1cc;
-}
-
-.article-no-17 header,
-.article-no-18 header,
-.article-no-19 header,
-.article-no-20 header,
-.article-no-21 header,
-.article-no-22 header,
-.article-no-23 header {
-  background: #f2d2b6;
-}
-
-.article-no-10 .fixed-page {
-  background:
-    radial-gradient(circle at 14% 12%, rgba(0,255,204,0.20), transparent 19%),
-    radial-gradient(circle at 86% 20%, rgba(255,51,102,0.18), transparent 18%),
-    linear-gradient(180deg, #171717 0%, #252018 100%);
-  color: #f4f4f4;
-}
-
-.article-no-10 .fixed-page::before {
-  content: "闘技場スター名鑑";
-  background: #00ffcc;
-  color: #111;
-  border-color: #111;
-}
-
-.article-no-10 .fixed-page::after {
-  content: "推しが見つかる四天王";
-  background: #ff3366;
-}
-
-.article-no-10 .article-sheet {
-  column-count: 1;
-  column-rule: none;
-  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
-  font-size: 19px;
-  line-height: 1.42;
-}
-
-.article-no-10 h1 {
-  margin: 0 0 14px;
-  padding: 16px 24px;
-  border: 7px solid #00ffcc;
-  background: #111;
-  color: #00ffcc;
-  font-size: 58px;
-  line-height: 1.04;
-  letter-spacing: -0.06em;
-  text-align: center;
-  text-shadow: 0 0 12px rgba(0,255,204,0.6);
-}
-
-.article-no-10 .intro {
-  margin: 0 0 16px;
-  padding: 12px 18px;
-  border: 5px solid #00ffcc;
-  background: rgba(0,0,0,0.72);
-  color: #fff;
-  font-size: 20px;
-  line-height: 1.36;
-}
-
-.article-no-10 .intro p {
-  margin: 0;
-  text-align: left;
-}
-
-.article-no-10 .player-card {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 14px;
-  break-inside: avoid;
-  box-sizing: border-box;
-  margin: 0 0 14px;
-  padding: 10px;
-  border: 5px solid #444;
-  background: #1f1f1f;
-  box-shadow: 6px 6px 0 rgba(0,0,0,0.75);
-}
-
-.article-no-10 .player-card figure {
-  margin: 0;
-}
-
-.article-no-10 .player-card img,
-.article-no-10 .player-img {
-  width: 100%;
-  max-width: 100%;
-  height: 235px;
-  object-fit: cover;
-  border: 4px solid #111;
-  box-shadow: none;
-}
-
-.article-no-10 .player-card figcaption {
-  display: block;
-  margin: 4px 0 0;
-  padding: 5px 6px;
-  background: #111;
-  color: #dcdcdc;
-  font-size: 12px;
-  line-height: 1.25;
-}
-
-.article-no-10 .player-info {
-  padding: 0;
-}
-
-.article-no-10 .player-info h2 {
-  margin: 0 0 5px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  color: #aaa;
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.article-no-10 .player-info h2::before {
-  display: none;
-}
-
-.article-no-10 .player-info h3 {
-  margin: 0 0 7px;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: 31px;
-  line-height: 1.06;
-}
-
-.article-no-10 .quote {
-  display: block;
-  margin: 0 0 7px;
-  padding: 6px 9px;
-  border-left: 6px solid #fff;
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  font-size: 20px;
-  line-height: 1.2;
-  font-weight: 900;
-}
-
-.article-no-10 .description {
-  margin: 0;
-  color: #ddd;
-  font-size: 18px;
-  line-height: 1.34;
-  text-align: left;
-}
-
-.article-no-10 .char-gear {
-  border-color: #ff9900;
-}
-
-.article-no-10 .char-gear h3 {
-  color: #ff9900;
-}
-
-.article-no-10 .char-miriam {
-  border-color: #00bfff;
-}
-
-.article-no-10 .char-miriam h3 {
-  color: #00bfff;
-}
-
-.article-no-10 .char-joker {
-  border-color: #bf00ff;
-}
-
-.article-no-10 .char-joker h3 {
-  color: #d45cff;
-}
-
-.article-no-10 .char-rachel {
-  border-color: #ff3366;
-}
-
-.article-no-10 .char-rachel h3 {
-  color: #ff6688;
-}
-
-.article-no-10 .footer-msg {
-  margin: 8px 0 0;
-  padding: 10px 16px;
-  border: 4px solid #00ffcc;
-  background: #111;
-  color: #e9e9e9;
-  font-size: 17px;
-  line-height: 1.28;
-  text-align: center;
-}
-
-.article-no-10 .footer-msg p {
-  margin: 0;
-  text-align: center;
-}
-
-@media screen and (max-width: 1456px) {
-  .fixed-page {
-    transform-origin: top left;
-  }
+.article-sheet > *:first-child {
+  margin-top: 0;
 }
