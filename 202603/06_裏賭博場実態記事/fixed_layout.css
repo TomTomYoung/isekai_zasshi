@@ -373,6 +373,87 @@ li::marker {
   background: #f2d2b6;
 }
 
+.article-no-06 .prediction-section {
+  column-span: all;
+  padding: 16px 18px;
+  margin: 22px 0 26px;
+  background: #fffdf0;
+}
+
+.article-no-06 .prediction-section h3 {
+  margin-top: 0;
+  font-size: 28px;
+}
+
+.article-no-06 .prediction-section table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
+  font-size: 16px;
+  line-height: 1.28;
+  background: #fff;
+}
+
+.article-no-06 .prediction-section th,
+.article-no-06 .prediction-section td {
+  border: 3px solid #111;
+  padding: 5px 6px;
+  vertical-align: top;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.article-no-06 .prediction-section th:nth-child(1),
+.article-no-06 .prediction-section td:nth-child(1) {
+  width: 5%;
+}
+
+.article-no-06 .prediction-section th:nth-child(2),
+.article-no-06 .prediction-section td:nth-child(2) {
+  width: 6%;
+}
+
+.article-no-06 .prediction-section th:nth-child(3),
+.article-no-06 .prediction-section td:nth-child(3) {
+  width: 22%;
+}
+
+.article-no-06 .prediction-section th:nth-child(4),
+.article-no-06 .prediction-section td:nth-child(4) {
+  width: 22%;
+}
+
+.article-no-06 .prediction-section th:nth-child(5),
+.article-no-06 .prediction-section td:nth-child(5) {
+  width: 45%;
+}
+
+.article-no-06 .prediction-section .prediction-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.article-no-06 .prediction-section .prediction-column {
+  border: 4px solid #111;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.article-no-06 .prediction-section .prediction-column h4 {
+  margin: 0 0 6px;
+  font-size: 21px;
+}
+
+.article-no-06 .prediction-section .prediction-column p {
+  font-size: 18px;
+  line-height: 1.38;
+  margin-bottom: 0;
+}
+
 @media screen and (max-width: 1456px) {
   .fixed-page {
     transform-origin: top left;
