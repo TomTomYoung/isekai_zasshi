@@ -1,0 +1,1 @@
+fixed_layout.html/css files are being rolled out to article folders so each article stays as one HTML document while generating 1456x2056 fixed-page sections internally.
