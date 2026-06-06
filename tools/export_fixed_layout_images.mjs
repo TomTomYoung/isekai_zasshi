@@ -113,29 +113,37 @@ function startServer() {
 async function waitForAssets(page) {
   await page.evaluate(async () => {
     if (document.fonts && document.fonts.ready) {
-      await document.fonts.ready;
+      await Promise.race([
+        document.fonts.ready,
+        new Promise(resolve => setTimeout(resolve, 5000)),
+      ]);
     }
+
     await Promise.all(Array.from(document.images).map(img => {
       if (img.complete) return Promise.resolve();
       return new Promise(resolve => {
-        img.addEventListener('load', resolve, { once: true });
-        img.addEventListener('error', resolve, { once: true });
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+        setTimeout(done, 8000);
       });
     }));
+
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
 }
 
 async function exportTarget(page, baseUrl, target) {
   const url = baseUrl + toUrlPath(target.htmlPath);
-  await page.goto(url, { waitUntil: 'networkidle' });
-  await page.waitForSelector(PAGE_SELECTOR, { state: 'visible' });
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForSelector(PAGE_SELECTOR, { state: 'visible', timeout: 60000 });
   await waitForAssets(page);
 
   const locators = await page.locator(PAGE_SELECTOR).all();
   const outputs = [];
   for (let i = 0; i < locators.length; i += 1) {
     const outputPath = path.join(OUT_DIR, outputName(target.dir, i, locators.length));
-    await locators[i].screenshot({ path: outputPath, animations: 'disabled' });
+    await locators[i].screenshot({ path: outputPath, animations: 'disabled', timeout: 60000 });
     outputs.push(outputPath);
   }
   return outputs;
@@ -153,6 +161,9 @@ async function main() {
 
   try {
     const page = await browser.newPage({ viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }, deviceScaleFactor: 1 });
+    page.setDefaultTimeout(60000);
+    page.setDefaultNavigationTimeout(60000);
+
     for (const target of targets) {
       const outputPaths = await exportTarget(page, baseUrl, target);
       for (const outputPath of outputPaths) {
