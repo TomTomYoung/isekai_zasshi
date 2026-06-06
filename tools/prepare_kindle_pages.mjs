@@ -16,10 +16,21 @@ function cleanDir(dir) {
   }
 }
 
-function pageNumberFromName(name) {
-  const match = name.match(/^(\d{2})_/);
-  if (!match) return null;
-  return Number(match[1]);
+function pageKeyFromName(name) {
+  const articleMatch = name.match(/^(\d{2})_/);
+  if (!articleMatch) return null;
+
+  const article = Number(articleMatch[1]);
+  const pageMatch = name.match(/_(\d{3})\.png$/i);
+  const page = pageMatch ? Number(pageMatch[1]) : 1;
+
+  return { article, page };
+}
+
+function comparePages(a, b) {
+  if (a.key.article !== b.key.article) return a.key.article - b.key.article;
+  if (a.key.page !== b.key.page) return a.key.page - b.key.page;
+  return a.name.localeCompare(b.name, 'ja');
 }
 
 function main() {
@@ -31,9 +42,9 @@ function main() {
 
   const pages = fs.readdirSync(SRC_DIR)
     .filter(name => name.toLowerCase().endsWith('.png'))
-    .map(name => ({ name, page: pageNumberFromName(name) }))
-    .filter(item => item.page !== null)
-    .sort((a, b) => a.page - b.page);
+    .map(name => ({ name, key: pageKeyFromName(name) }))
+    .filter(item => item.key !== null)
+    .sort(comparePages);
 
   if (pages.length === 0) {
     console.error(`No fixed layout PNG pages found in ${path.relative(ROOT, SRC_DIR)}`);
@@ -53,9 +64,6 @@ function main() {
 
   console.log('');
   console.log(`Prepared ${pages.length} Kindle pages in ${path.relative(ROOT, OUT_DIR)}`);
-  if (pages.length !== 23) {
-    console.warn(`Warning: expected 23 pages, got ${pages.length}.`);
-  }
 }
 
 main();
