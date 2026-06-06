@@ -1,0 +1,4 @@
+/* Reflow版CSSの入口。
+   現時点では既存の epub.css を互換読み込みする。
+   中身の完全移行は、*_reflow.html への改名と参照更新後に行う。 */
+@import url("epub.css");
