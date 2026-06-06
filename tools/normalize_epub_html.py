@@ -1,3 +1,16 @@
+"""Legacy EPUB-name normalization script.
+
+This script is kept for compatibility with the old `*_epub.html`,
+`目次_epub.html`, and `epub.css` naming scheme.
+
+Current primary workflow:
+- tools/create_reflow_files.py
+- tools/normalize_reflow_html.py
+- 202603/*/*_reflow.html
+- 202603/目次_reflow.html
+- 202603/reflow.css
+"""
+
 from pathlib import Path
 import re
 
