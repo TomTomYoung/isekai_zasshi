@@ -10,9 +10,13 @@ body {
   font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "MS PMincho", serif;
 }
 
+.article-pages {
+  margin: 0 auto;
+}
+
 .fixed-page {
   width: 1456px;
-  min-height: 2056px;
+  height: 2056px;
   box-sizing: border-box;
   margin: 0 auto;
   padding: 86px 66px 72px;
@@ -25,6 +29,7 @@ body {
   overflow: hidden;
   border-left: 14px solid #111;
   border-right: 14px solid #111;
+  page-break-after: always;
 }
 
 .fixed-page::before {
@@ -69,6 +74,9 @@ body {
 }
 
 .article-sheet {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   column-count: 2;
   column-gap: 38px;
   column-rule: 5px double #111;
@@ -259,122 +267,80 @@ figure img,
   margin: 0 auto 8px;
   border: 6px solid #111;
   box-sizing: border-box;
-  background: #fff;
-  filter: contrast(1.08) saturate(1.08);
-}
-
-.hero-photo img {
-  border-width: 8px;
-  box-shadow: 12px 12px 0 #111;
 }
 
 figcaption,
-.photo-block figcaption,
+.caption,
 .tabloid-caption {
   display: inline-block;
-  margin-top: -2px;
-  padding: 7px 10px;
+  margin-top: 4px;
+  padding: 4px 10px;
   background: #111;
   color: #fff;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
   font-size: 20px;
-  line-height: 1.42;
-  text-align: left;
+  line-height: 1.35;
   font-weight: 700;
 }
 
-hr {
-  border: 0;
-  border-top: 7px solid #111;
-  margin: 24px 0;
+ul,
+ol {
+  margin: 0 0 1em 1.4em;
+  padding: 0;
+}
+
+li {
+  margin: 0 0 0.38em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  background: #fff;
+  font-size: 22px;
+  break-inside: avoid;
+}
+
+th,
+td {
+  border: 4px solid #111;
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+th {
+  background: #ffd400;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", YuGothic, sans-serif;
+  font-weight: 900;
 }
 
 blockquote,
-.quote,
 .note-box,
 .warning-box,
 .summary-box,
 .push-point,
 .column-box,
-.dungeon-card,
-.illegal-item,
-.flyer-ad,
-.job-ad,
-.prediction-section,
 .danger-box {
-  border: 5px solid #111;
-  background: #fff9e8;
-  padding: 14px;
-  margin: 18px 0;
+  margin: 18px 0 22px;
+  padding: 14px 18px;
+  border: 6px solid #111;
+  background: #fff;
   box-shadow: 6px 6px 0 #111;
+  font-weight: 700;
 }
 
 .warning-box,
-.danger-box,
-.illegal-item {
-  background: #ffe1e1;
+.danger-box {
+  background: #ffe2df;
   border-color: #c40018;
 }
 
-.flyer-ad,
-.job-ad {
-  background: #fff;
-  border-style: dashed;
+.summary-box,
+.push-point {
+  background: #fff4b8;
 }
 
-ul,
-ol {
-  margin: 0 0 1em 1.2em;
-  padding: 0;
-}
-
-li::marker {
-  color: #c40018;
-  font-weight: 900;
-}
-
-.article-no-09 .article-sheet,
-.article-no-10 .article-sheet,
-.article-no-11 .article-sheet,
-.article-no-12 .article-sheet,
-.article-no-13 .article-sheet {
-  column-count: 3;
-  column-gap: 28px;
-  font-size: 22px;
-  line-height: 1.52;
-}
-
-.article-no-09 h1,
-.article-no-10 h1,
-.article-no-11 h1,
-.article-no-12 h1,
-.article-no-13 h1 {
-  font-size: 66px;
-}
-
-.article-no-17 .fixed-page,
-.article-no-18 .fixed-page,
-.article-no-19 .fixed-page,
-.article-no-20 .fixed-page,
-.article-no-21 .fixed-page,
-.article-no-22 .fixed-page,
-.article-no-23 .fixed-page {
-  background:
-    linear-gradient(90deg, rgba(0,0,0,0.06) 0 1px, transparent 1px 100%),
-    #ece1cc;
-}
-
-.article-no-17 header,
-.article-no-18 header,
-.article-no-19 header,
-.article-no-20 header,
-.article-no-21 header,
-.article-no-22 header,
-.article-no-23 header {
-  background: #f2d2b6;
-}
-
-@media screen and (max-width: 1456px) {
-  .fixed-page {
-    transform-origin: top left;
-  }
+.article-sheet > *:first-child {
+  margin-top: 0;
 }
