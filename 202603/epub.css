@@ -1,4 +1,9 @@
 /*
+  Legacy EPUB-name CSS.
+
+  This file is kept for compatibility with old *_epub.html files.
+  Current primary reflow CSS is 202603/reflow.css.
+
   EPUB専用CSS
   対象: 202603 各記事フォルダ内の *_epub.html
 
