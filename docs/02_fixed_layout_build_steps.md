@@ -37,7 +37,9 @@ fixed_layout版
 202603/*/fixed_layout.css
 tools/export_fixed_layout_images.mjs
 tools/export_fixed_layout_images.sh
+tools/prepare_kindle_pages.mjs
 exports/fixed_layout_images/
+exports/kindle_pages/
 ```
 
 ---
@@ -52,7 +54,8 @@ exports/fixed_layout_images/
 5. PNGサイズを確認する
 6. 主要記事の見た目を確認する
 7. 致命的な崩れだけ直す
-8. fixed_layout版として一区切りにする
+8. Kindle Create用に連番ページ化する
+9. fixed_layout版として一区切りにする
 ```
 
 ---
@@ -140,6 +143,12 @@ npx playwright install chromium
 find exports/fixed_layout_images -name '*.png' -print
 ```
 
+PowerShellの場合：
+
+```powershell
+(Get-ChildItem exports/fixed_layout_images -Filter *.png).Count
+```
+
 期待：
 
 ```text
@@ -217,7 +226,60 @@ v0.1では後回しにするもの：
 
 ---
 
-## 8. fixed_layout版として一区切りにする
+## 8. Kindle Create用に連番ページ化する
+
+Kindle Create に投入する前に、日本語ファイル名のPNGを半角英数字の連番にコピーする。
+
+使用スクリプト：
+
+```text
+tools/prepare_kindle_pages.mjs
+```
+
+実行：
+
+```bash
+node tools/prepare_kindle_pages.mjs
+```
+
+入力：
+
+```text
+exports/fixed_layout_images/*.png
+```
+
+出力：
+
+```text
+exports/kindle_pages/0001.png
+exports/kindle_pages/0002.png
+...
+exports/kindle_pages/0023.png
+```
+
+期待：
+
+```text
+Prepared 23 Kindle pages in exports/kindle_pages
+```
+
+PowerShellで確認する場合：
+
+```powershell
+(Get-ChildItem exports/kindle_pages -Filter *.png).Count
+```
+
+期待：
+
+```text
+23
+```
+
+Kindle Create では `exports/kindle_pages` 内の `0001.png` から `0023.png` を全選択して Comics プロジェクトに読み込む。
+
+---
+
+## 9. fixed_layout版として一区切りにする
 
 以下を満たしたら、fixed_layout版として一区切りにする。
 
@@ -228,11 +290,12 @@ v0.1では後回しにするもの：
 - [ ] 主要記事が紙面として読める
 - [ ] 画像が表示される
 - [ ] 致命的な本文崩壊がない
+- [ ] `exports/kindle_pages` に `0001.png` 〜 `0023.png` がある
 
 ---
 
 ## 完了宣言
 
 ```text
-異世界雑誌 202603号 fixed_layout版は、23本の記事を固定紙面PNGとして書き出せる状態に到達した。
+異世界雑誌 202603号 fixed_layout版は、23本の記事を固定紙面PNGとして書き出し、Kindle Createに投入できる連番PNGとして準備できる状態に到達した。
 ```
