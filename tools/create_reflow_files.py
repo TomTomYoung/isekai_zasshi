@@ -3,11 +3,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ISSUE_DIR = ROOT / "202603"
 
-RENAMES = {
-    "目次_epub.html": "目次_reflow.html",
-    "epub.css": "reflow.css",
-}
-
 
 def convert_text(text: str) -> str:
     return (
@@ -16,8 +11,8 @@ def convert_text(text: str) -> str:
         .replace("目次_epub.html", "目次_reflow.html")
         .replace("_epub.html", "_reflow.html")
         .replace("epub-toc", "reflow-toc")
-        .replace("EPUB", "Reflow")
         .replace("EPUB向け", "Reflow向け")
+        .replace("EPUB", "Reflow")
     )
 
 
@@ -49,7 +44,7 @@ def main() -> None:
             changed.append(new_path.relative_to(ROOT).as_posix())
 
     if changed:
-        print("Created/updated reflow files:")
+        print(f"Created/updated {len(changed)} reflow files:")
         for item in changed:
             print(f"- {item}")
     else:
