@@ -7,10 +7,30 @@
   <link rel="stylesheet" href="fixed_layout.css">
   <style>
     .article-no-12 .article-sheet {
-      column-count: 2;
-      column-gap: 38px;
-      font-size: 23px;
-      line-height: 1.5;
+      column-count: 1;
+      column-rule: none;
+      font-size: 26px;
+      line-height: 1.52;
+    }
+
+    .article-no-12 header,
+    .article-no-12 .flyer-ad,
+    .article-no-12 .job-ad,
+    .article-no-12 figure,
+    .article-no-12 .photo-block {
+      column-span: none;
+    }
+
+    .article-no-12 h1 {
+      font-size: 72px;
+      line-height: 1.06;
+    }
+
+    .article-no-12 img,
+    .article-no-12 figure img,
+    .article-no-12 .photo-block img {
+      width: 78%;
+      max-width: 78%;
     }
   </style>
 </head>
