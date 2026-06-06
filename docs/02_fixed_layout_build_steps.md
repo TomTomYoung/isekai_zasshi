@@ -1,12 +1,8 @@
-# 異世界雑誌 202603号 fixed_layout ビルド手順 v0.1
+# 異世界丸見え実話 202603号 fixed_layout ビルド手順 v0.2
 
 ## 目的
 
-この文書は、異世界雑誌 202603号の fixed_layout 版をPNGとして書き出し、一区切りの成果物にするための作業手順である。
-
-現在の最優先作業は fixed_layout 版である。
-
-reflow版は fixed_layout 版の次に扱う。
+この文書は、202603号の fixed_layout 版を **1456×2056px のページPNG** として書き出し、Kindle用素材または固定レイアウトEPUBへまとめるための手順である。
 
 ---
 
@@ -14,19 +10,19 @@ reflow版は fixed_layout 版の次に扱う。
 
 ```text
 fixed_layout版
-= 固定紙面向け。1456×2056px の紙面をPNG画像として書き出す版。
+= 固定紙面向け。1ページを 1456×2056px のPNGとして書き出す版。
 ```
 
-1記事につき、原則として以下を持つ。
+記事HTMLは **記事単位で1本** のまま維持する。
+
+ただし、HTML内部ではJSにより必要枚数の `.fixed-page` を生成する。
 
 ```text
-202603/XX_記事フォルダ/fixed_layout.html
-202603/XX_記事フォルダ/fixed_layout.css
+1記事HTML
+  ├─ .fixed-page 001
+  ├─ .fixed-page 002
+  └─ .fixed-page 003 ...
 ```
-
-`fixed_layout.html` は通常記事HTMLを読み込み、`.fixed-page` 内に流し込む。
-
-`fixed_layout.css` は固定紙面の見た目を決める。
 
 ---
 
@@ -38,8 +34,10 @@ fixed_layout版
 tools/export_fixed_layout_images.mjs
 tools/export_fixed_layout_images.sh
 tools/prepare_kindle_pages.mjs
+tools/build_fixed_layout_epub.py
 exports/fixed_layout_images/
 exports/kindle_pages/
+exports/isekai_marumie_jitsuwa_202603_fixed_layout.epub
 ```
 
 ---
@@ -48,13 +46,13 @@ exports/kindle_pages/
 
 ```text
 1. fixed_layout.html / fixed_layout.css の存在を確認する
-2. 書き出しスクリプトを確認する
+2. 記事HTML内で .fixed-page が複数生成される前提を確認する
 3. PNGを書き出す
-4. 出力PNGの数を確認する
-5. PNGサイズを確認する
-6. 主要記事の見た目を確認する
-7. 致命的な崩れだけ直す
-8. Kindle Create用に連番ページ化する
+4. 出力PNGの数とサイズを確認する
+5. 主要記事の見た目を確認する
+6. 致命的な崩れだけ直す
+7. Kindle用に連番ページ化する
+8. 必要なら固定レイアウトEPUBを直接生成する
 9. fixed_layout版として一区切りにする
 ```
 
@@ -63,18 +61,6 @@ exports/kindle_pages/
 ## 1. fixed_layoutファイルの存在確認
 
 対象は、202603号の23本の記事である。
-
-確認対象：
-
-```text
-202603/01_聖女泥酔スクープ記事/fixed_layout.html
-202603/01_聖女泥酔スクープ記事/fixed_layout.css
-...
-202603/23_鉄人会幹部襲撃事件/fixed_layout.html
-202603/23_鉄人会幹部襲撃事件/fixed_layout.css
-```
-
-確認コマンド例：
 
 ```bash
 find 202603 -path '*/fixed_layout.html' -print
@@ -90,21 +76,37 @@ fixed_layout.css が23本
 
 ---
 
-## 2. 書き出しスクリプトを確認する
+## 2. 固定ページ構造
 
-使用するスクリプト：
+各記事の `fixed_layout.html` は、通常記事HTMLを読み込み、内容量に応じて `.fixed-page` を生成する。
 
-```text
-tools/export_fixed_layout_images.sh
-tools/export_fixed_layout_images.mjs
+期待される構造：
+
+```html
+<main class="article-pages" id="article-pages"></main>
 ```
 
-`export_fixed_layout_images.mjs` は、`202603` 配下の `XX_` で始まる記事フォルダを走査し、`fixed_layout.html` が存在する記事だけをPNG出力対象にする。
+実行後のDOM：
 
-出力先：
+```html
+<main class="article-pages">
+  <section class="fixed-page">
+    <section class="article-sheet">...</section>
+  </section>
+  <section class="fixed-page">
+    <section class="article-sheet">...</section>
+  </section>
+</main>
+```
 
-```text
-exports/fixed_layout_images/
+CSS側では、必ず以下を満たす。
+
+```css
+.fixed-page {
+  width: 1456px;
+  height: 2056px;
+  overflow: hidden;
+}
 ```
 
 ---
@@ -117,49 +119,49 @@ exports/fixed_layout_images/
 ./tools/export_fixed_layout_images.sh
 ```
 
-Windows環境で `.sh` が使えない場合は、Node側を直接実行する。
+Windows環境で `.sh` が使えない場合：
 
 ```bash
 node tools/export_fixed_layout_images.mjs
 ```
 
-Playwright が未導入の場合は、先に依存関係を入れる。
+Playwright が未導入の場合：
 
 ```bash
 npm install
+npx playwright install chromium
 ```
 
-必要なら：
+出力先：
 
-```bash
-npx playwright install chromium
+```text
+exports/fixed_layout_images/
+```
+
+出力ファイル例：
+
+```text
+01_聖女泥酔スクープ記事_001.png
+01_聖女泥酔スクープ記事_002.png
+02_聖騎士不倫_001.png
+...
 ```
 
 ---
 
-## 4. 出力PNGの数を確認する
+## 4. 出力PNGの数とサイズを確認する
+
+PNGの枚数は、記事をページ分割するため **23枚固定ではない**。
 
 ```bash
 find exports/fixed_layout_images -name '*.png' -print
 ```
 
-PowerShellの場合：
+PowerShell：
 
 ```powershell
 (Get-ChildItem exports/fixed_layout_images -Filter *.png).Count
 ```
-
-期待：
-
-```text
-23枚
-```
-
-不足がある場合は、該当記事フォルダに `fixed_layout.html` がない、または書き出し途中で止まっている可能性が高い。
-
----
-
-## 5. PNGサイズを確認する
 
 期待サイズ：
 
@@ -173,10 +175,11 @@ PowerShellの場合：
 - [ ] 高さが2056pxである
 - [ ] 余白が極端に崩れていない
 - [ ] `.fixed-page` 全体が画像化されている
+- [ ] ファイル名が `記事名_001.png` 形式になっている
 
 ---
 
-## 6. 主要記事の見た目確認
+## 5. 主要記事の見た目確認
 
 優先確認対象：
 
@@ -200,14 +203,15 @@ PowerShellの場合：
 - [ ] 画像が表示されている
 - [ ] キャプションが読める
 - [ ] 見出しが潰れていない
-- [ ] 2段組または3段組が破綻していない
+- [ ] 段組が破綻していない
 - [ ] 下端で重要本文が切れていない
+- [ ] ページ送り後に記事内容が継続している
 
 ---
 
-## 7. 致命的な崩れだけ直す
+## 6. 致命的な崩れだけ直す
 
-v0.1で必ず直すもの：
+v0.2で必ず直すもの：
 
 - [ ] PNGが出力できない
 - [ ] 記事が真っ白になる
@@ -215,8 +219,9 @@ v0.1で必ず直すもの：
 - [ ] タイトルが読めない
 - [ ] 本文がほぼ読めない
 - [ ] 紙面外にはみ出して主要情報が消える
+- [ ] ページ分割後に大きな本文欠落がある
 
-v0.1では後回しにするもの：
+v0.2では後回しにするもの：
 
 - [ ] 全記事の完全な紙面最適化
 - [ ] 細かい禁則処理
@@ -226,17 +231,9 @@ v0.1では後回しにするもの：
 
 ---
 
-## 8. Kindle Create用に連番ページ化する
+## 7. Kindle用に連番ページ化する
 
 Kindle Create に投入する前に、日本語ファイル名のPNGを半角英数字の連番にコピーする。
-
-使用スクリプト：
-
-```text
-tools/prepare_kindle_pages.mjs
-```
-
-実行：
 
 ```bash
 node tools/prepare_kindle_pages.mjs
@@ -254,28 +251,37 @@ exports/fixed_layout_images/*.png
 exports/kindle_pages/0001.png
 exports/kindle_pages/0002.png
 ...
-exports/kindle_pages/0023.png
 ```
 
-期待：
+並び順：
 
 ```text
-Prepared 23 Kindle pages in exports/kindle_pages
+記事番号 → 記事内ページ番号
 ```
 
-PowerShellで確認する場合：
+---
 
-```powershell
-(Get-ChildItem exports/kindle_pages -Filter *.png).Count
+## 8. 固定レイアウトEPUBを直接生成する
+
+Kindle Createを使わず、連番PNGから固定レイアウトEPUBを生成する場合：
+
+```bash
+python tools/build_fixed_layout_epub.py
 ```
 
-期待：
+入力：
 
 ```text
-23
+exports/kindle_pages/*.png
 ```
 
-Kindle Create では `exports/kindle_pages` 内の `0001.png` から `0023.png` を全選択して Comics プロジェクトに読み込む。
+出力：
+
+```text
+exports/isekai_marumie_jitsuwa_202603_fixed_layout.epub
+```
+
+このEPUBは、各PNGを1つのXHTMLページに包んで `manifest` と `spine` に並べる。
 
 ---
 
@@ -285,17 +291,18 @@ Kindle Create では `exports/kindle_pages` 内の `0001.png` から `0023.png` 
 
 - [ ] 23本の記事に `fixed_layout.html` がある
 - [ ] 23本の記事に `fixed_layout.css` がある
-- [ ] PNGが23枚出力される
-- [ ] PNGが1456×2056pxである
+- [ ] PNGが出力される
+- [ ] すべてのPNGが1456×2056pxである
 - [ ] 主要記事が紙面として読める
 - [ ] 画像が表示される
 - [ ] 致命的な本文崩壊がない
-- [ ] `exports/kindle_pages` に `0001.png` 〜 `0023.png` がある
+- [ ] `exports/kindle_pages` に連番PNGがある
+- [ ] 必要なら固定レイアウトEPUBが生成できる
 
 ---
 
 ## 完了宣言
 
 ```text
-異世界雑誌 202603号 fixed_layout版は、23本の記事を固定紙面PNGとして書き出し、Kindle Createに投入できる連番PNGとして準備できる状態に到達した。
+異世界丸見え実話 202603号 fixed_layout版は、記事単位HTMLを維持しつつ、内部で1456×2056pxページへ分割し、Kindle用連番PNGまたは固定レイアウトEPUBとして準備できる状態に到達した。
 ```
