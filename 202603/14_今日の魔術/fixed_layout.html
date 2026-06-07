@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=1456, initial-scale=1.0">
   <title>固定レイアウト版</title>
   <link rel="stylesheet" href="fixed_layout.css">
+  <script src="../../tools/fixed_layout_image_expand.js" defer></script>
 </head>
 <body>
   <main class="article-pages" id="article-pages"></main>
@@ -15,8 +16,9 @@
       const folderName = parts.slice(-2, -1)[0] || '';
       const articleNo = (folderName.match(/^(\d+)_/) || [null, '00'])[1];
       const source = folderName.replace(/^\d+_/, '') + '.html';
-      const PAGE_BUDGET = 30;
       const ATOMIC_SELECTOR = 'h1,h2,h3,h4,p,figure,table,ul,ol,blockquote';
+      const MEASURE_SAFETY_PX = 28;
+      const SECTION_SOFT_TEXT_CHARS = 1200;
 
       function makePage(index) {
         const page = document.createElement('section');
@@ -51,84 +53,216 @@
         return blocks;
       }
 
-      function blockWeight(block) {
-        if (block.nodeType !== Node.ELEMENT_NODE) return 1;
-        const tag = block.tagName.toLowerCase();
-        const textLength = block.textContent.trim().length;
-        if (tag === 'h1') return 6;
-        if (tag === 'h2') return 4;
-        if (tag === 'h3' || tag === 'h4') return 3;
-        if (tag === 'figure') return 12;
-        if (tag === 'table') return Math.max(10, Math.ceil(block.querySelectorAll('tr').length / 2));
-        if (tag === 'ul' || tag === 'ol') return Math.max(4, Math.ceil(block.querySelectorAll('li').length / 2));
-        if (tag === 'blockquote') return Math.max(4, Math.ceil(textLength / 90));
-        return Math.max(1, Math.ceil(textLength / 105));
-      }
-
-      function unitWeight(unit) {
-        return Array.from(unit.children).reduce((sum, child) => sum + blockWeight(child), 0);
-      }
-
-      function makeUnit(kind = 'text') {
+      function makePackage(kind = 'section') {
         const unit = document.createElement('section');
-        unit.className = 'content-unit content-unit-' + kind;
+        unit.className = 'content-unit content-package content-package-' + kind;
+        unit.dataset.packageKind = kind;
         return unit;
       }
 
-      function pushUnit(units, unit) {
-        if (unit && unit.children.length > 0) units.push(unit);
+      function pushPackage(packages, unit) {
+        if (unit && unit.children.length > 0) packages.push(unit);
       }
 
-      function buildContentUnits(blocks) {
-        const units = [];
-        let current = makeUnit('text');
+      function tagOf(block) {
+        return block && block.nodeType === Node.ELEMENT_NODE ? block.tagName.toLowerCase() : '';
+      }
+
+      function packageStats(unit) {
+        const blocks = Array.from(unit.children);
+        const text = unit.textContent.trim();
+        return {
+          hasHeading: Boolean(unit.querySelector('h1,h2,h3,h4')),
+          hasSectionHeading: Boolean(unit.querySelector('h2')),
+          hasMedia: Boolean(unit.querySelector('figure,img')),
+          hasTable: Boolean(unit.querySelector('table')),
+          paragraphCount: unit.querySelectorAll('p,ul,ol,blockquote').length,
+          textChars: text.length,
+          blockCount: blocks.length,
+        };
+      }
+
+      function shouldSoftClosePackage(unit, incomingBlock) {
+        const incomingTag = tagOf(incomingBlock);
+        if (incomingTag === 'h2') return true;
+        const stats = packageStats(unit);
+        if (stats.hasMedia && stats.paragraphCount >= 1) return true;
+        if (stats.hasTable && stats.paragraphCount >= 1) return true;
+        if (stats.hasSectionHeading && stats.textChars >= SECTION_SOFT_TEXT_CHARS && stats.paragraphCount >= 3) return true;
+        return false;
+      }
+
+      function buildContentPackages(blocks) {
+        const packages = [];
+        let current = makePackage('intro');
 
         for (const block of blocks) {
           if (block.nodeType !== Node.ELEMENT_NODE) continue;
-          const tag = block.tagName.toLowerCase();
+          const tag = tagOf(block);
 
           if (tag === 'h1') {
-            pushUnit(units, current);
-            const unit = makeUnit('headline');
-            unit.appendChild(block);
-            units.push(unit);
-            current = makeUnit('text');
-            continue;
-          }
-
-          if (tag === 'figure' || tag === 'table') {
-            pushUnit(units, current);
-            const unit = makeUnit(tag === 'figure' ? 'media' : 'table');
-            unit.appendChild(block);
-            units.push(unit);
-            current = makeUnit('text');
+            pushPackage(packages, current);
+            current = makePackage('headline');
+            current.appendChild(block);
+            pushPackage(packages, current);
+            current = makePackage('intro');
             continue;
           }
 
           if (tag === 'h2') {
-            pushUnit(units, current);
-            current = makeUnit('section');
+            pushPackage(packages, current);
+            current = makePackage('section');
             current.appendChild(block);
             continue;
           }
 
+          if (shouldSoftClosePackage(current, block)) {
+            pushPackage(packages, current);
+            current = makePackage('section-continued');
+          }
+
           current.appendChild(block);
-          if (unitWeight(current) >= 16) {
-            pushUnit(units, current);
-            current = makeUnit('text');
+        }
+
+        pushPackage(packages, current);
+        return packages;
+      }
+
+      function outerHeight(el) {
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        const marginTop = parseFloat(style.marginTop) || 0;
+        const marginBottom = parseFloat(style.marginBottom) || 0;
+        return Math.ceil(rect.height + marginTop + marginBottom);
+      }
+
+      async function waitForImages(root) {
+        const images = Array.from(root.querySelectorAll('img'));
+        await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => {
+            const done = () => resolve();
+            img.addEventListener('load', done, { once: true });
+            img.addEventListener('error', done, { once: true });
+            setTimeout(done, 1500);
+          });
+        }));
+      }
+
+      async function measureOne(probeSheet, node) {
+        const clone = node.cloneNode(true);
+        probeSheet.appendChild(clone);
+        await waitForImages(clone);
+        const height = outerHeight(clone);
+        probeSheet.innerHTML = '';
+        return height;
+      }
+
+      async function splitOversizePackage(unit, capacity, probeSheet) {
+        const children = Array.from(unit.children).map(child => child.cloneNode(true));
+        const result = [];
+        let current = makePackage(unit.dataset.packageKind || 'section-split');
+        let used = 0;
+        let carryHeading = null;
+
+        for (const child of children) {
+          const single = makePackage(unit.dataset.packageKind || 'section-split');
+          if (carryHeading && tagOf(child) !== 'h2') single.appendChild(carryHeading.cloneNode(true));
+          single.appendChild(child.cloneNode(true));
+          const h = await measureOne(probeSheet, single);
+
+          if (used > 0 && used + h > capacity) {
+            pushPackage(result, current);
+            current = makePackage('section-split');
+            used = 0;
+          }
+
+          if (tagOf(child) === 'h2') carryHeading = child.cloneNode(true);
+          current.appendChild(child);
+          used += h;
+        }
+
+        pushPackage(result, current);
+        return result;
+      }
+
+      async function measureUnits(units, slug, capacityProbeSheet) {
+        const probePage = document.createElement('section');
+        probePage.className = 'fixed-page article-no-' + articleNo + ' measurement-page';
+        probePage.style.position = 'absolute';
+        probePage.style.left = '-20000px';
+        probePage.style.top = '0';
+        probePage.style.visibility = 'hidden';
+        probePage.style.pointerEvents = 'none';
+
+        const probeSheet = document.createElement('section');
+        probeSheet.className = 'article-sheet';
+        probePage.appendChild(probeSheet);
+        document.body.appendChild(probePage);
+
+        const capacity = Math.max(0, capacityProbeSheet.getBoundingClientRect().height - MEASURE_SAFETY_PX);
+        const finalUnits = [];
+
+        for (const unit of units) {
+          const h = await measureOne(probeSheet, unit);
+          if (h > capacity && unit.children.length > 1) {
+            const splitUnits = await splitOversizePackage(unit, capacity, probeSheet);
+            finalUnits.push(...splitUnits);
+          } else {
+            finalUnits.push(unit);
           }
         }
 
-        pushUnit(units, current);
-        return units;
+        const items = [];
+        items.push({ type: 'slug', node: slug, height: await measureOne(probeSheet, slug), stats: { slug: true } });
+
+        for (let i = 0; i < finalUnits.length; i += 1) {
+          const unit = finalUnits[i];
+          items.push({
+            type: 'unit',
+            index: i,
+            node: unit,
+            height: await measureOne(probeSheet, unit),
+            stats: packageStats(unit),
+            kind: unit.dataset.packageKind || '',
+          });
+        }
+
+        probePage.remove();
+        return { capacity, items };
       }
 
-      function shouldStartNewPage(unit, sheet, used) {
-        if (!sheet || sheet.childNodes.length === 0) return false;
-        const weight = unitWeight(unit);
-        const isMedia = unit.classList.contains('content-unit-media') || unit.classList.contains('content-unit-table');
-        if (isMedia && used >= 12) return true;
-        return used + weight > PAGE_BUDGET;
+      function paginateMeasuredUnits(sheet, measured) {
+        const metrics = {
+          source,
+          articleNo,
+          capacity: measured.capacity,
+          safetyPx: MEASURE_SAFETY_PX,
+          pages: [],
+          units: measured.items.map(item => ({ type: item.type, index: item.index ?? null, height: item.height, kind: item.kind || '', stats: item.stats || {} })),
+        };
+
+        let used = 0;
+        let pageIndex = 1;
+        sheet.innerHTML = '';
+
+        function startNewPage() {
+          metrics.pages.push({ index: pageIndex, used });
+          sheet = makePage(pages.children.length);
+          pageIndex += 1;
+          used = 0;
+        }
+
+        for (const item of measured.items) {
+          if (used > 0 && used + item.height > measured.capacity) startNewPage();
+          sheet.appendChild(item.node);
+          item.node.dataset.measuredHeight = String(item.height);
+          item.node.dataset.packageStats = JSON.stringify(item.stats || {});
+          used += item.height;
+        }
+
+        metrics.pages.push({ index: pageIndex, used });
+        window.__fixedLayoutMetrics = metrics;
       }
 
       let sheet = makePage(0);
@@ -164,19 +298,11 @@
       const slug = document.createElement('div');
       slug.className = 'gossip-slug';
       slug.textContent = '本誌独占　異世界ゴシップ総力取材班';
-      sheet.innerHTML = '';
-      sheet.appendChild(slug);
-      let used = 3;
 
-      const units = buildContentUnits(blocks);
-      for (const unit of units) {
-        if (shouldStartNewPage(unit, sheet, used)) {
-          sheet = makePage(pages.children.length);
-          used = 0;
-        }
-        sheet.appendChild(unit);
-        used += unitWeight(unit);
-      }
+      const units = buildContentPackages(blocks);
+      if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 800))]);
+      const measured = await measureUnits(units, slug, sheet);
+      paginateMeasuredUnits(sheet, measured);
     })();
   </script>
 </body>
