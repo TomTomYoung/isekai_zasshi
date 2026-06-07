@@ -35,10 +35,6 @@ function timeout(ms, label) {
   return new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms));
 }
 
-function withTimeout(promise, ms, label) {
-  return Promise.race([promise, timeout(ms, label)]);
-}
-
 function toUrlPath(filePath) {
   const rel = path.relative(ROOT, filePath).split(path.sep).map(encodeURIComponent).join('/');
   return '/' + rel;
@@ -114,8 +110,8 @@ function crashResult(target, type, message, pageErrors = []) {
   };
 }
 
-async function inspectPage(page) {
-  return await page.evaluate(({ PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR }) => {
+async function inspectPage(page, targetName) {
+  return await page.evaluate(({ PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR, targetName }) => {
     function rectOf(el) {
       const r = el.getBoundingClientRect();
       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
@@ -129,6 +125,7 @@ async function inspectPage(page) {
       return { level, type, selector, message, data };
     }
 
+    const isCover = targetName.startsWith('00_');
     const issues = [];
     const fixedPages = Array.from(document.querySelectorAll('.fixed-page'));
     if (fixedPages.length === 0) {
@@ -144,13 +141,13 @@ async function inspectPage(page) {
       }
 
       const text = fixedPage.textContent.trim();
-      if (text.length < 50) issues.push(issue('warn', 'near-empty-page', pageLabel, 'Page has very little text content.', { pageIndex, textLength: text.length }));
+      if (!isCover && text.length < 50) issues.push(issue('warn', 'near-empty-page', pageLabel, 'Page has very little text content.', { pageIndex, textLength: text.length }));
       if (text.includes('固定レイアウト生成エラー') || text.includes('固定レイアウト読込エラー')) {
         issues.push(issue('error', 'fallback-page', pageLabel, 'Fallback/error page is present.', { pageIndex }));
       }
 
       const sheet = fixedPage.querySelector('.article-sheet');
-      if (!sheet) issues.push(issue('error', 'missing-article-sheet', pageLabel, 'Missing .article-sheet.', { pageIndex }));
+      if (!isCover && !sheet) issues.push(issue('error', 'missing-article-sheet', pageLabel, 'Missing .article-sheet.', { pageIndex }));
       const usableHeight = sheet ? sheet.getBoundingClientRect().height : pr.height;
 
       fixedPage.querySelectorAll(CHECK_SELECTOR).forEach(el => {
@@ -164,7 +161,7 @@ async function inspectPage(page) {
           issues.push(issue('error', 'overflow-y', selector, 'Element overflows page vertically.', { pageIndex, rect: r, pageRect: pr, overflowBottom: Math.max(0, r.bottom - pr.bottom) }));
         }
         const tag = el.tagName.toLowerCase();
-        if ((tag === 'table' || tag === 'figure' || tag === 'img') && r.height > usableHeight * 0.95) {
+        if (!isCover && (tag === 'table' || tag === 'figure' || tag === 'img') && r.height > usableHeight * 0.95) {
           issues.push(issue('warn', 'oversized-element', selector, 'Element is nearly as tall as the usable page area.', { pageIndex, rect: r, usableHeight }));
         }
         if ((tag === 'table' || tag === 'figure' || el.classList.contains('note-box') || el.classList.contains('warning-box')) && el.getClientRects().length > 1) {
@@ -173,7 +170,7 @@ async function inspectPage(page) {
       });
     });
     return { pageCount: fixedPages.length, issues };
-  }, { PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR });
+  }, { PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR, targetName });
 }
 
 async function validateTargetInner(baseUrl, target) {
@@ -200,7 +197,7 @@ async function validateTargetInner(baseUrl, target) {
       if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 300))]);
       await new Promise(resolve => requestAnimationFrame(resolve));
     });
-    const result = await inspectPage(page);
+    const result = await inspectPage(page, target.name);
     return { name: target.name, status: result.issues.some(i => i.level === 'error') ? 'error' : result.issues.length ? 'warn' : 'ok', pageErrors, ...result };
   } catch (error) {
     return crashResult(target, 'validator-crash', error.message, pageErrors);
