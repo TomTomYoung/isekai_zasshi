@@ -23,6 +23,7 @@ function run(command, args) {
 }
 
 async function main() {
+  await run('node', ['tools/sync_fixed_layout_sources.mjs']);
   await run('node', ['tools/check_fixed_layout_sources.mjs']);
   await run('node', ['tools/validate_fixed_layout_geometry.mjs']);
   await run('node', ['tools/export_fixed_layout_images.mjs']);
