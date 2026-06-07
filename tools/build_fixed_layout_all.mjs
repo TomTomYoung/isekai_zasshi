@@ -23,6 +23,7 @@ function run(command, args) {
 }
 
 async function main() {
+  await run('node', ['tools/validate_fixed_layout_geometry.mjs']);
   await run('node', ['tools/export_fixed_layout_images.mjs']);
   await run('node', ['tools/prepare_kindle_pages.mjs']);
   await run('python', ['tools/build_fixed_layout_epub.py']);
