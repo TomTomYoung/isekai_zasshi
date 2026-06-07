@@ -15,12 +15,12 @@
       const folderName = parts.slice(-2, -1)[0] || '';
       const articleNo = (folderName.match(/^(\d+)_/) || [null, '00'])[1];
       const source = folderName.replace(/^\d+_/, '') + '.html';
+      const MAX_NODES_PER_PAGE = 18;
 
       function makePage(index) {
         const page = document.createElement('section');
         page.className = 'fixed-page article-no-' + articleNo;
         page.dataset.pageIndex = String(index + 1).padStart(3, '0');
-
         const sheet = document.createElement('section');
         sheet.className = 'article-sheet';
         sheet.dataset.articleNo = articleNo;
@@ -31,41 +31,39 @@
       }
 
       function renderError(sheet, message) {
-        sheet.innerHTML = `
-          <header>
-            <div class="gossip-slug">固定レイアウト読込エラー</div>
-            <h1>${source}</h1>
-          </header>
-          <div class="warning-box">
-            <p>${message}</p>
-            <p>元記事HTMLのファイル名、パス、画像読込、または本文構造を確認してください。</p>
-          </div>
-        `;
+        sheet.innerHTML = '<header><div class="gossip-slug">固定レイアウト読込エラー</div><h1>' + source + '</h1></header><div class="warning-box"><p>' + message + '</p></div>';
+      }
+
+      function shouldStartNewPage(node, sheet, nodeCountOnPage) {
+        if (!sheet || sheet.childNodes.length === 0) return false;
+        if (node.nodeType !== Node.ELEMENT_NODE) return false;
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'h2') return true;
+        if ((tag === 'figure' || tag === 'table') && nodeCountOnPage >= 6) return true;
+        return nodeCountOnPage >= MAX_NODES_PER_PAGE;
       }
 
       let sheet = makePage(0);
       let text = '';
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15000);
+        const timer = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(source, { signal: controller.signal });
         clearTimeout(timer);
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
         text = await res.text();
       } catch (error) {
-        renderError(sheet, `元記事HTMLを読み込めませんでした: ${error.message}`);
+        renderError(sheet, '元記事HTMLを読み込めませんでした: ' + error.message);
         return;
       }
 
       const doc = new DOMParser().parseFromString(text, 'text/html');
       const title = doc.querySelector('title');
       if (title) document.title = title.textContent + '｜固定レイアウト版';
-
       const article = doc.querySelector('article, .chapter, main, body');
       const staging = document.createElement('div');
       staging.innerHTML = article ? article.innerHTML : text;
       staging.querySelectorAll('script, style, link[rel="stylesheet"]').forEach(el => el.remove());
-
       const h1 = staging.querySelector('h1');
       if (h1) {
         const slug = document.createElement('div');
@@ -73,30 +71,20 @@
         slug.textContent = '本誌独占　異世界ゴシップ総力取材班';
         h1.before(slug);
       }
-
       const firstFigure = staging.querySelector('figure, .photo-block');
       if (firstFigure) firstFigure.classList.add('hero-photo');
-
-      staging.querySelectorAll('h2').forEach((h2, i) => {
-        h2.dataset.index = String(i + 1).padStart(2, '0');
-      });
-
-      staging.querySelectorAll('figcaption').forEach(caption => {
-        caption.classList.add('tabloid-caption');
-      });
-
-      const nodes = Array.from(staging.childNodes).filter(node => {
-        return node.nodeType !== Node.TEXT_NODE || node.textContent.trim();
-      });
-
+      staging.querySelectorAll('h2').forEach((h2, i) => h2.dataset.index = String(i + 1).padStart(2, '0'));
+      staging.querySelectorAll('figcaption').forEach(caption => caption.classList.add('tabloid-caption'));
+      const nodes = Array.from(staging.childNodes).filter(node => node.nodeType !== Node.TEXT_NODE || node.textContent.trim());
       sheet.innerHTML = '';
+      let nodeCountOnPage = 0;
       for (const node of nodes) {
-        sheet.appendChild(node);
-        if (sheet.scrollHeight > sheet.clientHeight && sheet.childNodes.length > 1) {
-          sheet.removeChild(node);
+        if (shouldStartNewPage(node, sheet, nodeCountOnPage)) {
           sheet = makePage(pages.children.length);
-          sheet.appendChild(node);
+          nodeCountOnPage = 0;
         }
+        sheet.appendChild(node);
+        nodeCountOnPage += 1;
       }
     })();
   </script>
