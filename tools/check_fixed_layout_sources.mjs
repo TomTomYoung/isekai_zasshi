@@ -45,9 +45,10 @@ async function main() {
     const html = await fs.readFile(htmlPath, 'utf-8');
     const css = await fs.readFile(cssPath, 'utf-8');
 
-    if (!html.includes('function flatten(')) errors.push(`${name}: fixed_layout.html is old; missing function flatten(`);
-    if (!html.includes('MAX_BLOCKS_PER_PAGE')) errors.push(`${name}: fixed_layout.html is old; missing MAX_BLOCKS_PER_PAGE`);
-    if (!html.includes("classList.contains('column-box')")) errors.push(`${name}: fixed_layout.html is old; column-box is not recursively flattened`);
+    if (!html.includes('ATOMIC_SELECTOR')) errors.push(`${name}: fixed_layout.html is old; missing ATOMIC_SELECTOR`);
+    if (!html.includes('PAGE_BUDGET')) errors.push(`${name}: fixed_layout.html is old; missing PAGE_BUDGET`);
+    if (!html.includes('function collectAtomicBlocks(')) errors.push(`${name}: fixed_layout.html is old; missing collectAtomicBlocks(`);
+    if (!html.includes('function blockWeight(')) errors.push(`${name}: fixed_layout.html is old; missing blockWeight(`);
     if (html.includes('scrollHeight') || html.includes('clientHeight')) errors.push(`${name}: fixed_layout.html must not use layout-measure pagination`);
 
     if (css.includes('column-count')) errors.push(`${name}: fixed_layout.css is old; column-count remains`);
