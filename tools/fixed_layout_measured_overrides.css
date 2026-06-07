@@ -1,0 +1,1 @@
+.fixed-page::before,.fixed-page::after,header::after,.hero-photo::before,h2::before{content:none!important;display:none!important}h2{padding-left:12px!important}.fixed-page .page-diagonal-band,.fixed-page .page-top-band{box-sizing:border-box}
