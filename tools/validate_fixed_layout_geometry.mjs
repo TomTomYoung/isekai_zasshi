@@ -16,7 +16,7 @@ const PAGE_H = 2056;
 const EPS = 1;
 const BLEED = 24;
 const ARTICLE_TIMEOUT_MS = 18000;
-const CHECK_SELECTOR = 'h1,h2,h3,p,figure,img,table,blockquote,.article-sheet,.lead,.note-box,.warning-box,.summary-box,.push-point,.column-box,.danger-box';
+const CHECK_SELECTOR = '*';
 
 const MIME_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -41,12 +41,7 @@ function toUrlPath(filePath) {
 }
 
 async function exists(filePath) {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
+  try { await fs.access(filePath); return true; } catch { return false; }
 }
 
 async function collectTargets() {
@@ -55,7 +50,6 @@ async function collectTargets() {
     .filter(entry => entry.isDirectory() && /^\d{2}_/.test(entry.name))
     .map(entry => path.join(ISSUE_DIR, entry.name))
     .sort((a, b) => a.localeCompare(b, 'ja'));
-
   const targets = [];
   for (const dir of dirs) {
     const htmlPath = path.join(dir, 'fixed_layout.html');
@@ -70,17 +64,9 @@ function startServer() {
       const rawPath = decodeURIComponent((req.url || '/').split('?')[0]);
       const normalizedPath = path.normalize(rawPath).replace(/^([/\\])+/, '');
       const filePath = path.join(ROOT, normalizedPath);
-      if (!filePath.startsWith(ROOT)) {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
-      }
+      if (!filePath.startsWith(ROOT)) { res.writeHead(403); res.end('Forbidden'); return; }
       const stat = await fs.stat(filePath);
-      if (!stat.isFile()) {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
+      if (!stat.isFile()) { res.writeHead(404); res.end('Not found'); return; }
       const ext = path.extname(filePath).toLowerCase();
       res.writeHead(200, { 'Content-Type': MIME_TYPES.get(ext) || 'application/octet-stream' });
       createReadStream(filePath).pipe(res);
@@ -101,13 +87,7 @@ function startServer() {
 }
 
 function crashResult(target, type, message, pageErrors = []) {
-  return {
-    name: target.name,
-    status: 'error',
-    pageCount: 0,
-    pageErrors,
-    issues: [{ level: 'error', type, selector: '', message, data: {} }],
-  };
+  return { name: target.name, status: 'error', pageCount: 0, pageErrors, issues: [{ level: 'error', type, selector: '', message, data: {} }] };
 }
 
 async function inspectPage(page, targetName) {
@@ -121,9 +101,7 @@ async function inspectPage(page, targetName) {
       if (el.className && typeof el.className === 'string') return `${el.tagName.toLowerCase()}.${el.className.trim().split(/\s+/).join('.')}`;
       return el.tagName.toLowerCase();
     }
-    function issue(level, type, selector, message, data = {}) {
-      return { level, type, selector, message, data };
-    }
+    function issue(level, type, selector, message, data = {}) { return { level, type, selector, message, data }; }
 
     const isCover = targetName.startsWith('00_');
     const issues = [];
@@ -142,31 +120,22 @@ async function inspectPage(page, targetName) {
 
       const text = fixedPage.textContent.trim();
       if (!isCover && text.length < 50) issues.push(issue('warn', 'near-empty-page', pageLabel, 'Page has very little text content.', { pageIndex, textLength: text.length }));
-      if (text.includes('固定レイアウト生成エラー') || text.includes('固定レイアウト読込エラー')) {
-        issues.push(issue('error', 'fallback-page', pageLabel, 'Fallback/error page is present.', { pageIndex }));
-      }
+      if (text.includes('固定レイアウト生成エラー') || text.includes('固定レイアウト読込エラー')) issues.push(issue('error', 'fallback-page', pageLabel, 'Fallback/error page is present.', { pageIndex }));
 
       const sheet = fixedPage.querySelector('.article-sheet');
       if (!isCover && !sheet) issues.push(issue('error', 'missing-article-sheet', pageLabel, 'Missing .article-sheet.', { pageIndex }));
       const usableHeight = sheet ? sheet.getBoundingClientRect().height : pr.height;
 
       fixedPage.querySelectorAll(CHECK_SELECTOR).forEach(el => {
+        if (el === fixedPage) return;
         const r = rectOf(el);
         const selector = `${pageLabel} ${selectorOf(el)}`;
         if (r.width <= 0 || r.height <= 0) return;
-        if (r.left < pr.left - BLEED || r.right > pr.right + BLEED) {
-          issues.push(issue('error', 'overflow-x', selector, 'Element overflows page horizontally.', { pageIndex, rect: r, pageRect: pr }));
-        }
-        if (r.top < pr.top - BLEED || r.bottom > pr.bottom + BLEED) {
-          issues.push(issue('error', 'overflow-y', selector, 'Element overflows page vertically.', { pageIndex, rect: r, pageRect: pr, overflowBottom: Math.max(0, r.bottom - pr.bottom) }));
-        }
+        if (r.left < pr.left - BLEED || r.right > pr.right + BLEED) issues.push(issue('error', 'overflow-x', selector, 'Element bounding box overflows page horizontally.', { pageIndex, rect: r, pageRect: pr }));
+        if (r.top < pr.top - BLEED || r.bottom > pr.bottom + BLEED) issues.push(issue('error', 'overflow-y', selector, 'Element bounding box overflows page vertically.', { pageIndex, rect: r, pageRect: pr, overflowBottom: Math.max(0, r.bottom - pr.bottom) }));
         const tag = el.tagName.toLowerCase();
-        if (!isCover && (tag === 'table' || tag === 'figure' || tag === 'img') && r.height > usableHeight * 0.95) {
-          issues.push(issue('warn', 'oversized-element', selector, 'Element is nearly as tall as the usable page area.', { pageIndex, rect: r, usableHeight }));
-        }
-        if ((tag === 'table' || tag === 'figure' || el.classList.contains('note-box') || el.classList.contains('warning-box')) && el.getClientRects().length > 1) {
-          issues.push(issue('warn', 'split-element', selector, 'Element appears split across columns or fragments.', { pageIndex, fragments: el.getClientRects().length }));
-        }
+        if (!isCover && (tag === 'table' || tag === 'figure' || tag === 'img') && r.height > usableHeight * 0.95) issues.push(issue('warn', 'oversized-element', selector, 'Element is nearly as tall as the usable page area.', { pageIndex, rect: r, usableHeight }));
+        if ((tag === 'table' || tag === 'figure' || el.classList.contains('note-box') || el.classList.contains('warning-box')) && el.getClientRects().length > 1) issues.push(issue('warn', 'split-element', selector, 'Element appears split across columns or fragments.', { pageIndex, fragments: el.getClientRects().length }));
       });
     });
     return { pageCount: fixedPages.length, issues };
@@ -187,10 +156,7 @@ async function validateTargetInner(baseUrl, target) {
     page.setDefaultTimeout(8000);
     page.setDefaultNavigationTimeout(8000);
     page.on('pageerror', error => pageErrors.push(error.message));
-    page.on('console', message => {
-      if (message.type() === 'error') pageErrors.push(message.text());
-    });
-
+    page.on('console', message => { if (message.type() === 'error') pageErrors.push(message.text()); });
     await page.goto(baseUrl + toUrlPath(target.htmlPath), { waitUntil: 'domcontentloaded', timeout: 8000 });
     await page.waitForTimeout(500);
     await page.evaluate(async () => {
@@ -210,9 +176,7 @@ async function validateTarget(baseUrl, target) {
   console.log(`validate: ${target.name}`);
   return await Promise.race([
     validateTargetInner(baseUrl, target),
-    timeout(ARTICLE_TIMEOUT_MS, `validate ${target.name}`)
-      .then(() => null)
-      .catch(error => crashResult(target, 'validator-timeout', error.message)),
+    timeout(ARTICLE_TIMEOUT_MS, `validate ${target.name}`).then(() => null).catch(error => crashResult(target, 'validator-timeout', error.message)),
   ]);
 }
 
@@ -222,14 +186,10 @@ async function main() {
   const { server, baseUrl } = await startServer();
   const report = { pageWidth: PAGE_W, pageHeight: PAGE_H, generatedAt: new Date().toISOString(), articles: [] };
   try {
-    for (const target of targets) {
-      const articleReport = await validateTarget(baseUrl, target);
-      report.articles.push(articleReport);
-    }
+    for (const target of targets) report.articles.push(await validateTarget(baseUrl, target));
   } finally {
     await new Promise(resolve => server.close(resolve));
   }
-
   await fs.writeFile(REPORT_PATH, JSON.stringify(report, null, 2), 'utf-8');
   let errors = 0;
   let warnings = 0;
@@ -245,7 +205,4 @@ async function main() {
   if (errors > 0) process.exit(1);
 }
 
-main().catch(error => {
-  console.error(error);
-  process.exit(1);
-});
+main().catch(error => { console.error(error); process.exit(1); });
