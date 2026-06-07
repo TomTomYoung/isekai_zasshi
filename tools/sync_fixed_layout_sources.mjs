@@ -26,13 +26,15 @@ async function collectArticleDirs() {
 function assertTemplate(html, css) {
   const requiredHtml = [
     'ATOMIC_SELECTOR',
-    'PAGE_BUDGET',
+    'MEASURE_SAFETY_PX',
     'function collectAtomicBlocks(',
-    'function blockWeight(',
+    'function measureUnits(',
+    'function paginateMeasuredUnits(',
+    'window.__fixedLayoutMetrics',
   ];
   for (const token of requiredHtml) {
     if (!html.includes(token)) {
-      throw new Error(`Template HTML is not the atomic-pagination version. Missing: ${token}`);
+      throw new Error(`Template HTML is not the measured-pagination version. Missing: ${token}`);
     }
   }
   if (html.includes('scrollHeight') || html.includes('clientHeight')) {
