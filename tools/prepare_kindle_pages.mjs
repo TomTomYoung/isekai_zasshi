@@ -4,6 +4,7 @@ import path from 'path';
 const ROOT = process.cwd();
 const SRC_DIR = path.join(ROOT, 'exports', 'fixed_layout_images');
 const OUT_DIR = path.join(ROOT, 'exports', 'kindle_pages');
+const PAGE_NAME_PATTERN = /^\d{2}_.+_\d{3}\.png$/i;
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -17,14 +18,13 @@ function cleanDir(dir) {
 }
 
 function pageKeyFromName(name) {
+  if (!PAGE_NAME_PATTERN.test(name)) return null;
+
   const articleMatch = name.match(/^(\d{2})_/);
-  if (!articleMatch) return null;
-
-  const article = Number(articleMatch[1]);
   const pageMatch = name.match(/_(\d{3})\.png$/i);
-  const page = pageMatch ? Number(pageMatch[1]) : 1;
+  if (!articleMatch || !pageMatch) return null;
 
-  return { article, page };
+  return { article: Number(articleMatch[1]), page: Number(pageMatch[1]) };
 }
 
 function comparePages(a, b) {
@@ -40,10 +40,15 @@ function main() {
     process.exit(1);
   }
 
+  const ignored = [];
   const pages = fs.readdirSync(SRC_DIR)
     .filter(name => name.toLowerCase().endsWith('.png'))
     .map(name => ({ name, key: pageKeyFromName(name) }))
-    .filter(item => item.key !== null)
+    .filter(item => {
+      if (item.key !== null) return true;
+      ignored.push(item.name);
+      return false;
+    })
     .sort(comparePages);
 
   if (pages.length === 0) {
@@ -53,6 +58,10 @@ function main() {
 
   ensureDir(OUT_DIR);
   cleanDir(OUT_DIR);
+
+  for (const name of ignored) {
+    console.warn(`ignored stale/non-page PNG: ${name}`);
+  }
 
   for (let i = 0; i < pages.length; i += 1) {
     const src = path.join(SRC_DIR, pages[i].name);
