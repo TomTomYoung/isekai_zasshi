@@ -1,0 +1,1 @@
+Second pagination fix: recursive flattening is required because one wrapper can contain the whole article.
