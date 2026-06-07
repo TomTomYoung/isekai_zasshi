@@ -15,7 +15,7 @@
       const folderName = parts.slice(-2, -1)[0] || '';
       const articleNo = (folderName.match(/^(\d+)_/) || [null, '00'])[1];
       const source = folderName.replace(/^\d+_/, '') + '.html';
-      const PAGE_BUDGET = 16;
+      const PAGE_BUDGET = 30;
       const ATOMIC_SELECTOR = 'h1,h2,h3,h4,p,figure,table,ul,ol,blockquote';
 
       function makePage(index) {
@@ -55,23 +55,80 @@
         if (block.nodeType !== Node.ELEMENT_NODE) return 1;
         const tag = block.tagName.toLowerCase();
         const textLength = block.textContent.trim().length;
-        if (tag === 'h1') return 5;
+        if (tag === 'h1') return 6;
         if (tag === 'h2') return 4;
         if (tag === 'h3' || tag === 'h4') return 3;
-        if (tag === 'figure') return 10;
-        if (tag === 'table') return Math.max(8, Math.ceil(block.querySelectorAll('tr').length / 2));
-        if (tag === 'ul' || tag === 'ol') return Math.max(3, Math.ceil(block.querySelectorAll('li').length / 2));
-        if (tag === 'blockquote') return Math.max(3, Math.ceil(textLength / 80));
-        return Math.max(1, Math.ceil(textLength / 85));
+        if (tag === 'figure') return 12;
+        if (tag === 'table') return Math.max(10, Math.ceil(block.querySelectorAll('tr').length / 2));
+        if (tag === 'ul' || tag === 'ol') return Math.max(4, Math.ceil(block.querySelectorAll('li').length / 2));
+        if (tag === 'blockquote') return Math.max(4, Math.ceil(textLength / 90));
+        return Math.max(1, Math.ceil(textLength / 105));
       }
 
-      function shouldStartNewPage(block, sheet, used) {
+      function unitWeight(unit) {
+        return Array.from(unit.children).reduce((sum, child) => sum + blockWeight(child), 0);
+      }
+
+      function makeUnit(kind = 'text') {
+        const unit = document.createElement('section');
+        unit.className = 'content-unit content-unit-' + kind;
+        return unit;
+      }
+
+      function pushUnit(units, unit) {
+        if (unit && unit.children.length > 0) units.push(unit);
+      }
+
+      function buildContentUnits(blocks) {
+        const units = [];
+        let current = makeUnit('text');
+
+        for (const block of blocks) {
+          if (block.nodeType !== Node.ELEMENT_NODE) continue;
+          const tag = block.tagName.toLowerCase();
+
+          if (tag === 'h1') {
+            pushUnit(units, current);
+            const unit = makeUnit('headline');
+            unit.appendChild(block);
+            units.push(unit);
+            current = makeUnit('text');
+            continue;
+          }
+
+          if (tag === 'figure' || tag === 'table') {
+            pushUnit(units, current);
+            const unit = makeUnit(tag === 'figure' ? 'media' : 'table');
+            unit.appendChild(block);
+            units.push(unit);
+            current = makeUnit('text');
+            continue;
+          }
+
+          if (tag === 'h2') {
+            pushUnit(units, current);
+            current = makeUnit('section');
+            current.appendChild(block);
+            continue;
+          }
+
+          current.appendChild(block);
+          if (unitWeight(current) >= 16) {
+            pushUnit(units, current);
+            current = makeUnit('text');
+          }
+        }
+
+        pushUnit(units, current);
+        return units;
+      }
+
+      function shouldStartNewPage(unit, sheet, used) {
         if (!sheet || sheet.childNodes.length === 0) return false;
-        if (block.nodeType !== Node.ELEMENT_NODE) return false;
-        const tag = block.tagName.toLowerCase();
-        if (tag === 'h2') return true;
-        if (tag === 'figure' || tag === 'table') return used >= 4;
-        return used + blockWeight(block) > PAGE_BUDGET;
+        const weight = unitWeight(unit);
+        const isMedia = unit.classList.contains('content-unit-media') || unit.classList.contains('content-unit-table');
+        if (isMedia && used >= 12) return true;
+        return used + weight > PAGE_BUDGET;
       }
 
       let sheet = makePage(0);
@@ -109,15 +166,16 @@
       slug.textContent = '本誌独占　異世界ゴシップ総力取材班';
       sheet.innerHTML = '';
       sheet.appendChild(slug);
-      let used = blockWeight(slug);
+      let used = 3;
 
-      for (const block of blocks) {
-        if (shouldStartNewPage(block, sheet, used)) {
+      const units = buildContentUnits(blocks);
+      for (const unit of units) {
+        if (shouldStartNewPage(unit, sheet, used)) {
           sheet = makePage(pages.children.length);
           used = 0;
         }
-        sheet.appendChild(block);
-        used += blockWeight(block);
+        sheet.appendChild(unit);
+        used += unitWeight(unit);
       }
     })();
   </script>
