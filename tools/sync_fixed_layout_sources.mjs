@@ -25,13 +25,14 @@ async function collectArticleDirs() {
 
 function assertTemplate(html, css) {
   const requiredHtml = [
-    'function flatten(',
-    'MAX_BLOCKS_PER_PAGE',
-    "classList.contains('column-box')",
+    'ATOMIC_SELECTOR',
+    'PAGE_BUDGET',
+    'function collectAtomicBlocks(',
+    'function blockWeight(',
   ];
   for (const token of requiredHtml) {
     if (!html.includes(token)) {
-      throw new Error(`Template HTML is not the recursive-pagination version. Missing: ${token}`);
+      throw new Error(`Template HTML is not the atomic-pagination version. Missing: ${token}`);
     }
   }
   if (html.includes('scrollHeight') || html.includes('clientHeight')) {
