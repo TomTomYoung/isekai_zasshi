@@ -45,9 +45,8 @@ function safeBaseName(articleDir) {
   return path.basename(articleDir).replace(/[\\/:*?"<>|]/g, '_');
 }
 
-function outputName(articleDir, index, count) {
+function outputName(articleDir, index) {
   const base = safeBaseName(articleDir);
-  if (count <= 1) return `${base}_001.png`;
   return `${base}_${String(index + 1).padStart(3, '0')}.png`;
 }
 
@@ -58,6 +57,11 @@ async function exists(filePath) {
   } catch {
     return false;
   }
+}
+
+async function cleanDir(dir) {
+  await fs.rm(dir, { recursive: true, force: true });
+  await fs.mkdir(dir, { recursive: true });
 }
 
 async function collectTargets() {
@@ -202,7 +206,7 @@ async function exportFallbackOnly(browser, target, reason) {
   try {
     await page.goto('about:blank', { waitUntil: 'domcontentloaded', timeout: 5000 });
     await ensureFixedPage(page, targetName);
-    const outputPath = path.join(OUT_DIR, outputName(target.dir, 0, 1));
+    const outputPath = path.join(OUT_DIR, outputName(target.dir, 0));
     await page.locator(PAGE_SELECTOR).first().screenshot({ path: outputPath, animations: 'disabled', timeout: 10000 });
     return [outputPath];
   } finally {
@@ -235,7 +239,7 @@ async function exportTarget(browser, baseUrl, target) {
 
     const outputs = [];
     for (let i = 0; i < locators.length; i += 1) {
-      const outputPath = path.join(OUT_DIR, outputName(target.dir, i, locators.length));
+      const outputPath = path.join(OUT_DIR, outputName(target.dir, i));
       await withTimeout(locators[i].screenshot({ path: outputPath, animations: 'disabled', timeout: 12000 }), 15000, `screenshot ${i + 1}`);
       outputs.push(outputPath);
     }
@@ -251,7 +255,7 @@ async function main() {
     throw new Error('No fixed_layout.html files found under 202603 article folders.');
   }
 
-  await fs.mkdir(OUT_DIR, { recursive: true });
+  await cleanDir(OUT_DIR);
   const { server, baseUrl } = await startServer();
   const browser = await chromium.launch();
 
