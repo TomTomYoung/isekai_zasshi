@@ -15,12 +15,12 @@
       const folderName = parts.slice(-2, -1)[0] || '';
       const articleNo = (folderName.match(/^(\d+)_/) || [null, '00'])[1];
       const source = folderName.replace(/^\d+_/, '') + '.html';
+      const MAX_BLOCKS_PER_PAGE = 8;
 
       function makePage(index) {
         const page = document.createElement('section');
         page.className = 'fixed-page article-no-' + articleNo;
         page.dataset.pageIndex = String(index + 1).padStart(3, '0');
-
         const sheet = document.createElement('section');
         sheet.className = 'article-sheet';
         sheet.dataset.articleNo = articleNo;
@@ -31,36 +31,66 @@
       }
 
       function renderError(sheet, message) {
-        sheet.innerHTML = `
-          <header>
-            <div class="gossip-slug">固定レイアウト読込エラー</div>
-            <h1>${source}</h1>
-          </header>
-          <div class="warning-box">
-            <p>${message}</p>
-            <p>元記事HTMLのファイル名、パス、画像読込、または本文構造を確認してください。</p>
-          </div>
-        `;
+        sheet.innerHTML = '<header><div class="gossip-slug">固定レイアウト読込エラー</div><h1>' + source + '</h1></header><div class="warning-box"><p>' + message + '</p></div>';
+      }
+
+      function isWrapper(el) {
+        if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'article' || tag === 'main' || tag === 'section') return true;
+        if (tag === 'div') {
+          if (el.classList.contains('column-box')) return true;
+          if (el.classList.contains('article-body')) return true;
+          if (el.classList.contains('content')) return true;
+          if (el.children.length > 1 && !el.querySelector(':scope > img')) return true;
+        }
+        return false;
+      }
+
+      function flatten(node, out = []) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (node.textContent.trim()) out.push(node.cloneNode(true));
+          return out;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return out;
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style' || tag === 'link') return out;
+        if (isWrapper(node)) {
+          Array.from(node.childNodes).forEach(child => flatten(child, out));
+          return out;
+        }
+        out.push(node.cloneNode(true));
+        return out;
+      }
+
+      function shouldStartNewPage(node, sheet, blockCount) {
+        if (!sheet || sheet.childNodes.length === 0) return false;
+        if (node.nodeType !== Node.ELEMENT_NODE) return false;
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'header') return false;
+        if (tag === 'h2') return true;
+        if ((tag === 'figure' || tag === 'table') && blockCount >= 2) return true;
+        if ((tag === 'h3') && blockCount >= 5) return true;
+        return blockCount >= MAX_BLOCKS_PER_PAGE;
       }
 
       let sheet = makePage(0);
       let text = '';
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 15000);
+        const timer = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(source, { signal: controller.signal });
         clearTimeout(timer);
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
         text = await res.text();
       } catch (error) {
-        renderError(sheet, `元記事HTMLを読み込めませんでした: ${error.message}`);
+        renderError(sheet, '元記事HTMLを読み込めませんでした: ' + error.message);
         return;
       }
 
       const doc = new DOMParser().parseFromString(text, 'text/html');
       const title = doc.querySelector('title');
       if (title) document.title = title.textContent + '｜固定レイアウト版';
-
       const article = doc.querySelector('article, .chapter, main, body');
       const staging = document.createElement('div');
       staging.innerHTML = article ? article.innerHTML : text;
@@ -73,30 +103,21 @@
         slug.textContent = '本誌独占　異世界ゴシップ総力取材班';
         h1.before(slug);
       }
-
       const firstFigure = staging.querySelector('figure, .photo-block');
       if (firstFigure) firstFigure.classList.add('hero-photo');
+      staging.querySelectorAll('h2').forEach((h2, i) => h2.dataset.index = String(i + 1).padStart(2, '0'));
+      staging.querySelectorAll('figcaption').forEach(caption => caption.classList.add('tabloid-caption'));
 
-      staging.querySelectorAll('h2').forEach((h2, i) => {
-        h2.dataset.index = String(i + 1).padStart(2, '0');
-      });
-
-      staging.querySelectorAll('figcaption').forEach(caption => {
-        caption.classList.add('tabloid-caption');
-      });
-
-      const nodes = Array.from(staging.childNodes).filter(node => {
-        return node.nodeType !== Node.TEXT_NODE || node.textContent.trim();
-      });
-
+      const blocks = flatten(staging).filter(node => node.nodeType !== Node.TEXT_NODE || node.textContent.trim());
       sheet.innerHTML = '';
-      for (const node of nodes) {
-        sheet.appendChild(node);
-        if (sheet.scrollHeight > sheet.clientHeight && sheet.childNodes.length > 1) {
-          sheet.removeChild(node);
+      let blockCount = 0;
+      for (const block of blocks) {
+        if (shouldStartNewPage(block, sheet, blockCount)) {
           sheet = makePage(pages.children.length);
-          sheet.appendChild(node);
+          blockCount = 0;
         }
+        sheet.appendChild(block);
+        blockCount += 1;
       }
     })();
   </script>
