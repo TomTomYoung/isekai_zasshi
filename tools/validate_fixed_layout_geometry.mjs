@@ -15,6 +15,7 @@ const PAGE_W = 1456;
 const PAGE_H = 2056;
 const EPS = 1;
 const BLEED = 24;
+const ARTICLE_TIMEOUT_MS = 18000;
 const CHECK_SELECTOR = 'h1,h2,h3,p,figure,img,table,blockquote,.article-sheet,.lead,.note-box,.warning-box,.summary-box,.push-point,.column-box,.danger-box';
 
 const MIME_TYPES = new Map([
@@ -29,6 +30,14 @@ const MIME_TYPES = new Map([
   ['.webp', 'image/webp'],
   ['.svg', 'image/svg+xml; charset=utf-8'],
 ]);
+
+function timeout(ms, label) {
+  return new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms));
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([promise, timeout(ms, label)]);
+}
 
 function toUrlPath(filePath) {
   const rel = path.relative(ROOT, filePath).split(path.sep).map(encodeURIComponent).join('/');
@@ -95,105 +104,132 @@ function startServer() {
   });
 }
 
-async function validateTarget(browser, baseUrl, target) {
-  console.log(`validate: ${target.name}`);
-  const page = await browser.newPage({ viewport: { width: PAGE_W, height: PAGE_H }, deviceScaleFactor: 1 });
-  page.setDefaultTimeout(15000);
-  page.setDefaultNavigationTimeout(15000);
-  const pageErrors = [];
-  page.on('pageerror', error => pageErrors.push(error.message));
-  page.on('console', message => {
-    if (message.type() === 'error') pageErrors.push(message.text());
-  });
+function crashResult(target, type, message, pageErrors = []) {
+  return {
+    name: target.name,
+    status: 'error',
+    pageCount: 0,
+    pageErrors,
+    issues: [{ level: 'error', type, selector: '', message, data: {} }],
+  };
+}
 
+async function inspectPage(page) {
+  return await page.evaluate(({ PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR }) => {
+    function rectOf(el) {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+    }
+    function selectorOf(el) {
+      if (el.id) return `${el.tagName.toLowerCase()}#${el.id}`;
+      if (el.className && typeof el.className === 'string') return `${el.tagName.toLowerCase()}.${el.className.trim().split(/\s+/).join('.')}`;
+      return el.tagName.toLowerCase();
+    }
+    function issue(level, type, selector, message, data = {}) {
+      return { level, type, selector, message, data };
+    }
+
+    const issues = [];
+    const fixedPages = Array.from(document.querySelectorAll('.fixed-page'));
+    if (fixedPages.length === 0) {
+      issues.push(issue('error', 'missing-fixed-page', '.fixed-page', 'No .fixed-page elements were generated.'));
+      return { pageCount: 0, issues };
+    }
+
+    fixedPages.forEach((fixedPage, pageIndex) => {
+      const pr = rectOf(fixedPage);
+      const pageLabel = `page-${String(pageIndex + 1).padStart(3, '0')}`;
+      if (Math.abs(pr.width - PAGE_W) > EPS || Math.abs(pr.height - PAGE_H) > EPS) {
+        issues.push(issue('error', 'wrong-page-size', `.fixed-page[${pageIndex}]`, `Expected ${PAGE_W}x${PAGE_H}, got ${Math.round(pr.width)}x${Math.round(pr.height)}.`, { pageIndex, rect: pr }));
+      }
+
+      const text = fixedPage.textContent.trim();
+      if (text.length < 50) issues.push(issue('warn', 'near-empty-page', pageLabel, 'Page has very little text content.', { pageIndex, textLength: text.length }));
+      if (text.includes('固定レイアウト生成エラー') || text.includes('固定レイアウト読込エラー')) {
+        issues.push(issue('error', 'fallback-page', pageLabel, 'Fallback/error page is present.', { pageIndex }));
+      }
+
+      const sheet = fixedPage.querySelector('.article-sheet');
+      if (!sheet) issues.push(issue('error', 'missing-article-sheet', pageLabel, 'Missing .article-sheet.', { pageIndex }));
+      const usableHeight = sheet ? sheet.getBoundingClientRect().height : pr.height;
+
+      fixedPage.querySelectorAll(CHECK_SELECTOR).forEach(el => {
+        const r = rectOf(el);
+        const selector = `${pageLabel} ${selectorOf(el)}`;
+        if (r.width <= 0 || r.height <= 0) return;
+        if (r.left < pr.left - BLEED || r.right > pr.right + BLEED) {
+          issues.push(issue('error', 'overflow-x', selector, 'Element overflows page horizontally.', { pageIndex, rect: r, pageRect: pr }));
+        }
+        if (r.top < pr.top - BLEED || r.bottom > pr.bottom + BLEED) {
+          issues.push(issue('error', 'overflow-y', selector, 'Element overflows page vertically.', { pageIndex, rect: r, pageRect: pr, overflowBottom: Math.max(0, r.bottom - pr.bottom) }));
+        }
+        const tag = el.tagName.toLowerCase();
+        if ((tag === 'table' || tag === 'figure' || tag === 'img') && r.height > usableHeight * 0.95) {
+          issues.push(issue('warn', 'oversized-element', selector, 'Element is nearly as tall as the usable page area.', { pageIndex, rect: r, usableHeight }));
+        }
+        if ((tag === 'table' || tag === 'figure' || el.classList.contains('note-box') || el.classList.contains('warning-box')) && el.getClientRects().length > 1) {
+          issues.push(issue('warn', 'split-element', selector, 'Element appears split across columns or fragments.', { pageIndex, fragments: el.getClientRects().length }));
+        }
+      });
+    });
+    return { pageCount: fixedPages.length, issues };
+  }, { PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR });
+}
+
+async function validateTargetInner(baseUrl, target) {
+  const pageErrors = [];
+  const browser = await chromium.launch();
   try {
-    await page.goto(baseUrl + toUrlPath(target.htmlPath), { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(1000);
-    await page.evaluate(async () => {
-      if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1000))]);
-      await new Promise(resolve => requestAnimationFrame(resolve));
+    const context = await browser.newContext({ viewport: { width: PAGE_W, height: PAGE_H }, deviceScaleFactor: 1 });
+    await context.route('**/*', route => {
+      const type = route.request().resourceType();
+      if (type === 'font' || type === 'media') route.abort();
+      else route.continue();
+    });
+    const page = await context.newPage();
+    page.setDefaultTimeout(8000);
+    page.setDefaultNavigationTimeout(8000);
+    page.on('pageerror', error => pageErrors.push(error.message));
+    page.on('console', message => {
+      if (message.type() === 'error') pageErrors.push(message.text());
     });
 
-    const result = await page.evaluate(({ PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR }) => {
-      function rectOf(el) {
-        const r = el.getBoundingClientRect();
-        return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
-      }
-      function selectorOf(el) {
-        if (el.id) return `${el.tagName.toLowerCase()}#${el.id}`;
-        if (el.className && typeof el.className === 'string') return `${el.tagName.toLowerCase()}.${el.className.trim().split(/\s+/).join('.')}`;
-        return el.tagName.toLowerCase();
-      }
-      function issue(level, type, selector, message, data = {}) {
-        return { level, type, selector, message, data };
-      }
-
-      const issues = [];
-      const fixedPages = Array.from(document.querySelectorAll('.fixed-page'));
-      if (fixedPages.length === 0) {
-        issues.push(issue('error', 'missing-fixed-page', '.fixed-page', 'No .fixed-page elements were generated.'));
-        return { pageCount: 0, issues };
-      }
-
-      fixedPages.forEach((fixedPage, pageIndex) => {
-        const pr = rectOf(fixedPage);
-        const pageLabel = `page-${String(pageIndex + 1).padStart(3, '0')}`;
-        if (Math.abs(pr.width - PAGE_W) > EPS || Math.abs(pr.height - PAGE_H) > EPS) {
-          issues.push(issue('error', 'wrong-page-size', `.fixed-page[${pageIndex}]`, `Expected ${PAGE_W}x${PAGE_H}, got ${Math.round(pr.width)}x${Math.round(pr.height)}.`, { pageIndex, rect: pr }));
-        }
-
-        const text = fixedPage.textContent.trim();
-        if (text.length < 50) issues.push(issue('warn', 'near-empty-page', pageLabel, 'Page has very little text content.', { pageIndex, textLength: text.length }));
-        if (text.includes('固定レイアウト生成エラー') || text.includes('固定レイアウト読込エラー')) {
-          issues.push(issue('error', 'fallback-page', pageLabel, 'Fallback/error page is present.', { pageIndex }));
-        }
-
-        const sheet = fixedPage.querySelector('.article-sheet');
-        if (!sheet) issues.push(issue('error', 'missing-article-sheet', pageLabel, 'Missing .article-sheet.', { pageIndex }));
-
-        const usableHeight = sheet ? sheet.getBoundingClientRect().height : pr.height;
-        fixedPage.querySelectorAll(CHECK_SELECTOR).forEach(el => {
-          const r = rectOf(el);
-          const selector = `${pageLabel} ${selectorOf(el)}`;
-          if (r.width <= 0 || r.height <= 0) return;
-          if (r.left < pr.left - BLEED || r.right > pr.right + BLEED) {
-            issues.push(issue('error', 'overflow-x', selector, 'Element overflows page horizontally.', { pageIndex, rect: r, pageRect: pr }));
-          }
-          if (r.top < pr.top - BLEED || r.bottom > pr.bottom + BLEED) {
-            issues.push(issue('error', 'overflow-y', selector, 'Element overflows page vertically.', { pageIndex, rect: r, pageRect: pr, overflowBottom: Math.max(0, r.bottom - pr.bottom) }));
-          }
-          const tag = el.tagName.toLowerCase();
-          if ((tag === 'table' || tag === 'figure' || tag === 'img') && r.height > usableHeight * 0.95) {
-            issues.push(issue('warn', 'oversized-element', selector, 'Element is nearly as tall as the usable page area.', { pageIndex, rect: r, usableHeight }));
-          }
-          if ((tag === 'table' || tag === 'figure' || el.classList.contains('note-box') || el.classList.contains('warning-box')) && el.getClientRects().length > 1) {
-            issues.push(issue('warn', 'split-element', selector, 'Element appears split across columns or fragments.', { pageIndex, fragments: el.getClientRects().length }));
-          }
-        });
-      });
-      return { pageCount: fixedPages.length, issues };
-    }, { PAGE_W, PAGE_H, EPS, BLEED, CHECK_SELECTOR });
-
+    await page.goto(baseUrl + toUrlPath(target.htmlPath), { waitUntil: 'domcontentloaded', timeout: 8000 });
+    await page.waitForTimeout(500);
+    await page.evaluate(async () => {
+      if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 300))]);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    });
+    const result = await inspectPage(page);
     return { name: target.name, status: result.issues.some(i => i.level === 'error') ? 'error' : result.issues.length ? 'warn' : 'ok', pageErrors, ...result };
   } catch (error) {
-    return { name: target.name, status: 'error', pageCount: 0, pageErrors, issues: [{ level: 'error', type: 'validator-crash', selector: '', message: error.message, data: {} }] };
+    return crashResult(target, 'validator-crash', error.message, pageErrors);
   } finally {
-    await page.close().catch(() => {});
+    await browser.close().catch(() => {});
   }
+}
+
+async function validateTarget(baseUrl, target) {
+  console.log(`validate: ${target.name}`);
+  return await Promise.race([
+    validateTargetInner(baseUrl, target),
+    timeout(ARTICLE_TIMEOUT_MS, `validate ${target.name}`)
+      .then(() => null)
+      .catch(error => crashResult(target, 'validator-timeout', error.message)),
+  ]);
 }
 
 async function main() {
   await fs.mkdir(OUT_DIR, { recursive: true });
   const targets = await collectTargets();
   const { server, baseUrl } = await startServer();
-  const browser = await chromium.launch();
   const report = { pageWidth: PAGE_W, pageHeight: PAGE_H, generatedAt: new Date().toISOString(), articles: [] };
   try {
     for (const target of targets) {
-      report.articles.push(await validateTarget(browser, baseUrl, target));
+      const articleReport = await validateTarget(baseUrl, target);
+      report.articles.push(articleReport);
     }
   } finally {
-    await browser.close();
     await new Promise(resolve => server.close(resolve));
   }
 
