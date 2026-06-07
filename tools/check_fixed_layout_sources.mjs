@@ -46,9 +46,11 @@ async function main() {
     const css = await fs.readFile(cssPath, 'utf-8');
 
     if (!html.includes('ATOMIC_SELECTOR')) errors.push(`${name}: fixed_layout.html is old; missing ATOMIC_SELECTOR`);
-    if (!html.includes('PAGE_BUDGET')) errors.push(`${name}: fixed_layout.html is old; missing PAGE_BUDGET`);
+    if (!html.includes('MEASURE_SAFETY_PX')) errors.push(`${name}: fixed_layout.html is old; missing MEASURE_SAFETY_PX`);
     if (!html.includes('function collectAtomicBlocks(')) errors.push(`${name}: fixed_layout.html is old; missing collectAtomicBlocks(`);
-    if (!html.includes('function blockWeight(')) errors.push(`${name}: fixed_layout.html is old; missing blockWeight(`);
+    if (!html.includes('function measureUnits(')) errors.push(`${name}: fixed_layout.html is old; missing measureUnits(`);
+    if (!html.includes('function paginateMeasuredUnits(')) errors.push(`${name}: fixed_layout.html is old; missing paginateMeasuredUnits(`);
+    if (!html.includes('window.__fixedLayoutMetrics')) errors.push(`${name}: fixed_layout.html is old; missing fixed layout metrics`);
     if (html.includes('scrollHeight') || html.includes('clientHeight')) errors.push(`${name}: fixed_layout.html must not use layout-measure pagination`);
 
     if (css.includes('column-count')) errors.push(`${name}: fixed_layout.css is old; column-count remains`);
