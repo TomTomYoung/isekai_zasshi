@@ -105,6 +105,43 @@ npm run collect:issue-pages -- 202603
 5. `exports/<issue>/kindle_pages/0001.png` から全体連番でコピーする。
 6. `exports/<issue>/issue_manifest.json` を作る。
 
+## EPUB生成
+
+記事単位ビルド経由で作ったページ画像は、そのままEPUB生成に渡せる。
+
+実行例：
+
+```bash
+python tools/build_fixed_layout_epub.py 202603
+```
+
+npm script 経由：
+
+```bash
+npm run build:epub -- 202603
+```
+
+`tools/build_fixed_layout_epub.py` は次の順で画像入力を探す。
+
+1. `exports/<issue>/kindle_pages`
+2. 後方互換用の `exports/kindle_pages`
+
+出力先は、号別入力がある場合は次の通り。
+
+```text
+exports/<issue>/isekai_marumie_jitsuwa_<issue>_fixed_layout.epub
+```
+
+したがって、記事単位ビルドから最終EPUBまでの流れは次の形になる。
+
+```bash
+npm run build:article -- 202603/00_表紙
+npm run build:article -- 202603/01_記事名
+npm run build:article -- 202603/02_記事名
+npm run collect:issue-pages -- 202603
+npm run build:epub -- 202603
+```
+
 ## 号manifest
 
 `exports/<issue>/issue_manifest.json` の例：
@@ -160,6 +197,8 @@ exports/fixed_layout_images/*.png
 各記事 pages/*.png
 ↓
 exports/<issue>/kindle_pages/*.png
+↓
+exports/<issue>/isekai_marumie_jitsuwa_<issue>_fixed_layout.epub
 ```
 
 記事単位方式は、既存方式を置き換える前の安全な追加レイヤーとして扱う。
