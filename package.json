@@ -3,7 +3,8 @@
   "scripts": {
     "export:fixed-layout": "node tools/export_fixed_layout_images.mjs",
     "build:article": "node tools/build_article.mjs",
-    "collect:issue-pages": "node tools/collect_issue_pages.mjs"
+    "collect:issue-pages": "node tools/collect_issue_pages.mjs",
+    "build:epub": "python tools/build_fixed_layout_epub.py"
   },
   "devDependencies": {
     "playwright": "^1.46.0"
