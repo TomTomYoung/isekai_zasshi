@@ -59,6 +59,34 @@ npm run build:article -- 202603/06_裏賭博場実態記事
 
 `.fixed-page` が見つからない場合は、フォールバック紙面を生成し、ビルドエラーで止まらず原因確認用のPNGを出力する。
 
+## 号内の記事を一括ビルドする
+
+号ディレクトリ内の `00_`, `01_`, `02_` 形式の記事フォルダを走査し、`fixed_layout.html` がある記事だけを順番にビルドする。
+
+実行例：
+
+```bash
+node tools/build_issue_articles.mjs 202603
+```
+
+npm script 経由：
+
+```bash
+npm run build:issue-articles -- 202603
+```
+
+未生成の記事だけをビルドする場合：
+
+```bash
+npm run build:issue-articles -- 202603 --missing-only
+```
+
+処理結果は次に保存する。
+
+```text
+exports/<issue>/article_build_results.json
+```
+
 ## 記事manifest
 
 `intermediate/article_manifest.json` の例：
@@ -132,14 +160,57 @@ npm run build:epub -- 202603
 exports/<issue>/isekai_marumie_jitsuwa_<issue>_fixed_layout.epub
 ```
 
-したがって、記事単位ビルドから最終EPUBまでの流れは次の形になる。
+## 出力検査
+
+記事単位方式で生成したPNGとEPUBは、既存の検査スクリプトで確認できる。
+
+実行例：
 
 ```bash
-npm run build:article -- 202603/00_表紙
-npm run build:article -- 202603/01_記事名
-npm run build:article -- 202603/02_記事名
+python tools/check_fixed_layout_outputs.py 202603
+```
+
+npm script 経由：
+
+```bash
+npm run check:fixed-layout -- 202603
+```
+
+検査対象：
+
+- `exports/<issue>/kindle_pages/*.png` の存在
+- PNG寸法が `1456x2056` であること
+- 全体ページ番号が `0001.png`, `0002.png` ... で連続していること
+- `exports/<issue>/issue_manifest.json` のページ数
+- `exports/<issue>/isekai_marumie_jitsuwa_<issue>_fixed_layout.epub` のmanifest/spine数
+
+## 全体コマンド列
+
+号内の記事をまとめてビルドする場合：
+
+```bash
+npm run build:issue-articles -- 202603
 npm run collect:issue-pages -- 202603
 npm run build:epub -- 202603
+npm run check:fixed-layout -- 202603
+```
+
+未生成分だけビルドする場合：
+
+```bash
+npm run build:issue-articles -- 202603 --missing-only
+npm run collect:issue-pages -- 202603
+npm run build:epub -- 202603
+npm run check:fixed-layout -- 202603
+```
+
+個別記事だけ直す場合：
+
+```bash
+npm run build:article -- 202603/06_裏賭博場実態記事
+npm run collect:issue-pages -- 202603
+npm run build:epub -- 202603
+npm run check:fixed-layout -- 202603
 ```
 
 ## 号manifest
