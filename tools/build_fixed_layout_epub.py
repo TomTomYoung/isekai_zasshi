@@ -2,16 +2,36 @@ import datetime
 import html
 import os
 from pathlib import Path
+import sys
 import uuid
 import zipfile
 
 ROOT = Path.cwd()
-SRC_DIR = ROOT / 'exports' / 'kindle_pages'
-OUT_DIR = ROOT / 'exports'
-OUT_EPUB = OUT_DIR / 'isekai_marumie_jitsuwa_202603_fixed_layout.epub'
-BOOK_TITLE = '異世界丸見え実話 202603号'
 PAGE_WIDTH = 1456
 PAGE_HEIGHT = 2056
+DEFAULT_ISSUE = '202603'
+
+
+def resolve_issue():
+    if len(sys.argv) >= 2:
+        return sys.argv[1]
+    return os.environ.get('ISSUE', DEFAULT_ISSUE)
+
+
+ISSUE = resolve_issue()
+ISSUE_EXPORT_DIR = ROOT / 'exports' / ISSUE
+ISSUE_SRC_DIR = ISSUE_EXPORT_DIR / 'kindle_pages'
+LEGACY_SRC_DIR = ROOT / 'exports' / 'kindle_pages'
+
+if ISSUE_SRC_DIR.exists():
+    SRC_DIR = ISSUE_SRC_DIR
+    OUT_DIR = ISSUE_EXPORT_DIR
+else:
+    SRC_DIR = LEGACY_SRC_DIR
+    OUT_DIR = ROOT / 'exports'
+
+OUT_EPUB = OUT_DIR / f'isekai_marumie_jitsuwa_{ISSUE}_fixed_layout.epub'
+BOOK_TITLE = f'異世界丸見え実話 {ISSUE}号'
 
 
 def xhtml_page(index, image_name):
@@ -149,11 +169,14 @@ def container_xml():
 
 def main():
     if not SRC_DIR.exists():
-        raise SystemExit('Missing exports/kindle_pages. Run: node tools/prepare_kindle_pages.mjs')
+        raise SystemExit(
+            f'Missing {SRC_DIR.relative_to(ROOT)}. Run: node tools/collect_issue_pages.mjs {ISSUE} '
+            f'or provide legacy exports/kindle_pages.'
+        )
 
     images = sorted(p.name for p in SRC_DIR.glob('*.png'))
     if not images:
-        raise SystemExit('No PNG files found in exports/kindle_pages.')
+        raise SystemExit(f'No PNG files found in {SRC_DIR.relative_to(ROOT)}.')
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     book_id = str(uuid.uuid4())
@@ -171,6 +194,7 @@ def main():
                 epub.writestr(f'OEBPS/images/{image_name}', image_file.read(), compress_type=zipfile.ZIP_DEFLATED)
 
     print(f'Created {OUT_EPUB.relative_to(ROOT)}')
+    print(f'Source: {SRC_DIR.relative_to(ROOT)}')
     print(f'Pages: {len(images)}')
     print(f'Page size: {PAGE_WIDTH}x{PAGE_HEIGHT}')
 
