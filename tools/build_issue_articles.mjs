@@ -10,6 +10,7 @@ const ROOT = path.resolve(__dirname, '..');
 function usage() {
   console.error('usage: node tools/build_issue_articles.mjs <issue> [--missing-only]');
   console.error('example: node tools/build_issue_articles.mjs 202603');
+  console.error('example: node tools/build_issue_articles.mjs 202603 --missing-only');
 }
 
 async function exists(filePath) {
@@ -21,17 +22,16 @@ async function exists(filePath) {
   }
 }
 
+function normalizeRel(filePath) {
+  return path.relative(ROOT, filePath).split(path.sep).join('/');
+}
+
 async function collectArticleDirs(issueDir) {
   const entries = await fs.readdir(issueDir, { withFileTypes: true });
-  const dirs = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory() || !/^\d{2}_/.test(entry.name)) continue;
-    const dir = path.join(issueDir, entry.name);
-    if (await exists(path.join(dir, 'fixed_layout.html'))) {
-      dirs.push(dir);
-    }
-  }
-  return dirs.sort((a, b) => path.basename(a).localeCompare(path.basename(b), 'ja'));
+  return entries
+    .filter(entry => entry.isDirectory() && /^\d{2}_/.test(entry.name))
+    .map(entry => path.join(issueDir, entry.name))
+    .sort((a, b) => path.basename(a).localeCompare(path.basename(b), 'ja'));
 }
 
 function runNodeScript(scriptPath, args) {
@@ -65,29 +65,55 @@ async function main() {
 
   const articleDirs = await collectArticleDirs(issueDir);
   if (articleDirs.length === 0) {
-    throw new Error(`No article folders with fixed_layout.html found under ${issue}`);
+    throw new Error(`No article folders found under ${issue}`);
   }
 
   const buildScript = path.join(ROOT, 'tools', 'build_article.mjs');
-  let built = 0;
-  let skipped = 0;
+  const results = [];
 
   for (const articleDir of articleDirs) {
+    const rel = normalizeRel(articleDir);
+    const fixedLayoutPath = path.join(articleDir, 'fixed_layout.html');
     const manifestPath = path.join(articleDir, 'intermediate', 'article_manifest.json');
-    const rel = path.relative(ROOT, articleDir).split(path.sep).join('/');
-    if (missingOnly && await exists(manifestPath)) {
-      console.log(`skip existing: ${rel}`);
-      skipped += 1;
+
+    if (!(await exists(fixedLayoutPath))) {
+      console.warn(`skip missing fixed_layout.html: ${rel}`);
+      results.push({ article: rel, status: 'skipped', reason: 'missing fixed_layout.html' });
       continue;
     }
+
+    if (missingOnly && await exists(manifestPath)) {
+      console.log(`skip existing: ${rel}`);
+      results.push({ article: rel, status: 'skipped', reason: 'article_manifest exists' });
+      continue;
+    }
+
     console.log(`build article: ${rel}`);
-    await runNodeScript(buildScript, [rel]);
-    built += 1;
+    try {
+      await runNodeScript(buildScript, [rel]);
+      results.push({ article: rel, status: 'ok' });
+    } catch (error) {
+      results.push({ article: rel, status: 'failed', reason: error.message });
+      const outPath = path.join(ROOT, 'exports', issue, 'article_build_results.json');
+      await fs.mkdir(path.dirname(outPath), { recursive: true });
+      await fs.writeFile(outPath, JSON.stringify({ issue, missingOnly, results }, null, 2), 'utf8');
+      throw error;
+    }
   }
+
+  const outPath = path.join(ROOT, 'exports', issue, 'article_build_results.json');
+  await fs.mkdir(path.dirname(outPath), { recursive: true });
+  await fs.writeFile(outPath, JSON.stringify({ issue, missingOnly, results }, null, 2), 'utf8');
+
+  const built = results.filter(result => result.status === 'ok').length;
+  const skipped = results.filter(result => result.status === 'skipped').length;
+  const failed = results.filter(result => result.status === 'failed').length;
 
   console.log(`issue article build complete: ${issue}`);
   console.log(`built: ${built}`);
   console.log(`skipped: ${skipped}`);
+  console.log(`failed: ${failed}`);
+  console.log(`article build results: ${normalizeRel(outPath)}`);
 }
 
 main().catch(error => {
