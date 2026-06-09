@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=1456, initial-scale=1.0">
   <title>固定レイアウト版</title>
   <link rel="stylesheet" href="fixed_layout.css">
+  <link rel="stylesheet" href="artifact_fixed_layout.css">
   <script src="../../tools/fixed_layout_image_expand.js" defer></script>
   <link rel="stylesheet" href="../../tools/fixed_layout_measured_overrides.css">
 </head>
@@ -17,7 +18,7 @@
       const folderName = parts.slice(-2, -1)[0] || '';
       const articleNo = (folderName.match(/^(\d+)_/) || [null, '00'])[1];
       const source = folderName.replace(/^\d+_/, '') + '.html';
-      const ATOMIC_SELECTOR = 'h1,h2,h3,h4,p,figure,table,ul,ol,blockquote';
+      const ATOMIC_SELECTOR = '.illegal-item,h1,h2,h3,h4,p,figure,table,ul,ol,blockquote';
       const MEASURE_SAFETY_PX = 28;
       const SECTION_SOFT_TEXT_CHARS = 1200;
 
@@ -38,6 +39,10 @@
         sheet.innerHTML = '<header><div class="gossip-slug">固定レイアウト読込エラー</div><h1>' + source + '</h1></header><div class="warning-box"><p>' + message + '</p></div>';
       }
 
+      function isIllegalItem(el) {
+        return Boolean(el.classList && el.classList.contains('illegal-item'));
+      }
+
       function isInsideCollectedAtomic(el) {
         return Boolean(el.parentElement && el.parentElement.closest(ATOMIC_SELECTOR));
       }
@@ -48,6 +53,7 @@
         for (const el of elements) {
           if (isInsideCollectedAtomic(el)) continue;
           const clone = el.cloneNode(true);
+          if (isIllegalItem(clone)) clone.classList.add('fixed-illegal-item');
           if (clone.tagName && clone.tagName.toLowerCase() === 'figure') clone.classList.add('hero-photo');
           blocks.push(clone);
         }
@@ -77,6 +83,7 @@
           hasSectionHeading: Boolean(unit.querySelector('h2')),
           hasMedia: Boolean(unit.querySelector('figure,img')),
           hasTable: Boolean(unit.querySelector('table')),
+          hasIllegalItem: Boolean(unit.querySelector('.illegal-item')),
           paragraphCount: unit.querySelectorAll('p,ul,ol,blockquote').length,
           textChars: text.length,
           blockCount: blocks.length,
@@ -85,6 +92,7 @@
 
       function shouldSoftClosePackage(unit, incomingBlock) {
         const incomingTag = tagOf(incomingBlock);
+        if (isIllegalItem(incomingBlock)) return true;
         if (incomingTag === 'h2') return true;
         const stats = packageStats(unit);
         if (stats.hasMedia && stats.paragraphCount >= 1) return true;
@@ -107,6 +115,15 @@
             current.appendChild(block);
             pushPackage(packages, current);
             current = makePackage('intro');
+            continue;
+          }
+
+          if (isIllegalItem(block)) {
+            pushPackage(packages, current);
+            const item = makePackage('catalog');
+            item.appendChild(block);
+            pushPackage(packages, item);
+            current = makePackage('section-continued');
             continue;
           }
 
@@ -206,7 +223,7 @@
 
         for (const unit of units) {
           const h = await measureOne(probeSheet, unit);
-          if (h > capacity && unit.children.length > 1) {
+          if (h > capacity && unit.dataset.packageKind !== 'catalog' && unit.children.length > 1) {
             const splitUnits = await splitOversizePackage(unit, capacity, probeSheet);
             finalUnits.push(...splitUnits);
           } else {
@@ -255,7 +272,8 @@
         }
 
         for (const item of measured.items) {
-          if (used > 0 && used + item.height > measured.capacity) startNewPage();
+          if (item.kind === 'catalog' && used > 0) startNewPage();
+          else if (used > 0 && used + item.height > measured.capacity) startNewPage();
           sheet.appendChild(item.node);
           item.node.dataset.measuredHeight = String(item.height);
           item.node.dataset.packageStats = JSON.stringify(item.stats || {});
