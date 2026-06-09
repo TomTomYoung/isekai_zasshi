@@ -20,16 +20,8 @@ def resolve_issue():
 
 ISSUE = resolve_issue()
 ISSUE_EXPORT_DIR = ROOT / 'exports' / ISSUE
-ISSUE_SRC_DIR = ISSUE_EXPORT_DIR / 'kindle_pages'
-LEGACY_SRC_DIR = ROOT / 'exports' / 'kindle_pages'
-
-if ISSUE_SRC_DIR.exists():
-    SRC_DIR = ISSUE_SRC_DIR
-    OUT_DIR = ISSUE_EXPORT_DIR
-else:
-    SRC_DIR = LEGACY_SRC_DIR
-    OUT_DIR = ROOT / 'exports'
-
+SRC_DIR = ISSUE_EXPORT_DIR / 'kindle_pages'
+OUT_DIR = ISSUE_EXPORT_DIR
 OUT_EPUB = OUT_DIR / f'isekai_marumie_jitsuwa_{ISSUE}_fixed_layout.epub'
 BOOK_TITLE = f'異世界丸見え実話 {ISSUE}号'
 
@@ -171,7 +163,7 @@ def main():
     if not SRC_DIR.exists():
         raise SystemExit(
             f'Missing {SRC_DIR.relative_to(ROOT)}. Run: node tools/collect_issue_pages.mjs {ISSUE} '
-            f'or provide legacy exports/kindle_pages.'
+            f'or node "{ISSUE}/10_選手名鑑記事/reflect_this_article.mjs".'
         )
 
     images = sorted(p.name for p in SRC_DIR.glob('*.png'))
