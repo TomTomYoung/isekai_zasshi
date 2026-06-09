@@ -17,7 +17,7 @@
       const folderName = parts.slice(-2, -1)[0] || '';
       const articleNo = (folderName.match(/^(\d+)_/) || [null, '00'])[1];
       const source = folderName.replace(/^\d+_/, '') + '.html';
-      const ATOMIC_SELECTOR = 'h1,h2,h3,h4,p,figure,table,ul,ol,blockquote';
+      const ATOMIC_SELECTOR = '.player-card,h1,h2,h3,h4,p,figure,table,ul,ol,blockquote';
       const MEASURE_SAFETY_PX = 28;
       const SECTION_SOFT_TEXT_CHARS = 1200;
 
@@ -38,6 +38,10 @@
         sheet.innerHTML = '<header><div class="gossip-slug">固定レイアウト読込エラー</div><h1>' + source + '</h1></header><div class="warning-box"><p>' + message + '</p></div>';
       }
 
+      function isPlayerCard(el) {
+        return Boolean(el && el.classList && el.classList.contains('player-card'));
+      }
+
       function isInsideCollectedAtomic(el) {
         return Boolean(el.parentElement && el.parentElement.closest(ATOMIC_SELECTOR));
       }
@@ -48,6 +52,7 @@
         for (const el of elements) {
           if (isInsideCollectedAtomic(el)) continue;
           const clone = el.cloneNode(true);
+          if (isPlayerCard(clone)) clone.classList.add('fixed-player-card');
           if (clone.tagName && clone.tagName.toLowerCase() === 'figure') clone.classList.add('hero-photo');
           blocks.push(clone);
         }
@@ -76,6 +81,7 @@
           hasHeading: Boolean(unit.querySelector('h1,h2,h3,h4')),
           hasSectionHeading: Boolean(unit.querySelector('h2')),
           hasMedia: Boolean(unit.querySelector('figure,img')),
+          hasPlayerCard: Boolean(unit.querySelector('.player-card')),
           hasTable: Boolean(unit.querySelector('table')),
           paragraphCount: unit.querySelectorAll('p,ul,ol,blockquote').length,
           textChars: text.length,
@@ -84,6 +90,7 @@
       }
 
       function shouldSoftClosePackage(unit, incomingBlock) {
+        if (isPlayerCard(incomingBlock)) return true;
         const incomingTag = tagOf(incomingBlock);
         if (incomingTag === 'h2') return true;
         const stats = packageStats(unit);
@@ -107,6 +114,15 @@
             current.appendChild(block);
             pushPackage(packages, current);
             current = makePackage('intro');
+            continue;
+          }
+
+          if (isPlayerCard(block)) {
+            pushPackage(packages, current);
+            const playerPackage = makePackage('player');
+            playerPackage.appendChild(block);
+            pushPackage(packages, playerPackage);
+            current = makePackage('section');
             continue;
           }
 
@@ -206,7 +222,7 @@
 
         for (const unit of units) {
           const h = await measureOne(probeSheet, unit);
-          if (h > capacity && unit.children.length > 1) {
+          if (h > capacity && unit.children.length > 1 && unit.dataset.packageKind !== 'player') {
             const splitUnits = await splitOversizePackage(unit, capacity, probeSheet);
             finalUnits.push(...splitUnits);
           } else {
@@ -255,7 +271,8 @@
         }
 
         for (const item of measured.items) {
-          if (used > 0 && used + item.height > measured.capacity) startNewPage();
+          const forceNewPage = item.kind === 'player' && used > 0;
+          if (forceNewPage || (used > 0 && used + item.height > measured.capacity)) startNewPage();
           sheet.appendChild(item.node);
           item.node.dataset.measuredHeight = String(item.height);
           item.node.dataset.packageStats = JSON.stringify(item.stats || {});
