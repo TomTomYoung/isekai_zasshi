@@ -2,8 +2,10 @@ import fs from 'fs';
 import path from 'path';
 
 const ROOT = process.cwd();
-const SRC_DIR = path.join(ROOT, 'exports', 'fixed_layout_images');
-const OUT_DIR = path.join(ROOT, 'exports', 'kindle_pages');
+const ISSUE = process.argv[2] || process.env.ISSUE || '202603';
+const ISSUE_EXPORT_DIR = path.join(ROOT, 'exports', ISSUE);
+const SRC_DIR = path.join(ISSUE_EXPORT_DIR, 'fixed_layout_images');
+const OUT_DIR = path.join(ISSUE_EXPORT_DIR, 'kindle_pages');
 const PAGE_NAME_PATTERN = /^\d{2}_.+_\d{3}\.png$/i;
 
 function ensureDir(dir) {
@@ -36,7 +38,7 @@ function comparePages(a, b) {
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
     console.error(`Missing source directory: ${path.relative(ROOT, SRC_DIR)}`);
-    console.error('Run: node tools/export_fixed_layout_images.mjs');
+    console.error(`Run: node tools/export_fixed_layout_images.mjs ${ISSUE}`);
     process.exit(1);
   }
 
@@ -68,7 +70,7 @@ function main() {
     const outName = `${String(i + 1).padStart(4, '0')}.png`;
     const dest = path.join(OUT_DIR, outName);
     fs.copyFileSync(src, dest);
-    console.log(`${pages[i].name} -> ${outName}`);
+    console.log(`${pages[i].name} -> ${path.relative(ROOT, dest)}`);
   }
 
   console.log('');
