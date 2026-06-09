@@ -5,10 +5,13 @@ import { promises as fs } from 'node:fs';
 const __filename = fileURLToPath(import.meta.url);
 const ARTICLE_DIR = path.dirname(__filename);
 const ROOT = path.resolve(ARTICLE_DIR, '../..');
+const ISSUE = path.basename(path.dirname(ARTICLE_DIR));
 const ARTICLE_NAME = path.basename(ARTICLE_DIR);
 const LOCAL_BUILD_DIR = path.join(ARTICLE_DIR, 'build');
-const FIXED_EXPORT_DIR = path.join(ROOT, 'exports', 'fixed_layout_images');
-const KINDLE_EXPORT_DIR = path.join(ROOT, 'exports', 'kindle_pages');
+const ISSUE_EXPORT_DIR = path.join(ROOT, 'exports', ISSUE);
+const FIXED_EXPORT_DIR = path.join(ISSUE_EXPORT_DIR, 'fixed_layout_images');
+const KINDLE_EXPORT_DIR = path.join(ISSUE_EXPORT_DIR, 'kindle_pages');
+const LEGACY_FIXED_EXPORT_DIR = path.join(ROOT, 'exports', 'fixed_layout_images');
 const PAGE_NAME_PATTERN = /^\d{2}_.+_\d{3}\.png$/i;
 
 function normalizeRel(filePath) {
@@ -62,8 +65,31 @@ async function localBuildPages() {
   return names.map(name => path.join(LOCAL_BUILD_DIR, name));
 }
 
-async function removeOldFixedExports() {
+async function seedIssueFixedExportsFromLegacy() {
   await fs.mkdir(FIXED_EXPORT_DIR, { recursive: true });
+
+  if (!(await exists(LEGACY_FIXED_EXPORT_DIR))) return;
+
+  const currentNames = await fs.readdir(FIXED_EXPORT_DIR).catch(() => []);
+  if (currentNames.some(name => name.toLowerCase().endsWith('.png'))) return;
+
+  const legacyNames = (await fs.readdir(LEGACY_FIXED_EXPORT_DIR))
+    .filter(name => name.toLowerCase().endsWith('.png'));
+
+  for (const name of legacyNames) {
+    await fs.copyFile(
+      path.join(LEGACY_FIXED_EXPORT_DIR, name),
+      path.join(FIXED_EXPORT_DIR, name),
+    );
+  }
+
+  if (legacyNames.length > 0) {
+    console.log(`seeded ${legacyNames.length} pages: ${normalizeRel(LEGACY_FIXED_EXPORT_DIR)} -> ${normalizeRel(FIXED_EXPORT_DIR)}`);
+  }
+}
+
+async function removeOldFixedExports() {
+  await seedIssueFixedExportsFromLegacy();
   const names = await fs.readdir(FIXED_EXPORT_DIR).catch(() => []);
   const prefix = `${ARTICLE_NAME}_`;
 
@@ -86,7 +112,7 @@ async function copyLocalBuildToFixedExports(localPages) {
   }
 }
 
-async function rebuildKindlePages() {
+async function fixedExportPages() {
   if (!(await exists(FIXED_EXPORT_DIR))) {
     throw new Error(`Missing fixed export directory: ${normalizeRel(FIXED_EXPORT_DIR)}`);
   }
@@ -106,11 +132,16 @@ async function rebuildKindlePages() {
     throw new Error(`No fixed layout PNG pages found in ${normalizeRel(FIXED_EXPORT_DIR)}`);
   }
 
-  await cleanDir(KINDLE_EXPORT_DIR);
-
   for (const name of ignored) {
     console.warn(`ignored stale/non-page PNG: ${name}`);
   }
+
+  return pages;
+}
+
+async function rebuildKindlePages() {
+  const pages = await fixedExportPages();
+  await cleanDir(KINDLE_EXPORT_DIR);
 
   for (let i = 0; i < pages.length; i += 1) {
     const src = path.join(FIXED_EXPORT_DIR, pages[i].name);
