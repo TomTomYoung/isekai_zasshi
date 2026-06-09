@@ -11,9 +11,12 @@ const ROOT = path.resolve(ARTICLE_DIR, '../..');
 const ARTICLE_NAME = path.basename(ARTICLE_DIR);
 const FIXED_LAYOUT_HTML = path.join(ARTICLE_DIR, 'fixed_layout.html');
 const OUT_DIR = path.join(ARTICLE_DIR, 'build');
+const FIXED_EXPORT_DIR = path.join(ROOT, 'exports', 'fixed_layout_images');
+const KINDLE_EXPORT_DIR = path.join(ROOT, 'exports', 'kindle_pages');
 const PAGE_SELECTOR = '.fixed-page';
 const VIEWPORT_WIDTH = 1456;
 const VIEWPORT_HEIGHT = 2056;
+const PAGE_NAME_PATTERN = /^\d{2}_.+_\d{3}\.png$/i;
 
 const MIME_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -38,6 +41,22 @@ function outputName(index) {
   return `${ARTICLE_NAME}_${String(index + 1).padStart(3, '0')}.png`;
 }
 
+function pageKeyFromName(name) {
+  if (!PAGE_NAME_PATTERN.test(name)) return null;
+
+  const articleMatch = name.match(/^(\d{2})_/);
+  const pageMatch = name.match(/_(\d{3})\.png$/i);
+  if (!articleMatch || !pageMatch) return null;
+
+  return { article: Number(articleMatch[1]), page: Number(pageMatch[1]) };
+}
+
+function comparePages(a, b) {
+  if (a.key.article !== b.key.article) return a.key.article - b.key.article;
+  if (a.key.page !== b.key.page) return a.key.page - b.key.page;
+  return a.name.localeCompare(b.name, 'ja');
+}
+
 async function ensureExists(filePath, label) {
   try {
     await fs.access(filePath);
@@ -46,9 +65,80 @@ async function ensureExists(filePath, label) {
   }
 }
 
+async function exists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function cleanDir(dir) {
+  await fs.rm(dir, { recursive: true, force: true });
+  await fs.mkdir(dir, { recursive: true });
+}
+
 async function cleanLocalBuildDir() {
-  await fs.rm(OUT_DIR, { recursive: true, force: true });
-  await fs.mkdir(OUT_DIR, { recursive: true });
+  await cleanDir(OUT_DIR);
+}
+
+async function removeArticleFixedExports() {
+  await fs.mkdir(FIXED_EXPORT_DIR, { recursive: true });
+  const names = await fs.readdir(FIXED_EXPORT_DIR).catch(() => []);
+  const prefix = `${ARTICLE_NAME}_`;
+  for (const name of names) {
+    if (name.startsWith(prefix) && name.toLowerCase().endsWith('.png')) {
+      await fs.rm(path.join(FIXED_EXPORT_DIR, name), { force: true });
+      console.log(`removed stale fixed export: ${path.relative(ROOT, path.join(FIXED_EXPORT_DIR, name))}`);
+    }
+  }
+}
+
+async function copyBuildToFixedExports(outputPaths) {
+  await removeArticleFixedExports();
+  for (const src of outputPaths) {
+    const dest = path.join(FIXED_EXPORT_DIR, path.basename(src));
+    await fs.copyFile(src, dest);
+    console.log(`fixed export: ${path.relative(ROOT, dest)}`);
+  }
+}
+
+async function rebuildKindlePagesFromFixedExports() {
+  if (!(await exists(FIXED_EXPORT_DIR))) {
+    throw new Error(`Missing source directory: ${path.relative(ROOT, FIXED_EXPORT_DIR)}`);
+  }
+
+  const ignored = [];
+  const pages = (await fs.readdir(FIXED_EXPORT_DIR))
+    .filter(name => name.toLowerCase().endsWith('.png'))
+    .map(name => ({ name, key: pageKeyFromName(name) }))
+    .filter(item => {
+      if (item.key !== null) return true;
+      ignored.push(item.name);
+      return false;
+    })
+    .sort(comparePages);
+
+  if (pages.length === 0) {
+    throw new Error(`No fixed layout PNG pages found in ${path.relative(ROOT, FIXED_EXPORT_DIR)}`);
+  }
+
+  await cleanDir(KINDLE_EXPORT_DIR);
+
+  for (const name of ignored) {
+    console.warn(`ignored stale/non-page PNG: ${name}`);
+  }
+
+  for (let i = 0; i < pages.length; i += 1) {
+    const src = path.join(FIXED_EXPORT_DIR, pages[i].name);
+    const outName = `${String(i + 1).padStart(4, '0')}.png`;
+    const dest = path.join(KINDLE_EXPORT_DIR, outName);
+    await fs.copyFile(src, dest);
+    console.log(`kindle page: ${pages[i].name} -> ${path.relative(ROOT, dest)}`);
+  }
+
+  console.log(`prepared ${pages.length} Kindle pages in ${path.relative(ROOT, KINDLE_EXPORT_DIR)}`);
 }
 
 function startServer() {
@@ -122,6 +212,7 @@ async function main() {
 
   const { server, baseUrl } = await startServer();
   const browser = await chromium.launch();
+  const outputPaths = [];
 
   try {
     const page = await browser.newPage({
@@ -151,12 +242,16 @@ async function main() {
     for (let i = 0; i < pages.length; i += 1) {
       const outputPath = path.join(OUT_DIR, outputName(i));
       await pages[i].screenshot({ path: outputPath, animations: 'disabled', timeout: 15000 });
-      console.log(`exported: ${path.relative(ROOT, outputPath)}`);
+      outputPaths.push(outputPath);
+      console.log(`local build: ${path.relative(ROOT, outputPath)}`);
     }
   } finally {
     await browser.close();
     await new Promise(resolve => server.close(resolve));
   }
+
+  await copyBuildToFixedExports(outputPaths);
+  await rebuildKindlePagesFromFixedExports();
 }
 
 main().catch(error => {
