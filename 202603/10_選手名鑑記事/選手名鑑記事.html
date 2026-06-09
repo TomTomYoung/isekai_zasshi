@@ -59,11 +59,35 @@
             border-color: #fff;
         }
 
+        .player-card figure {
+            margin: 0;
+            background: #181818;
+        }
+
+        .player-img-frame {
+            width: 100%;
+            height: 430px;
+            overflow: hidden;
+            background: #111;
+            border-bottom: 2px solid #333;
+        }
+
         .player-img {
             width: 100%;
-            height: auto;
-            border-bottom: 2px solid #333;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            border-bottom: 0;
             display: block;
+        }
+
+        figcaption {
+            margin: 0;
+            padding: 12px 18px 14px;
+            color: #aaa;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            background: #1a1a1a;
         }
 
         .player-info {
@@ -118,6 +142,65 @@
         .description {
             color: #ccc;
             line-height: 1.8;
+            margin-bottom: 18px;
+        }
+
+        .profile-spec {
+            display: grid;
+            gap: 8px;
+            margin: 18px 0 0;
+            padding: 0;
+        }
+
+        .profile-spec div {
+            display: grid;
+            grid-template-columns: 7.5em 1fr;
+            gap: 12px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+        }
+
+        .profile-spec dt {
+            color: #aaa;
+            font-weight: bold;
+        }
+
+        .profile-spec dd {
+            margin: 0;
+            color: #ddd;
+            line-height: 1.65;
+        }
+
+        .layout-gear .player-img-frame {
+            height: 460px;
+        }
+
+        .layout-gear .player-img {
+            object-position: center 42%;
+        }
+
+        .layout-miriam .player-img-frame {
+            height: 430px;
+        }
+
+        .layout-miriam .player-img {
+            object-position: center 35%;
+        }
+
+        .layout-joker .player-img-frame {
+            height: 420px;
+        }
+
+        .layout-joker .player-img {
+            object-position: center 45%;
+        }
+
+        .layout-rachel .player-img-frame {
+            height: 430px;
+        }
+
+        .layout-rachel .player-img {
+            object-position: center 38%;
         }
 
         hr {
@@ -150,65 +233,138 @@
         </div>
 
         <!-- Gear Gandor -->
-        <div class="player-card char-gear">
+        <div class="player-card char-gear layout-gear">
             <figure>
-                <img src="ギアガンドル.png" alt="ギア・ガンドル" class="player-img">
+                <div class="player-img-frame">
+                    <img src="ギアガンドル.png" alt="ギア・ガンドル" class="player-img">
+                </div>
                 <figcaption>▲ 蒸気機関と魔導回路がむき出しになった強化外骨格を纏い、咆哮する「鉄の暴君」ギア・ガンドル</figcaption>
             </figure>
             <div class="player-info">
                 <h2>1. その体は鉄か、魔法か</h2>
                 <h3>鉄の暴君『ギア・ガンドル』</h3>
                 <span class="quote">「蒸気（スチーム）と暴力のハーモニー！」</span>
-                <p class="description">全身を無骨な「試作型・強化外骨格」で覆った大男。蒸気を噴き上げながら、巨大な機械の腕で魔物をミンチにする姿は圧巻！
-                    「中身は脳だけのサイボーグ」なんて噂もあるけど、そのロマン溢れる戦い方に男の子（と一部のマニア）はメロメロ！ 必殺の『スチーム・パイルバンカー』が決まった瞬間の歓声は、ドーム・シティ一番の熱気かも！？
-                </p>
+                <p class="description">全身を無骨な「試作型・強化外骨格」で覆った大男。蒸気を噴き上げながら、巨大な機械の腕で魔物をミンチにする姿は圧巻！</p>
+                <dl class="profile-spec">
+                    <div>
+                        <dt>戦闘スタイル</dt>
+                        <dd>強化外骨格、蒸気機関、魔導回路、近接粉砕。</dd>
+                    </div>
+                    <div>
+                        <dt>必殺技</dt>
+                        <dd>『スチーム・パイルバンカー』。巨大な杭打ち機で相手を粉砕する。</dd>
+                    </div>
+                    <div>
+                        <dt>推しポイント</dt>
+                        <dd>機械音と蒸気をまき散らす、わかりやすい破壊力。</dd>
+                    </div>
+                    <div>
+                        <dt>噂</dt>
+                        <dd>中身は脳だけのサイボーグ、という怪情報が流れている。</dd>
+                    </div>
+                </dl>
             </div>
         </div>
 
         <!-- Miriam Viper -->
-        <div class="player-card char-miriam">
+        <div class="player-card char-miriam layout-miriam">
             <figure>
-                <img src="ミリアムヴァイパー.png" alt="ミリアム・ヴァイパー" class="player-img">
+                <div class="player-img-frame">
+                    <img src="ミリアムヴァイパー.png" alt="ミリアム・ヴァイパー" class="player-img">
+                </div>
                 <figcaption>▲ 蒼い稲妻を帯びた双剣を構え、挑戦的な笑みを浮かべる「蒼雷の女豹」ミリアム・ヴァイパー</figcaption>
             </figure>
             <div class="player-info">
                 <h2>2. 踏まれたい男子急増中！？</h2>
                 <h3>蒼雷の女豹『ミリアム・ヴァイパー』</h3>
                 <span class="quote">「女王様、僕も切ってください！」</span>
-                <p class="description">スタイリッシュな黒のレザーアーマーに身を包んだ、強気なさ美女剣士。目にも止まらぬ双剣と雷魔法で、相手をなぶり殺しにする「処刑ショー」が大人気！
-                    彼女が勝つと観客席に投げキッス＆敗者をヒールで踏みつけるのがお約束。実は没落した元・貴族令嬢で、借金返済のために戦っているという「悲劇のヒロイン」設定も、ファンの庇護欲をそそるとか…？</p>
+                <p class="description">スタイリッシュな黒のレザーアーマーに身を包んだ、強気な美女剣士。目にも止まらぬ双剣と雷魔法で、相手をなぶり殺しにする「処刑ショー」が大人気！</p>
+                <dl class="profile-spec">
+                    <div>
+                        <dt>戦闘スタイル</dt>
+                        <dd>双剣、雷魔法剣、高速連撃。</dd>
+                    </div>
+                    <div>
+                        <dt>名物演出</dt>
+                        <dd>勝利後の投げキッスと、敗者をヒールで踏みつけるパフォーマンス。</dd>
+                    </div>
+                    <div>
+                        <dt>推しポイント</dt>
+                        <dd>強さ、色気、悲劇設定が一体になったスター性。</dd>
+                    </div>
+                    <div>
+                        <dt>裏設定</dt>
+                        <dd>没落した元・貴族令嬢で、借金返済のために闘技場入りしたと言われている。</dd>
+                    </div>
+                </dl>
             </div>
         </div>
 
         <!-- Joker Bone -->
-        <div class="player-card char-joker">
+        <div class="player-card char-joker layout-joker">
             <figure>
-                <img src="ジョーカーボーン.png" alt="ジョーカー・ボーン" class="player-img">
+                <div class="player-img-frame">
+                    <img src="ジョーカーボーン.png" alt="ジョーカー・ボーン" class="player-img">
+                </div>
                 <figcaption>▲ 骸骨マスクを被り、不気味でありながらコミカルに骨と魔術を操る「不死身の道化師」ジョーカー・ボーン</figcaption>
             </figure>
             <div class="player-info">
                 <h2>3. 笑いと恐怖のサーカス団</h2>
                 <h3>不死身の道化師『ジョーカー・ボーン』</h3>
                 <span class="quote">「子供は泣くけど大人はハマる！」</span>
-                <p class="description">
-                    骸骨マスクを被った不気味な魔術師。自分の骨を切り離して操ったり、倒した魔物をその場で蘇生させたりと、戦い方はグロテスクそのもの。でも、戦いながらジャグリングをしたり、観客を煽ったりするパフォーマンスは超一流！
-                    悪役（ヒール）として完璧な振る舞いに、いつの間にか彼を応援したくなっちゃう不思議な魅力があります。※お昼の部は出入り禁止です（笑）</p>
+                <p class="description">骸骨マスクを被った不気味な魔術師。自分の骨を切り離して操ったり、倒した魔物をその場で蘇生させたりと、戦い方はグロテスクそのもの。</p>
+                <dl class="profile-spec">
+                    <div>
+                        <dt>戦闘スタイル</dt>
+                        <dd>死霊術、骨操作、曲芸、観客煽り。</dd>
+                    </div>
+                    <div>
+                        <dt>名物演出</dt>
+                        <dd>戦いながらジャグリングをし、悪役として観客の熱を上げる。</dd>
+                    </div>
+                    <div>
+                        <dt>推しポイント</dt>
+                        <dd>恐怖と笑いを同時に成立させる、ヒールとしての完成度。</dd>
+                    </div>
+                    <div>
+                        <dt>備考</dt>
+                        <dd>子供が泣くので昼の部は出入り禁止。</dd>
+                    </div>
+                </dl>
             </div>
         </div>
 
         <!-- Rachel Bomb -->
-        <div class="player-card char-rachel">
+        <div class="player-card char-rachel layout-rachel">
             <figure>
-                <img src="レイチェルボム.png" alt="レイチェル・ボム" class="player-img">
+                <div class="player-img-frame">
+                    <img src="レイチェルボム.png" alt="レイチェル・ボム" class="player-img">
+                </div>
                 <figcaption>▲ 可憐なフリルの衣装とは裏腹に、背後でド派手な大爆発を起こして微笑む「爆殺令嬢」レイチェル・ボム</figcaption>
             </figure>
             <div class="player-info">
                 <h2>4. 爆発こそ正義！ 最凶ロリータ</h2>
                 <h3>爆殺令嬢『レイチェル・ボム』</h3>
                 <span class="quote">「カワイイ顔してド派手な爆撃！」</span>
-                <p class="description">フリフリのロリータ服を着た可憐な少女…に見えるけど、中身は爆炎魔法のスペシャリスト！
-                    「えいっ♡」と杖を振るたびに、闘技場が爆炎に包まれます。勝利インタビューでの「お父様に怒られちゃう♡」というブリっ子発言と、直前のえげつない爆殺シーンの温度差が最高！
-                    最前列で観戦するときは、焦げないように「耐熱シート」の準備を忘れずにね！</p>
+                <p class="description">フリフリのロリータ服を着た可憐な少女……に見えるけど、中身は爆炎魔法のスペシャリスト。杖を振るたびに闘技場が爆炎に包まれる。</p>
+                <dl class="profile-spec">
+                    <div>
+                        <dt>戦闘スタイル</dt>
+                        <dd>爆炎魔法、広範囲攻撃、観客席ぎりぎりの派手な演出。</dd>
+                    </div>
+                    <div>
+                        <dt>名物発言</dt>
+                        <dd>勝利インタビューでの「お父様に怒られちゃう♡」。</dd>
+                    </div>
+                    <div>
+                        <dt>推しポイント</dt>
+                        <dd>可憐な外見とえげつない爆殺シーンの温度差。</dd>
+                    </div>
+                    <div>
+                        <dt>観戦注意</dt>
+                        <dd>最前列は耐熱シート推奨。</dd>
+                    </div>
+                </dl>
             </div>
         </div>
 
