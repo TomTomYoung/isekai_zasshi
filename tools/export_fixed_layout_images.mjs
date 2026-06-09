@@ -8,8 +8,10 @@ import { chromium } from 'playwright';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
-const ISSUE_DIR = path.join(ROOT, '202603');
-const OUT_DIR = path.join(ROOT, 'exports', 'fixed_layout_images');
+const ISSUE = process.argv[2] || process.env.ISSUE || '202603';
+const ISSUE_DIR = path.join(ROOT, ISSUE);
+const ISSUE_EXPORT_DIR = path.join(ROOT, 'exports', ISSUE);
+const OUT_DIR = path.join(ISSUE_EXPORT_DIR, 'fixed_layout_images');
 const PAGE_SELECTOR = '.fixed-page';
 const VIEWPORT_WIDTH = 1456;
 const VIEWPORT_HEIGHT = 2056;
@@ -250,9 +252,14 @@ async function exportTarget(browser, baseUrl, target) {
 }
 
 async function main() {
+  const issueStat = await fs.stat(ISSUE_DIR).catch(() => null);
+  if (!issueStat || !issueStat.isDirectory()) {
+    throw new Error(`Issue directory not found: ${path.relative(ROOT, ISSUE_DIR)}`);
+  }
+
   const targets = await collectTargets();
   if (targets.length === 0) {
-    throw new Error('No fixed_layout.html files found under 202603 article folders.');
+    throw new Error(`No fixed_layout.html files found under ${ISSUE} article folders.`);
   }
 
   await cleanDir(OUT_DIR);
@@ -272,6 +279,8 @@ async function main() {
     await browser.close();
     await new Promise(resolve => server.close(resolve));
   }
+
+  console.log(`fixed layout images: ${path.relative(ROOT, OUT_DIR)}`);
 }
 
 main().catch(err => {
