@@ -1,11 +1,13 @@
 {
   "private": true,
   "scripts": {
-    "export:fixed-layout": "node tools/export_fixed_layout_images.mjs",
+    "export:fixed-layout": "node tools/export_fixed_layout_images.mjs 202603",
+    "prepare:kindle-pages": "node tools/prepare_kindle_pages.mjs 202603",
+    "build:fixed-layout-epub": "npm run export:fixed-layout && npm run prepare:kindle-pages && npm run build:epub",
     "build:article": "node tools/build_article.mjs",
     "build:issue-articles": "node tools/build_issue_articles.mjs",
     "collect:issue-pages": "node tools/collect_issue_pages.mjs",
-    "build:epub": "python tools/build_fixed_layout_epub.py",
+    "build:epub": "python tools/build_fixed_layout_epub.py 202603",
     "check:fixed-layout": "python tools/check_fixed_layout_outputs.py"
   },
   "devDependencies": {
