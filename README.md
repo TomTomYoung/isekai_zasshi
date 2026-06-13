@@ -4,16 +4,16 @@
 
 このリポジトリは、異世界雑誌の原稿・固定レイアウト版HTML/CSS・リフロー版HTML・画像・制作手順を管理するためのものです。
 
-現在の最優先対象は、`202603` 号の fixed_layout 版を一区切りまで持っていくことです。
+`202603` 号 fixed_layout 版は、KDP公開済みです。
 
 ```text
 fixed_layout版
 = 固定紙面向け。1456×2056pxの紙面をPNG画像として書き出す版。
-= 現在の最優先作業。
+= 202603号ではKDP公開済みの主成果物。
 
 reflow版
 = EPUB等のリフロー本文向け。読者環境に応じて本文が流れる版。
-= fixed_layout版の次に扱う。
+= fixed_layout版とは別系統の派生候補。
 ```
 
 ---
@@ -21,13 +21,14 @@ reflow版
 ## 現在の優先作業
 
 ```text
-1. 異世界雑誌 202603号 fixed_layout PNG export
-2. 異世界雑誌 202603号 reflow v1.0
+1. 異世界雑誌 202603号 公開後整理
+2. 異世界雑誌 202604号 企画・誌面テンプレート設計
+3. 異世界雑誌 202603号 reflow v1.0
 ```
 
-v1.0 の目的は、完全版を作ることではありません。
+202603号 fixed_layout 版は、KDP公開まで到達したため制作フェーズを閉じます。
 
-既存記事を固定し、目次・本文・画像・キャプション・奥付を備えた、最初から最後まで読める版として一度閉じることです。
+次の主眼は、公開済み号の制作記録を残し、202604号以降へ再利用できる制作ルール・テンプレートへ落とし込むことです。
 
 ---
 
@@ -36,18 +37,23 @@ v1.0 の目的は、完全版を作ることではありません。
 作業手順：
 
 1. [`docs/02_fixed_layout_build_steps.md`](docs/02_fixed_layout_build_steps.md)
-   - `fixed_layout.html` / `fixed_layout.css` の存在確認、PNG書き出し、出力枚数・サイズ・主要記事確認の手順。
+   - `fixed_layout.html` / `fixed_layout.css` の存在確認、PNG書き出し、Kindle用連番PNG、固定レイアウトEPUB生成の手順。
 
-固定レイアウト版をPNG化するには、リポジトリ直下で以下を実行します。
+2. [`docs/04_202603_post_release_notes.md`](docs/04_202603_post_release_notes.md)
+   - 202603号 fixed_layout 版のKDP公開後メモ。制作方式、最終出力、反省点、次号への改善ルール。
+
+固定レイアウト版をEPUBまでまとめて生成するには、リポジトリ直下で以下を実行します。
 
 ```bash
-./tools/export_fixed_layout_images.sh
+npm run build:fixed-layout-epub
 ```
 
-出力先：
+号数別の正規出力先：
 
 ```text
-exports/fixed_layout_images/
+exports/202603/fixed_layout_images/
+exports/202603/kindle_pages/
+exports/202603/isekai_marumie_jitsuwa_202603_fixed_layout.epub
 ```
 
 固定レイアウト版の主要ファイル：
@@ -56,15 +62,17 @@ exports/fixed_layout_images/
 202603/*/fixed_layout.html
 202603/*/fixed_layout.css
 tools/export_fixed_layout_images.mjs
-tools/export_fixed_layout_images.sh
-exports/fixed_layout_images/
+tools/prepare_kindle_pages.mjs
+tools/build_fixed_layout_epub.py
+exports/202603/fixed_layout_images/
+exports/202603/kindle_pages/
 ```
 
 ---
 
 ## reflow v1.0 作業導線
 
-reflow版は fixed_layout版の次に扱います。
+reflow版は fixed_layout版とは別系統の派生候補です。
 
 作業は以下の順に確認します。
 
@@ -96,8 +104,10 @@ docs/03_epub_v1_release_notes.md
 202603/*/fixed_layout.html
 202603/*/fixed_layout.css
 tools/export_fixed_layout_images.mjs
-tools/export_fixed_layout_images.sh
-exports/fixed_layout_images/
+tools/prepare_kindle_pages.mjs
+tools/build_fixed_layout_epub.py
+exports/202603/fixed_layout_images/
+exports/202603/kindle_pages/
 ```
 
 ### reflow版
@@ -138,17 +148,25 @@ git diff -- 202603
 
 ---
 
-## fixed_layout版の完了条件
+## 202603号 fixed_layout版の到達点
 
-以下を満たしたら、`202603` 号を fixed_layout 版として一区切りにします。
+`202603` 号 fixed_layout 版は、KDP公開済みのため制作フェーズを閉じます。
 
-- fixed_layout HTMLが開く
-- fixed_layout PNGが出力できる
-- 出力PNGが開ける
-- 主要記事が紙面として読める
-- 画像が表示される
-- キャプションが読める
-- 致命的な画像切れ・本文崩壊がない
+到達点：
+
+- fixed_layout HTML/CSSを記事単位で整備
+- 1456×2056pxページPNGとして書き出し
+- Kindle用連番PNGへ変換
+- 固定レイアウトEPUB/KPF化の導線を整備
+- KDP公開まで到達
+
+今後、202603号に対して行う作業は、原則として以下に限定します。
+
+- 公開後メモの補足
+- 明白な誤字・表示事故の修正
+- 次号へ流用するための制作ルール抽出
+
+新記事追加・大幅な誌面再設計・世界設定の拡張は、202604号以降へ回します。
 
 ---
 
@@ -180,7 +198,6 @@ isekai-zasshi-202603-reflow-v1.0
 - 世界設定の拡張
 - CSSの全面再設計
 - 新規画像の大量追加
-- KDP完全最適化
 - 全端末での完全表示保証
 
 これらは v1.1 以降、または v2.0 以降に回します。
