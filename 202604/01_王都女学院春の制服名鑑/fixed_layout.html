@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1456, initial-scale=1.0">
+  <title>王都女学院春の制服名鑑｜固定レイアウト版</title>
+  <style>
+    html,body{margin:0;padding:0;background:#111;color:#111}
+    body{font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"MS PMincho",serif}
+    .fixed-page{width:1456px;height:2056px;box-sizing:border-box;margin:0 auto;position:relative;overflow:hidden;background:#f4ecd2;border-left:16px solid #111;border-right:16px solid #111;page-break-after:always;padding:70px 62px 62px}
+    .fixed-page:before{content:"異世界丸見え実話　2026年4月号";position:absolute;top:22px;left:62px;right:62px;height:38px;background:#ffd400;border-top:7px solid #111;border-bottom:7px solid #111;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-size:26px;font-weight:900;line-height:24px;text-align:center;letter-spacing:.08em}
+    .fixed-page:after{content:attr(data-page);position:absolute;right:42px;bottom:28px;width:70px;height:70px;border:6px solid #111;border-radius:50%;background:#fff;color:#111;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-size:28px;font-weight:900;line-height:58px;text-align:center;box-sizing:border-box}
+    h1,h2,h3{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-weight:900;line-height:1.06;margin:0}
+    p{font-size:26px;line-height:1.48;margin:0 0 .72em;text-align:justify}
+    .slug{display:inline-block;background:#c40018;color:#fff;border:5px solid #111;box-shadow:5px 5px 0 #111;padding:7px 18px;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-size:28px;font-weight:900;transform:rotate(-2deg);margin:0 0 16px}
+    .headline{background:#fff4b8;border:9px solid #111;box-shadow:12px 12px 0 #111;padding:26px 32px;margin:0 0 26px;position:relative}
+    .headline h1{font-size:74px;letter-spacing:-.08em;color:#c40018;text-shadow:4px 4px 0 #ffd400,6px 6px 0 rgba(0,0,0,.24)}
+    .headline .sub{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-size:34px;font-weight:900;margin-top:12px;line-height:1.18}
+    .lead{background:#fff;border:6px solid #111;box-shadow:8px 8px 0 #c40018;padding:16px 20px;margin:0 0 22px;font-size:31px;line-height:1.36;font-weight:900}
+    .three-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:24px 0 20px}
+    .school-card{background:#fff;border:7px solid #111;box-shadow:7px 7px 0 #111;padding:12px;min-height:910px;display:flex;flex-direction:column;position:relative}
+    .school-card h2{font-size:38px;background:#111;color:#fff;padding:9px 12px;margin:0 0 10px;border-left:12px solid #c40018}
+    .school-card .image-box{height:620px;border:5px solid #111;background:#e7dfcb;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 0 10px;position:relative}
+    .school-card img{width:100%;height:100%;object-fit:cover;display:block}
+    .school-card .missing{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-size:28px;font-weight:900;text-align:center;line-height:1.3;padding:20px;color:#555}
+    .school-card .caption{font-size:21px;line-height:1.35;font-weight:900;background:#fff4b8;border:4px solid #111;padding:8px 10px;margin-top:auto}
+    .note{background:#fff;border:6px solid #111;box-shadow:7px 7px 0 #111;padding:16px 20px;margin:18px 0 0}
+    .note h3{font-size:34px;margin:0 0 8px;background:linear-gradient(transparent 58%,#ffd400 58%)}
+    .section-title{font-size:50px;background:#111;color:#fff;border-left:18px solid #c40018;box-shadow:7px 7px 0 #ffd400;padding:13px 18px;margin:0 0 24px}
+    .academy-page{display:grid;grid-template-columns:540px 1fr;gap:28px}
+    .main-photo{background:#fff;border:8px solid #111;box-shadow:10px 10px 0 #111;padding:12px;min-height:1240px;position:relative}
+    .main-photo .image-box{height:1120px;border:5px solid #111;background:#e7dfcb;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .main-photo img{width:100%;height:100%;object-fit:cover;display:block}
+    .main-photo figcaption{display:block;background:#111;color:#fff;padding:9px 12px;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-size:22px;font-weight:900;line-height:1.3;margin-top:10px}
+    .article-text{background:rgba(255,255,255,.72);padding:4px 0 0}
+    .article-text h3{font-size:38px;margin:18px 0 12px;padding:8px 12px;background:#ffd400;border:5px solid #111;box-shadow:4px 4px 0 #111}
+    .pull{background:#c40018;color:#fff;border:6px solid #111;box-shadow:6px 6px 0 #111;padding:12px 16px;margin:16px 0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-size:31px;font-weight:900;line-height:1.22}
+    table{width:100%;border-collapse:collapse;background:#fff;font-size:22px;line-height:1.35;table-layout:fixed;margin-top:22px}
+    th,td{border:4px solid #111;padding:9px 10px;vertical-align:top;word-break:break-word}
+    th{background:#ffd400;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-weight:900}
+    .compare-title{font-size:56px;background:#111;color:#fff;border-left:18px solid #c40018;box-shadow:8px 8px 0 #ffd400;padding:14px 18px;margin:0 0 20px}
+    .closing{columns:2;column-gap:38px;margin-top:22px}
+    .closing p{break-inside:avoid}
+  </style>
+</head>
+<body>
+  <section class="fixed-page" data-page="001">
+    <div class="slug">王都春制服　徹底比較</div>
+    <header class="headline">
+      <h1>王都女学院<br>春の制服名鑑</h1>
+      <div class="sub">桜花・金獅子・薔薇十字――制服でわかる家柄、進路、後援組織</div>
+    </header>
+    <p class="lead">春祭りの飾り布よりも早く王都の色を変えるものがある。女学院の制服である。襟、袖、リボン、紋章を見れば、背後にある家、信仰、金、魔術系統まで読める。</p>
+    <div class="three-grid">
+      <article class="school-card">
+        <h2>桜花</h2>
+        <div class="image-box"><img alt="王都桜花学園の春制服" data-candidates="images/ouka.png|images/ouka.webp|images/桜花.png|images/王都桜花学園.png|ouka.png|桜花.png|王都桜花学園.png"></div>
+        <div class="caption">聖教会、王族、貴族、民間上層。回復、浄化、保護、生活魔術。清潔感と礼法をまとう制服。</div>
+      </article>
+      <article class="school-card">
+        <h2>金獅子</h2>
+        <div class="image-box"><img alt="金獅子女学院の春制服" data-candidates="images/kinjishi.png|images/kinjishi.webp|images/金獅子.png|images/金獅子女学院.png|kinjishi.png|金獅子.png|金獅子女学院.png"></div>
+        <div class="caption">軍閥、商会、金融、鉱山、海運。資金と物流と後援網。金糸と革鞄で家の力を示す制服。</div>
+      </article>
+      <article class="school-card">
+        <h2>薔薇十字</h2>
+        <div class="image-box"><img alt="薔薇十字女学院の春制服" data-candidates="images/barajuji.png|images/barajuji.webp|images/薔薇十字.png|images/薔薇十字女学院.png|barajuji.png|薔薇十字.png|薔薇十字女学院.png"></div>
+        <div class="caption">魔術師協会、魔道具工房、術式研究会。攻撃魔法、結界術、術式解析。清楚な高等魔術制服。</div>
+      </article>
+    </div>
+    <section class="note">
+      <h3>編集部の見立て</h3>
+      <p>一番清く見えるのは桜花。一番金がかかるのは金獅子。一番魔術的に油断できないのは薔薇十字。三つの制服は、三つの未来を示している。</p>
+    </section>
+  </section>
+
+  <section class="fixed-page" data-page="002">
+    <h2 class="section-title">一、王都桜花学園――聖教会の回復と浄化を宿す</h2>
+    <div class="academy-page">
+      <figure class="main-photo">
+        <div class="image-box"><img alt="王都桜花学園の春制服" data-candidates="images/ouka.png|images/ouka.webp|images/桜花.png|images/王都桜花学園.png|ouka.png|桜花.png|王都桜花学園.png"></div>
+        <figcaption>淡い桜色と白。聖教会の清潔感、王都上層の礼法、施療院実務を同時に見せる。</figcaption>
+      </figure>
+      <article class="article-text">
+        <p>桜花学園の制服は、一見すると最も「王都の令嬢」らしい。淡い色味の上衣、整えられた襟、過度に膨らませない袖、動作を美しく見せる長めのスカート。髪飾りやリボンも派手すぎず、家柄のよさを見せながら、礼法の範囲に収める。</p>
+        <p>だが、桜花の制服をただの淑女服と思ってはいけない。桜花学園の基盤には聖教会があり、教育の中心には礼法、家政、宮廷作法、回復魔法、浄化、保護、慈善実務が置かれている。</p>
+        <div class="pull">清らかに見える。だが現場にも出られる。</div>
+        <p>袖口は祈りや回復術の所作を邪魔しない。胸元は礼法上きちんと閉じているが、内側には小型の聖印や護符を収める余地がある。スカートは舞踏にも耐えるが、慈善訪問や施療院の補助作業でも乱れにくい。</p>
+        <p>桜花生の制服姿が「上品なのに頼れる」と言われるのは、このためである。彼女たちは茶会の席で微笑みながら、相手の家格、寄付先、婚約先、推薦状、教会との関係を読む。</p>
+        <p>桜花の春制服は、聖教会の回復と王都上層の実務を結ぶ服である。</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="fixed-page" data-page="003">
+    <h2 class="section-title">二、金獅子女学院――軍閥と商会の制服</h2>
+    <div class="academy-page">
+      <figure class="main-photo">
+        <div class="image-box"><img alt="金獅子女学院の春制服" data-candidates="images/kinjishi.png|images/kinjishi.webp|images/金獅子.png|images/金獅子女学院.png|kinjishi.png|金獅子.png|金獅子女学院.png"></div>
+        <figcaption>紺、白、金。軍閥と商会、資金と物流、後援者名簿の力を示す制服。</figcaption>
+      </figure>
+      <article class="article-text">
+        <p>金獅子女学院の制服は、遠目にもわかる。布地が違う。仕立てが違う。刺繍の密度が違う。馬車を降りた瞬間、周囲の空気が「金獅子だ」と気づく。</p>
+        <p>金獅子女学院は、軍閥、商会、金融家、鉱山主、海運王、魔道具財閥に近い女学院である。学園そのものが王都の資金、物流、補給、人脈をつなぐ社交場でもある。</p>
+        <div class="pull">制服は単なる服ではなく、契約書の前置きである。</div>
+        <p>襟飾り、リボン留め、手袋、靴、鞄、外套の裏地、ブローチ、香り袋。規定内と言いながら、実際には「どこの家がどれだけの後援力を持つか」の展示会になっている。</p>
+        <p>家が強い。財布が強い。倉庫が強い。紹介状が強い。後援者名簿が強い。一着の制服が、王都経済と後援網の早耳情報になる。</p>
+        <p>それが金獅子女学院である。</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="fixed-page" data-page="004">
+    <h2 class="section-title">三、薔薇十字女学院――魔術師協会の理論と攻撃魔法</h2>
+    <div class="academy-page">
+      <figure class="main-photo">
+        <div class="image-box"><img alt="薔薇十字女学院の春制服" data-candidates="images/barajuji.png|images/barajuji.webp|images/薔薇十字.png|images/薔薇十字女学院.png|barajuji.png|薔薇十字.png|薔薇十字女学院.png"></div>
+        <figcaption>白、深紅、黒。清楚な外見に、術式解析、結界術、高等魔術の規律を隠す。</figcaption>
+      </figure>
+      <article class="article-text">
+        <p>薔薇十字女学院の制服は、三校の中で最も静かに見える。色は抑えられ、装飾は少なく、清潔感と規律が重視される。だが、胸元や袖に入る薔薇と十字、幾何学的な術式紋が学院の性格を示す。</p>
+        <p>薔薇十字女学院は、魔術師協会が主導する名門女子学院である。教会的な名前と清楚な制服のため誤解されやすいが、教育の中心は魔術理論、術式解析、結界術、攻撃魔法、魔道具制御、魔術倫理である。</p>
+        <div class="pull">清楚さの中に、専門魔術の機能がある。</div>
+        <p>高い襟は姿勢と呼吸を整えるため。袖は杖や触媒を扱う動作を邪魔しないため。深紅のリボンやサッシュは、魔力制御具を兼ねるため。胸元の薔薇十字紋は、学院所属と術式系統を示すため。</p>
+        <p>彼女たちは礼儀正しい。だが、必要なら術式を組む。必要なら結界を編む。必要なら火、雷、光、氷の魔法系統を理論通りに扱う。</p>
+        <p>その制服は、王都の魔術理論を背負う服である。</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="fixed-page" data-page="005">
+    <h2 class="compare-title">三校比較早見表</h2>
+    <table>
+      <thead><tr><th>学院</th><th>制服の印象</th><th>背後にある力</th><th>魔法傾向</th><th>主な進路</th></tr></thead>
+      <tbody>
+        <tr><td>王都桜花学園</td><td>優雅、清潔、礼法的</td><td>聖教会、王族、貴族、民間上層</td><td>回復、浄化、保護、生活魔術</td><td>女官、施療院補佐、慈善事業、家門実務、社交実務</td></tr>
+        <tr><td>金獅子女学院</td><td>豪奢、華やか、金がかかる</td><td>軍閥、商会、金融、鉱山、海運</td><td>魔道具運用、補給、契約、資産管理</td><td>商会後継、軍需管理、投資、財団運営、後援者調整</td></tr>
+        <tr><td>薔薇十字女学院</td><td>清楚、厳格、専門的</td><td>魔術師協会、魔道具工房、術式研究会</td><td>攻撃魔法、結界術、術式解析、高等魔術</td><td>魔術師、術式研究者、結界技師、魔道具技師、協会実務</td></tr>
+      </tbody>
+    </table>
+    <div class="closing">
+      <p>桜花生は、清潔感と所作を見るとわかる。制服は上品で目立ちすぎないが、聖教会系の清潔感と施療院実務に耐える機能が残る。</p>
+      <p>金獅子生は、小物を見るとわかる。ボタンの光り方、鞄の革、刺繍糸、靴の留め具、外套の裏地。どれも高い。そして高いだけではなく、誰かとの関係を示している。</p>
+      <p>薔薇十字生は、装飾の規則性を見るとわかる。襟、袖、リボン、紋章、ベルト、鞄の金具まで、術式補助具のように配置が整っている。</p>
+      <p>桜花が回復と浄化で人を支え、金獅子が資金と物流で社会を動かし、薔薇十字が魔術理論と攻撃魔法で技術を担う。王都の春制服とは、未来の権力者たちの、最初の名刺なのである。</p>
+    </div>
+  </section>
+
+  <script>
+    (function(){
+      function installCandidateImage(img){
+        const list = (img.dataset.candidates || '').split('|').map(s => s.trim()).filter(Boolean);
+        let index = 0;
+        const box = img.closest('.image-box');
+        function fail(){
+          index += 1;
+          if(index < list.length){ img.src = list[index]; return; }
+          if(box){ box.innerHTML = '<div class="missing">画像ファイル未検出<br>images/ouka.png 等を配置</div>'; }
+        }
+        img.addEventListener('error', fail);
+        if(list.length) img.src = list[0];
+      }
+      document.querySelectorAll('img[data-candidates]').forEach(installCandidateImage);
+    })();
+  </script>
+</body>
+</html>
