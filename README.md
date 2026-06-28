@@ -25,6 +25,95 @@ fixed_layout.html = 固定レイアウト用HTML
 
 ---
 
+## まずこれ：記事単体の固定レイアウト確認
+
+記事を直したら、いきなりEPUBを作らず、先にその記事だけ画像化して確認します。
+
+### VSCodeでやる場合
+
+1. 確認したい記事フォルダ内の `fixed_layout.html` を開く。
+2. `Ctrl + Shift + P` を押す。
+3. `Tasks: Run Task` を選ぶ。
+4. `Preview current article` を選ぶ。
+
+これで、今開いているファイルのフォルダで `preview.mjs` が実行されます。
+
+出力先：
+
+```text
+202604/NN_記事名/preview/
+  001.png
+  002.png
+  003.png
+  ...
+```
+
+### ダブルクリックでやる場合
+
+記事フォルダ内のこれをダブルクリックします。
+
+```text
+preview.bat
+```
+
+同じく、記事フォルダ内の `preview/` に確認用PNGが出ます。
+
+### 初回だけ必要
+
+リポジトリ直下で一度だけ実行します。
+
+```bash
+npm install
+npx playwright install chromium
+```
+
+### 何をやっているか
+
+```text
+記事フォルダの fixed_layout.html
+  ↓
+ローカルHTTPサーバーで開く
+  ↓
+PlaywrightのChromiumで表示する
+  ↓
+.fixed-page を探す
+  ↓
+各 .fixed-page を 1456×2056px のPNGとして保存する
+  ↓
+記事フォルダ内の preview/ に 001.png, 002.png ... として出す
+```
+
+画像リンク切れもログに出ます。
+
+```text
+images: 3
+broken images: 1
+- images/example.png
+```
+
+`broken images` が 0 なら、とりあえず画像リンクは通っています。
+
+### 関係するファイル
+
+```text
+.vscode/tasks.json
+  VSCodeの Preview current article タスク
+
+tools/preview_fixed_layout_article_here.mjs
+  実際に fixed_layout.html を開いてPNG化する共通処理
+
+202604/NN_記事名/preview.mjs
+  共通処理を呼ぶだけの記事内ランチャー
+
+202604/NN_記事名/preview.bat
+  ダブルクリック用ランチャー
+
+202604/NN_記事名/preview/
+  確認用PNGの出力先
+```
+
+---
+
 ## 概要
 
 このリポジトリは、異世界雑誌の原稿・固定レイアウト版HTML/CSS・リフロー版HTML・画像・制作手順を管理するためのものです。
