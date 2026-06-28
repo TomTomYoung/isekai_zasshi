@@ -1,0 +1,6 @@
+/* A案: 現行寄りの安全版 */
+body{background:#111}
+.fixed-page{background:#f4ecd2}
+.headline{transform:rotate(0deg)}
+.lead{box-shadow:8px 8px 0 #c40018}
+.school-card,.note,.main-photo{box-shadow:7px 7px 0 #111}
