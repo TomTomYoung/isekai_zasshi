@@ -1,0 +1,20 @@
+/* C案: 高密度版 */
+.fixed-page{padding:58px 52px 54px}
+p{font-size:24px;line-height:1.38;margin:0 0 .54em}
+.headline{padding:20px 24px;margin:0 0 18px}
+.headline h1{font-size:68px}
+.headline .sub{font-size:30px}
+.lead{font-size:28px;line-height:1.28;padding:14px 16px;margin:0 0 16px}
+.three-grid{gap:16px;margin:18px 0 14px}
+.school-card{min-height:860px;padding:10px}
+.school-card .image-box{height:560px}
+.school-card .caption{font-size:19px}
+.section-title{font-size:44px;margin:0 0 18px}
+.academy-page{grid-template-columns:500px 1fr;gap:22px}
+.main-photo{min-height:1160px;padding:10px}
+.main-photo .image-box{height:1020px}
+.main-photo figcaption{font-size:20px}
+.pull{font-size:28px;padding:10px 12px}
+table{font-size:20px}
+.compare-title{font-size:50px}
+.closing{column-gap:28px}
