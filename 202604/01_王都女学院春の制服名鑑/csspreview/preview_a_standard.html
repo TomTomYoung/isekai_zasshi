@@ -5,9 +5,20 @@
   <meta name="viewport" content="width=1456, initial-scale=1.0">
   <title>A Standard Preview</title>
   <link rel="stylesheet" href="base.css">
-  <script defer src="preview_loader.js"></script>
+  <link rel="stylesheet" href="css_a_standard.css">
 </head>
-<body data-css="css_a_standard.css">
-  <div id="preview-root"></div>
+<body>
+  <section class="fixed-page" data-page="A-001">
+    <div class="slug">CSS A案</div>
+    <header class="headline">
+      <h1>記事レイアウト<br>見本</h1>
+      <div class="sub">CSS比較用の静的サンプルHTML</div>
+    </header>
+    <p class="lead">このHTMLは外部ローダーを使わず、中に実際のサンプル本文とページ構造を持つ。</p>
+    <section class="note">
+      <h3>使い方</h3>
+      <p>このファイルを開いてCSS案を確認する。採用したCSSを本番HTMLへ反映してから、記事フォルダ直下の preview.bat でPNG化する。</p>
+    </section>
+  </section>
 </body>
 </html>
