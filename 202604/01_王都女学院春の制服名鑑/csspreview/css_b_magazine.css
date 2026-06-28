@@ -1,0 +1,12 @@
+/* B案: 雑誌感を強める */
+body{background:#2b0e14}
+.fixed-page{background:#f7edd8;border-left:20px solid #111;border-right:20px solid #111}
+.headline{background:#fff0a2;box-shadow:18px 18px 0 #111;transform:rotate(-1deg)}
+.headline h1{font-size:80px;text-shadow:5px 5px 0 #ffd400,9px 9px 0 rgba(0,0,0,.28)}
+.slug{transform:rotate(-4deg);box-shadow:8px 8px 0 #111}
+.lead{box-shadow:12px 12px 0 #c40018;font-size:33px}
+.school-card{border-width:8px;box-shadow:10px 10px 0 #111}
+.school-card h2{border-left:18px solid #ffd400}
+.section-title,.compare-title{box-shadow:11px 11px 0 #ffd400}
+.pull{box-shadow:10px 10px 0 #111;font-size:34px}
+.note,.main-photo{box-shadow:10px 10px 0 #111}
