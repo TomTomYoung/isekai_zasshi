@@ -4,6 +4,7 @@
     "export:fixed-layout": "node tools/export_fixed_layout_images.mjs 202603",
     "prepare:kindle-pages": "node tools/prepare_kindle_pages.mjs 202603",
     "build:fixed-layout-epub": "npm run export:fixed-layout && npm run prepare:kindle-pages && npm run build:epub",
+    "audit:issue": "node tools/audit_issue_editorial.mjs",
     "build:article": "node tools/build_article.mjs",
     "build:issue-articles": "node tools/build_issue_articles.mjs",
     "collect:issue-pages": "node tools/collect_issue_pages.mjs",
