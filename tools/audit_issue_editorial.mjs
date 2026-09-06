@@ -52,7 +52,12 @@ for (const article of articleDirs) {
   if (!numberGroups.has(number)) numberGroups.set(number, []);
   numberGroups.get(number).push(article);
 
-  const mdFiles = files.filter((name) => name.endsWith('.md') && name !== '企画.md');
+  // Prompt/design notes are supporting material, not article body sources.
+  const expectedBody = `${article.replace(/^\d{2}_/, '')}.md`;
+  const allMarkdown = files.filter((name) => name.endsWith('.md') && name !== '企画.md');
+  const supportingMarkdown = allMarkdown.filter((name) => name !== expectedBody
+    && /プロンプト|prompt|^README\.md$/i.test(name));
+  const mdFiles = allMarkdown.filter((name) => !supportingMarkdown.includes(name));
   const planFile = files.includes('企画.md') ? '企画.md' : null;
   const htmlFiles = files.filter((name) => name.endsWith('.html') && name !== 'fixed_layout.html');
   const fixedLayout = files.includes('fixed_layout.html');
@@ -76,6 +81,11 @@ for (const article of articleDirs) {
   rows.push({
     number,
     article,
+    expectedBody,
+    sourceStatus: mdFiles.includes(expectedBody)
+      ? (mdFiles.length === 1 ? 'BODY_FOUND' : 'MULTIPLE_BODY_CANDIDATES')
+      : (mdFiles.length ? 'REVIEW_BODY_FILENAME' : (number === '00' ? 'COVER' : 'MISSING_BODY')),
+    supportingMarkdown,
     plan: planFile ? fileInfo(articleDir, planFile) : null,
     markdown,
     html: htmlFiles.map((name) => fileInfo(articleDir, name)),
