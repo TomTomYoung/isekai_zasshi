@@ -1,0 +1,15 @@
+{
+  "issue": "202604",
+  "width": 1456,
+  "height": 2056,
+  "articles": [
+    {
+      "label": "00 表紙",
+      "src": "../202604/00_表紙/fixed_layout.html"
+    },
+    {
+      "label": "01 王都女学院春の制服名鑑",
+      "src": "../202604/01_王都女学院春の制服名鑑/fixed_layout.html"
+    }
+  ]
+}
