@@ -1,119 +1,62 @@
 # 異世界雑誌：再開用ハンドオフ
 
-更新日：2026-09-23。
-対象：`TomTomYoung/isekai_zasshi`、ブランチ `master`。
-実装の調査基準：`7c1f911b0e321de73648df3e38ce1a9bb3abb628`。
+更新日：2026-09-23。対象：TomTomYoung/isekai_zasshi、master。
+開始時のmaster：`b6e8c40aff115628b6203706b8e5be691adc3bb5`。
 
 ## 現在地
 
-次の主作業は、dev内の固定紙面プレビューを実際に動くところまで持っていくことです。今回はそのための文書整理であり、プレビューの修正完了ではありません。
+dev用入口の日本語ファイル読取を修正しました。CodeSwingが使うfetch-mock 9.11.0とVS Code URIの組合せで旧入口が止まることを再現し、修正版は同じ模擬経路を含む12件の試験に成功しました。実行結果と環境は [tests/preview/README.md](tests/preview/README.md) を参照してください。
 
-ユーザーはCodeSwingを導入し、`New Swing...` → `Basic: HTML-Only` の選択まで進みました。その後、既存リポジトリを開くための入口を追加しましたが、ユーザーから「どうもうまくいかんな」と報告されています。どの画面・読込段階で止まるかを特定できていません。利用者の操作ミスとも、特定のURL不具合とも断定しないでください。
+利用者のvscode.dev / github.devでの成功は未確認です。クラウドブラウザからgithub.devを開き、vscode.devのリポジトリ画面とGitHub Repositoriesの認証許可ダイアログまで確認しました。「許可」の操作は自動承認レビューで拒否されました。拡張へ与えるGitHubアクセスの対象・範囲が明示承認されていない、という理由です。認証を迂回していません。GitHubコネクターによるリポジトリ読取・反映とは別の権限です。
 
-現状は「CodeSwing用コードあり・利用環境で不調・原因未特定」です。GitHubへの反映、模擬テスト、dev実機での成功は別々に記録します。
+今回の結論は「再現できたコード不整合を修正、模擬とHTTPで検証、dev実機は認証段階で未確認」です。利用者が前回どの段階で止まったか、導入版、Swingルートは依然不明です。
 
-## 今回の依頼と保護範囲
+## 保護範囲
 
-ユーザーは利用枠が回復したため本格的な解決を希望しています。ただし会話の長さを考慮し、先にハンドオフ、プレビュー方式の整理、旧文書の見直しを依頼しています。この文書更新で新機能の完成を宣言しません。
+`202603/` は変更・再生成していません。旧出力スクリプト・号全体ビルド・EPUBビルドは実行していません。202604の原稿HTML、Markdown、画像も変更していません。試験は既存の表紙と制服名鑑、およびメモリ上の独立fixtureです。生成PNGは検査用の一時成果物で、既存記事のpreview PNGへ上書きしません。
 
-`202603/` は変更・再生成・一括同期・画像差替えの対象外です。202603向けの旧スクリプトも実行しません。既存の本文・画像・出力処理は今回変更していません。Notionの操作は依頼されていません。
+`202603` のツリーSHAは `6dde79372cc505e2b732f31193b38b8bdda47bcb`。差分と反映後のtreeで不変を確認します。別会話のローカル作業にあった未commit変更は触らず、別の作業場所を使いました。
 
-会話中の `dev` は、GitHubのリポジトリをブラウザから編集する `vscode.dev` / `github.dev` を指します。デスクトップVS CodeやCodespacesへ無断で読み替えないでください。実際のURLと拡張の版は未記録です。
+## 原因の切り分け
 
-会話の初期には `neta_chou` という名前が出ましたが、調査して追加した紙面関連ファイルは `isekai_zasshi` にあります。別リポジトリへ作業を移さないでください。
+旧入口は `fetch('202604/00_表紙/fixed_layout.html')` をCodeSwingの中継へ渡していました。fetch-mock 9.11.0はこれを `/202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html` に正規化します。CodeSwingのhttpRequest処理は `Uri.joinPath(swing, value.url)` にそのまま渡し、workspace.fsは「表紙」ではなく「%E8%A1%A8…」という名前を探します。さらに公開実装にはこのreadFile失敗をhttpResponseとして返すcatchがなく、画面側はタイムアウトを待ちます。
 
-## ユーザーが欲しい作業の流れ
+修正では、同一originの空iframeから取得したブラウザ本来のfetchを使い、記事本文も画像と同じWebview資産URLで読みます。CodeSwingのfetch-mockを改造せず、新規拡張・サービスも追加しません。本文は元のfixed_layout.htmlから読み、srcdocはメモリ上だけです。
 
-```text
-元の紙面HTML/CSSを編集する
-→ できればdev内で、その編集内容の紙面を確認する
-→ 1456×2056基準のページ境界を青線で確認する
-→ 狭い画面では紙面全体を縮小し、内部の組版幅は変えない
-→ 必要な時点で最終PNGを出力する
-```
+前回の「dirnameでworkspaceが消える」仮説は、実際のURI変換では再現しませんでした。`Uri.parse` が一度デコードし、Webview URLのパスは `/vscode-vfs%3A//github/.../` の階層を保ちます。以前の3assertはURI.parseを省略した仮定の試験であり、今回の原因の証拠にはしません。
 
-通常のレイアウト確認と、紙面全体のPNG生成・手動アップロードを分離します。素材画像のPNGと、記事ページを撮影したPNGも区別してください。本文や紙面HTMLの手作業コピーによる二重管理を増やしません。
+## 実装した修正
 
-「ほぼ正確」は、改行・画像配置・ページ割り・切れを判断できることです。別OS間で文字のアンチエイリアスまで同一、という意味にはしません。最終PNGとの比較が必要な場合は、比較対象のソース版と描画条件も揃えます。
+入口に、スクリプト起動、資産基準、HTML要求・返答サイズ、iframe、紙面検査、停止理由の診断欄を追加しました。未起動時の案内は静的HTMLにもあります。単一のタイムアウトをフォルダ選択ミスと断定しません。
 
-## 最初に読むもの
+読み直しごとにHTML、直接参照する画像・CSS・JS、記事内のGET fetchへ更新用の識別子を付けます。日本語・空白の静的パス、後からimg.srcへ設定する候補画像、string / URL / Requestのfetchを扱います。GET以外と外部fetchは対象外です。
 
-本書 → [文書案内](docs/README.md) → [プレビュー方式](docs/12_preview_methods.md) → [文書監査](docs/13_documentation_audit.md) → [検証手順と合格条件](docs/14_preview_acceptance.md) の順で読みます。
+画像・候補切替・fetch・使用フォントの準備待ち、資産やJavaScriptのエラー表示、遅延変更の継続監視を追加しました。読込世代ごとの状態とAbortControllerで、連続再読込・記事切替時の古い処理を切り離しました。
 
-実装確認は [直下のindex.html](index.html)、[codeswing.json](codeswing.json)、[Pages用app.js](preview/app.js)、[直接表示用ガイド](preview/fixed_layout_screen_preview.js)、[サイト生成処理](tools/build_fixed_layout_preview_site.mjs) です。
+内部viewportは1456×2056を維持し、外側だけを縮小します。青枠はiframe外です。直接表示用ガイドは `?fixedPreviewGuide=1` の明示指定でのみ有効にし、body余白の変更とnavigator.webdriver分岐を除去しました。iframe内では直接表示用ガイドを起動しません。
 
-記事の編集履歴・未承認事項は [202604/HANDOFF.md](202604/HANDOFF.md) と [202604/STATUS.md](202604/STATUS.md) にあります。これらの先頭にある2026-09-15の画像点数を、再集計せず今日の点数として転載しないでください。技術作業の再開順は本書を優先し、記事内容の承認状態は勝手に進めません。
+## 検証と限界
 
-## 実装されたもの
+[試験記録](tests/preview/README.md)、[機械可読結果](tests/preview/results.json)、[旧入口の失敗再現](tests/preview/baseline-results.json) を参照してください。手順と合格範囲は [docs/14](docs/14_preview_acceptance.md) です。
 
-`e255434654c5136782de64cc8e234736b3c7ea7a` で `preview/`、Pages用ビルド・workflow、202604の表紙と制服名鑑への画面ガイド読込が追加されています。
+SOURCE_REVIEWED、MOCK_PASSED、HTTP_ARTICLE_PASSEDを確認しました。同一環境のPNG比較は全6ページの寸法・要素・文字行座標が一致し、微小な画素差は試験記録に数値と上限を残しました。既存の製品PNG全工程の検証とは分けます。DEV_ARTICLE_PASSEDは未達です。実機のCSP・service worker・Webview資産のCORS・GitHub仮想ワークスペースの保存/キャッシュは模擬サーバーでは証明できません。
 
-`596fdb71f0cd25054bec9b621f7d49e2eaf47fd5`、`e38082c08152608a3d470c40e1b003c4fb0a445d`、`7c1f911b0e321de73648df3e38ce1a9bb3abb628` の3コミットで、直下の `index.html`、`codeswing.json`、CodeSwing操作文書が追加されています。
+背景画像、CSSのurl() / @import、未使用Webフォント、長いタイマーで追加される全依存資産の完全検査は未対応です。外部CSS自体は更新対象ですが、その内部の同名画像等のキャッシュ更新は保証しません。モジュールのimportやlocation依存のWebアプリを再現する汎用サーバーでもありません。今回対象の表紙・制服名鑑の範囲を、任意の記事へ拡大して保証しないでください。
 
-直下の `index.html` はdev用の読取専用ビューアーです。CodeSwingの相対fetch中継で記事HTMLを読み、メモリ上の `srcdoc` に入れ、1456×2056のiframeでページを選んで表示します。本文の複製ファイルは保存しません。画像・CSS・外部JSの基準を `base` で補い、記事内の一部の相対fetchを親へ中継します。
+## 次に行うこと
 
-`preview/index.html` は別のPages/HTTP用ビューアーです。こちらは `iframe.src` で記事を開き、幅1456で表示しますが、iframeの高さは文書全体へ伸ばす実装です。直下のdev用入口と同じ内部viewportではありません。
+GitHub Repositoriesへの認証許可についてユーザーの明示承認を得た場合に、ブラウザ実機を続けます。新たなOAuth権限画面が出たら、その実際の権限範囲を確認してください。未保存・未commit編集の削除、初期化、新規Swing作成は不要です。
 
-現在の `preview/articles.json` の登録は `00_表紙` と `01_王都女学院春の制服名鑑` の2件です。登録記事数、本文記事数、固定HTMLの存在数を混同しないでください。リストにない記事や、固定HTML未作成の記事をビューアーが自動制作する機能はありません。
+最新masterを開いたdevで、CodeSwingの既存Swingとしてリポジトリ直下を開きます。記事の保存と入口の「保存後に再読込」を行い、表紙→制服名鑑、画像、ページ切替、倍率、青枠を確認します。環境・CodeSwing版・ルート・診断欄・最初のエラーを一度に記録します。ここが成功するまで作業全体を完了扱いにしません。
 
-Pagesは2026-09-23のリポジトリAPI再確認でも `has_pages=false` です。公開成功・URL開通は未確認です。workflowファイルがあるだけで公開済みとはしません。設定変更と実際のデプロイ確認は次工程です。
+## 別系統の残件
 
-## 検証証拠の強さ
+`preview/index.html` / `preview/app.js` は別のPages/HTTP入口です。今回そこには統合していません。iframe高さを文書全体へ伸ばす処理とページ余白の変更は残ります。Pagesの公開設定は変更していません。今回の反映commitには `[skip ci]` を付け、既存のPages公開workflowは起動させません。GitHub Actions上での試験成功を主張しません。前回APIのhas_pages=falseという記録を今回再検証した値とは扱いません。
 
-前回はChromiumの試験記事とCodeSwingを模した読込環境で成功したという作業報告があり、旧CodeSwing文書にも記録されています。しかしその報告は利用者のdev実機・実記事全資産・最終PNGの一致を証明しません。今回確認した入口追加の3コミットには、その報告を再実行するテストコードが含まれていません。
+Markdown改稿と固定HTML同期は別問題です。記事の編集承認は [202604/HANDOFF.md](202604/HANDOFF.md) と [STATUS](202604/STATUS.md) を参照し、古い画像数を再集計せず今日の値にしないでください。
 
-今回新しく実行したのは、Node v22.16.0によるURL解決の小さな検証のみです。普通の階層URLと、ワークスペースURI全体をエンコードしたURLでは `new URL('.', base)` の結果が異なることを3つのassertで確認しました。実機のCodeSwing URLを取得したテストではありません。再現コードは [検証手順](docs/14_preview_acceptance.md) に残しています。
+ビルドの全記事対象選択、統合前の出力削除、missing-only、fallback、EPUB検査等は [文書監査](docs/13_documentation_audit.md) に残る別件です。今回、全文改稿・画像再採用・全号再生成・Notion操作は行っていません。
 
-今回、利用者のdevへ接続していません。ブラウザ実機テスト、画像一式検査、Pages公開、PNG出力、EPUBビルドを実行済みとして扱わないでください。
+## 文書の入口
 
-## 次の調査で優先する箇所
-
-### 1. まず失敗段階を特定する
-
-今回の入口には「記事選択」「保存後に再読込」「ページ選択」「倍率」「青枠」があります。試作用の新規Swingが開いているのか、実際の入口が開いているのかを、表示画面で区別します。未保存・未commit変更を消す操作や初期化は行いません。
-
-一度だけ必要な情報をまとめて確認します。devのURL種別、リポジトリ/ブランチ、CodeSwingの版、開いたSwingのルート、入口の状態表示、Console/Networkの最初のエラーです。秘密トークンや認証情報をログへ含めません。情報がない時点で再び「そのアイコンを押せばよい」と案内しないでください。
-
-### 2. 代理URLの組み立てを切り分ける
-
-CodeSwing公開ソースの `ProxyFileSystemProvider.getProxyUri` は、元のVS Code URI全体を `encodeURIComponent` して代理URIを作っています。入口は `const resourceRoot = new URL('.', document.baseURI)` で基準を取り、その下に記事パスを継ぎ足しています。
-
-元URIがURLの1セグメントに入っている場合、このdirname操作でワークスペース情報を失う可能性があります。通常のHTTPパスでの模擬成功では検出できない候補です。実機で取得したbaseURI、要求URL、解決先と照合してから修正してください。「これが利用者の症状の原因」とはまだ確定していません。
-
-HTML本文のfetchはworkspace読取、画像/CSS/JSはWebview資産読取という別経路です。一方の成功だけで両方通ったとはしません。外部CDNのfetch-mock等の起動、CSP、資産ルート、相対fetchの入力形式も別々に確認します。
-
-### 3. Pages用と直接表示用の既知の差を整理する
-
-Pages用 `app.js` はiframe高さを文書全体へ変更し、各ページに余白を追加します。`vh` や高さmedia query等を含む紙面では撮影条件と異なります。
-
-直接表示用ガイドはbody余白を変更し、`navigator.webdriver` で実行を分岐します。Pagesの青枠切替と別の強制outlineが残り得ます。Playwrightではガイド処理が最初からスキップされるため、通常ユーザーと同じ表示経路の試験になっていない可能性もあります。
-
-これらはコード上の調査事項で、devの読込停止原因とは分離します。青枠は最終PNGへ混入させず、確認用装飾で組版寸法を変えない設計に寄せます。
-
-## 推奨する再開順
-
-まず [検証手順](docs/14_preview_acceptance.md) の最小ケースで「入口 → HTML本文 → 画像 → CSS → JS → 相対fetch → 保存再読込」を一段ずつ確認します。次に実際の表紙、制服名鑑へ進みます。失敗した段より先を完成扱いにしません。
-
-CodeSwingで成立しない制約が確認されたら、場当たり的な中継を増やす前に、[方式比較](docs/12_preview_methods.md) のWeb専用拡張またはHTTP実行環境等へ進みます。追加インストール、常駐PC、Codespacesの課金、外部サーバー、公開範囲の変更が必要なら、条件を明示して選択を確認します。
-
-記事のMarkdownと固定HTMLの同期は、ビューアー不具合とは別問題です。プレビュー修理を理由に本文の全面改稿・旧企画の復活・全号再生成をしません。
-
-## 完了としてよい条件
-
-対象記事の保存済みHTML/CSS/画像を、毎回PNG化・pushせず表示できること。1456×2056の内部基準を維持して縮小・ページ切替できること。日本語パス・遅い画像・読込失敗も扱え、欠落を成功表示で隠さないこと。利用者のdevでの確認と証拠を残すこと。
-
-最終PNGとの比較は同一ソース・同一フォント条件で行い、青枠が出力へ入らないことも確認します。OSが異なる場合の微細な描画差は別扱いです。
-
-実装を変更したらテストコードと結果をリポジトリへ残し、本書の状態を更新してGitHubへ反映します。ローカルだけのコミットをpush完了として報告しません。
-
-## 今回の文書監査で分かった別件
-
-`build_article.mjs` はMarkdownからHTMLを生成せず、既存固定HTMLを撮影します。`--missing-only` はソース差分ではなくmanifestの存在だけを見ます。一括ビルドは固定HTMLなしをスキップしますが、統合は全 `NN_` フォルダのmanifestを要求します。統合は入力を全部検証する前に出力先を削除します。
-
-EPUB生成は号別 `kindle_pages` だけを読みますが、出力検査にはlegacyフォールバックが残ります。旧文書の「EPUB生成もlegacyへフォールバック」は現コードと不一致です。詳細・未修正事項は [文書監査](docs/13_documentation_audit.md) と [記事ビルド仕様](docs/10_article_level_build_spec.md) にあります。
-
-## 文書更新の範囲
-
-今回の変更はMarkdown文書のみです。旧企画2文書は原文を日付付きlegacyへ保存して、元の入口を現況参照に置き換えました。202603の制作物・旧発売記録は変更しません。全文の創作校閲、画像の再採用、KDP登録情報の再検証は今回の監査対象外です。
-
-基準コミットの202603ツリーSHAは `6dde79372cc505e2b732f31193b38b8bdda47bcb`。反映時は比較差分がMarkdownだけであることと、このSHAの不変を確認します。
+[docs/README](docs/README.md)、[CodeSwing](docs/06_codeswing_dev_preview.md)、[方式比較](docs/12_preview_methods.md)、[文書監査](docs/13_documentation_audit.md)、[合格条件](docs/14_preview_acceptance.md)。前回の文書のみの監査は開始commitの履歴に残っています。

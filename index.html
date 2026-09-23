@@ -9,6 +9,7 @@
   #source{flex:1 1 400px;min-width:180px}
   #status{margin:0;padding:8px 12px;white-space:pre-wrap}
   #status[data-error="true"]{color:#b42318}
+  #diagnostics{padding:0 12px} #diagnostic-log{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
   #workspace{padding:12px;overflow:auto}
   #paper{position:relative;margin:0 auto;outline:2px solid #1683ff;background:#fff}
   #paper iframe{position:absolute;top:0;left:0;width:1456px;height:2056px;border:0;transform-origin:top left}
@@ -21,102 +22,199 @@
   <select id="zoom" aria-label="表示倍率"><option value="auto">幅に合わせる</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="1">100%</option></select>
   <label><input id="guides" type="checkbox" checked>青枠</label>
 </header>
-<p id="status" role="status">HTMLを読み込みます。PNG生成・pushは不要です。</p>
+<p id="status" role="status">入口のスクリプト起動待ちです。このままならCodeSwingのConsoleを確認してください。</p>
+<details id="diagnostics"><summary>読込診断（実機確認時にこの内容を共有）</summary><pre id="diagnostic-log"></pre></details>
 <main id="workspace"><div id="paper"></div></main>
 <script>
 (() => {
   const W=1456,H=2056,$=id=>document.getElementById(id);
-  const resourceRoot=new URL('.',document.baseURI);
-  const read=window.fetch.bind(window); // CodeSwingでは相対パスをworkspace.fsへ渡す。
-  let frame=null,pages=[],generation=0,assetWarning='';
-  function status(text,error=false){$('status').textContent=text;$('status').dataset.error=String(error);}
-  function deadline(promise,ms=10000){
-    let timer;
-    return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('読込待ちがタイムアウトしました。リポジトリ直下をOpen Swingで開いているか確認してください。')),ms);})]).finally(()=>clearTimeout(timer));
+  let current=null,generation=0;
+  // CodeSwing's fetch-mock URL-encodes Japanese paths before workspace.fs.readFile.
+  // Use an unmodified browser fetch from a same-origin blank frame, so text and
+  // binary assets both go through the Webview resource provider instead.
+  const transport=document.createElement('iframe');
+  transport.hidden=true;transport.title='資産読取';transport.setAttribute('aria-hidden','true');
+  document.body.append(transport);
+  const read=transport.contentWindow.fetch.bind(transport.contentWindow);
+  const root=new URL('.',document.baseURI);
+  const mode=root.hostname.includes('vscode-')||root.hostname.includes('codeswing')?'Webview資産':'HTTP';
+  function active(run){return current===run&&!run.controller.signal.aborted;}
+  function status(message,error=false){$('status').textContent=message;$('status').dataset.error=String(error);}
+  function record(run,step,message){
+    if(!active(run))return;
+    run.log.push(step+': '+message);
+    $('diagnostic-log').textContent=run.log.slice(-60).join('\n');
+  }
+  function deadline(promise,label,ms=15000,signal){
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>finish(reject,new Error(label+'：15秒以内に完了しませんでした。診断の停止段階を確認してください。')),ms);
+      const abort=()=>finish(reject,new DOMException('読込を取り消しました','AbortError'));
+      function finish(fn,value){clearTimeout(timer);signal?.removeEventListener('abort',abort);fn(value);}
+      if(signal?.aborted)return abort();
+      signal?.addEventListener('abort',abort,{once:true});
+      Promise.resolve(promise).then(value=>finish(resolve,value),error=>finish(reject,error));
+    });
   }
   function articlePath(value){
     const path=String(value).trim();
-    if(!/^202604\/\d{2}_[^/]+\/fixed_layout\.html$/.test(path)||path.includes('\\')||path.includes('%')||path.includes('?')||path.includes('#')){
-      throw new Error('対象は202604/記事フォルダ/fixed_layout.htmlです。202603は対象外です。');
-    }
+    if(!/^202604\/\d{2}_[^/]+\/fixed_layout\.html$/.test(path)||/[\\%?#]/.test(path))throw new Error('対象は202604/記事フォルダ/fixed_layout.htmlです。');
     return path;
   }
   function resize(){
     const scale=$('zoom').value==='auto'?Math.max(.1,Math.min(1,($('workspace').clientWidth-24)/W)):Number($('zoom').value);
     $('paper').style.width=W*scale+'px';$('paper').style.height=H*scale+'px';
-    if(frame)frame.style.transform='scale('+scale+')';
+    if(current?.frame)current.frame.style.transform='scale('+scale+')';
     $('paper').style.outlineStyle=$('guides').checked?'solid':'none';
   }
   function showPage(){
-    const el=pages[Number($('page-number').value)||0];if(!el||!frame)return;
-    const win=frame.contentWindow,rect=el.getBoundingClientRect();
+    const run=current,el=run?.pages[Number($('page-number').value)||0];if(!el)return;
+    const win=run.frame.contentWindow,rect=el.getBoundingClientRect();
     win.scrollTo({left:rect.left+win.scrollX,top:rect.top+win.scrollY,behavior:'instant'});
-    const wrong=pages.filter(p=>{const r=p.getBoundingClientRect();return Math.abs(r.width-W)>.5||Math.abs(r.height-H)>.5;}).length;
-    $('paper').style.outlineColor=wrong?'#c62828':'#1683ff';
+    const wrong=run.pages.filter(p=>{const r=p.getBoundingClientRect();return Math.abs(r.width-W)>.5||Math.abs(r.height-H)>.5;}).length;
     const aligned=el.getBoundingClientRect();
-    const alignmentWarning=Math.abs(aligned.top)>.5||Math.abs(aligned.left)>.5?' / ページ先頭に整列できません。原本の余白を確認してください。':'';
-    status(pages.length+'ページ / 選択ページ '+rect.width+'×'+rect.height+' CSS px'+(wrong?' / サイズ不一致 '+wrong+'ページ':'')+assetWarning+alignmentWarning,Boolean(wrong||assetWarning||alignmentWarning));
+    const warnings=[...run.warnings];
+    if(wrong)warnings.push('サイズ不一致 '+wrong+'ページ');
+    if(Math.abs(aligned.top)>.5||Math.abs(aligned.left)>.5)warnings.push('ページ先頭に整列できません。原本の余白を確認してください。');
+    if(win.innerWidth!==W||win.innerHeight!==H)warnings.push('内部viewport不一致');
+    $('paper').style.outlineColor=warnings.length?'#c62828':'#1683ff';
+    status(run.pages.length+'ページ / 選択ページ '+rect.width+'×'+rect.height+' CSS px / '+run.readiness+(warnings.length?' / '+warnings.join(' / '):''),Boolean(warnings.length));
     resize();
   }
-  // srcdoc内の相対fetchも、記事フォルダを基準にCodeSwingの読取ブリッジへ渡す。
-  window.__fixedPreviewRead=(article,input,init={})=>{
-    const method=String(init.method||'GET').toUpperCase();
-    if(method!=='GET')return Promise.reject(new Error('プレビューのファイル読取はGETのみです。'));
-    const base=new URL(article,'https://workspace.invalid/');
-    const url=new URL(String(input),base);
-    if(url.origin!=='https://workspace.invalid')return Promise.reject(new Error('外部fetchはプレビュー対象外です。'));
-    const path=decodeURIComponent(url.pathname.slice(1));
-    if(!path.startsWith('202604/')||path.includes('\\'))return Promise.reject(new Error('読取対象外のパスです。'));
-    return deadline(read(path,{...init,cache:'no-store'}));
-  };
-  function childBridge(article){
-    window.__fixedPreviewErrors=[];
-    window.addEventListener('error',e=>{if(e.error||e.target instanceof HTMLScriptElement)window.__fixedPreviewErrors.push(e.message||'script load error');},true);
-    window.addEventListener('unhandledrejection',e=>window.__fixedPreviewErrors.push(String(e.reason)));
+  // Runs BEFORE article scripts. Every navigation has its own native fetch,
+  // revision and pending counter; no child calls a global parent read function.
+  function childBridge(config){
+    const state=window.__fixedPreviewState={pending:0,errors:[],changed:Date.now()};
     const nativeFetch=window.fetch.bind(window);
-    window.fetch=(input,init)=>{
-      if(typeof input==='string'&&!/^[a-z][a-z\d+.-]*:|^\/\//i.test(input))return parent.__fixedPreviewRead(article,input,init);
-      return nativeFetch(input,init);
+    const base=new URL(config.base),root=new URL(config.root);
+    const local=url=>url.origin===root.origin&&url.pathname.startsWith(root.pathname);
+    const label=url=>{try{return decodeURIComponent(new URL(url,base).pathname);}catch{return '不明な資産';}};
+    function stamp(input){
+      const url=new URL(String(input),base);
+      if(local(url))url.searchParams.set('__fixedPreview',config.revision);
+      return url.href;
+    }
+    // Preserve binary contents. Only URLs are changed in the in-memory view.
+    const attrs={IMG:['src','srcset'],SOURCE:['src','srcset'],SCRIPT:['src'],LINK:['href'],VIDEO:['src','poster'],AUDIO:['src']};
+    function rewrite(tag,name,value){
+      if(!attrs[tag]?.includes(name)||!value||/^(data:|blob:|#)/i.test(value))return value;
+      if(name==='srcset')return value.split(',').map(part=>{const match=part.trim().match(/^(\S+)(.*)$/);return match?stamp(match[1])+match[2]:part;}).join(', ');
+      return stamp(value);
+    }
+    const originalSet=Element.prototype.setAttribute;
+    Element.prototype.setAttribute=function(name,value){return originalSet.call(this,name,rewrite(this.tagName,String(name).toLowerCase(),String(value)));};
+    for(const [ctor,names] of [[HTMLImageElement,['src','srcset']],[HTMLSourceElement,['src','srcset']],[HTMLScriptElement,['src']],[HTMLLinkElement,['href']],[HTMLVideoElement,['poster']],[HTMLMediaElement,['src']]]){
+      for(const name of names){const descriptor=Object.getOwnPropertyDescriptor(ctor.prototype,name);if(!descriptor?.set)continue;
+        Object.defineProperty(ctor.prototype,name,{...descriptor,set(value){descriptor.set.call(this,rewrite(this.tagName,name,String(value)));}});
+      }
+    }
+    window.fetch=(input,init={})=>{
+      const raw=typeof input==='string'||input instanceof URL?String(input):input.url;
+      const url=new URL(raw,base);
+      const method=String(init.method||input?.method||'GET').toUpperCase();
+      if(method!=='GET'||!local(url))return Promise.reject(new Error('プレビューfetchはリポジトリ内のGETのみです。'));
+      const request=typeof input==='object'&&'method' in input?new Request(stamp(url),new Request(input,init)):stamp(url);
+      state.pending++;state.changed=Date.now();
+      return nativeFetch(request,{...init,cache:'no-store'}).then(response=>{
+        if(!response.ok)state.errors.push('fetch HTTP '+response.status+' '+label(url));return response;
+      }).catch(error=>{state.errors.push('fetch失敗 '+label(url));throw error;}).finally(()=>{state.pending--;state.changed=Date.now();});
     };
+    window.addEventListener('error',event=>{
+      if(event.target instanceof HTMLScriptElement||event.target instanceof HTMLLinkElement)state.errors.push((event.target instanceof HTMLLinkElement?'CSS未読込':'JavaScript読込失敗')+' '+label(event.target.src||event.target.href));
+      else if(event.error)state.errors.push('JavaScript例外: '+event.message);
+      state.changed=Date.now();
+    },true);
+    window.addEventListener('unhandledrejection',()=>{state.errors.push('未処理のPromiseエラー');state.changed=Date.now();});
+    new MutationObserver(()=>{state.changed=Date.now();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,characterData:true});
+  }
+  function revised(url,revision){const result=new URL(url,root);result.searchParams.set('__fixedPreview',revision);return result.href;}
+  function prepare(html,source,run){
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    if(doc.querySelector('base'))throw new Error('独自のbase要素を持つ記事は対象外です。');
+    doc.querySelectorAll('script[src]').forEach(s=>{if(new URL(s.getAttribute('src'),root).pathname.endsWith('/fixed_layout_screen_preview.js'))s.remove();});
+    const baseUrl=new URL(source,root);
+    // Static assets and later assignments receive the same reload revision.
+    for(const el of doc.querySelectorAll('img,source,script[src],link[href],video,audio')){
+      for(const name of ['src','href','poster','srcset']){
+        const value=el.getAttribute(name);if(!value||/^(data:|blob:|#)/i.test(value))continue;
+        const stamp=value=>{const u=new URL(value,baseUrl);return u.origin===root.origin&&u.pathname.startsWith(root.pathname)?revised(u,run.revision):u.href;};
+        el.setAttribute(name,name==='srcset'?value.split(',').map(p=>{const m=p.trim().match(/^(\S+)(.*)$/);return m?stamp(m[1])+m[2]:p;}).join(', '):stamp(value));
+      }
+    }
+    const base=doc.createElement('base');base.href=baseUrl.href;doc.head.prepend(base);
+    const bridge=doc.createElement('script');
+    bridge.textContent='('+childBridge.toString()+')('+JSON.stringify({base:baseUrl.href,root:root.href,revision:run.revision}).replace(/</g,'\\u003c')+');';
+    base.after(bridge);
+    return '<!doctype html>'+doc.documentElement.outerHTML;
+  }
+  function inspect(run){
+    const inner=run.frame.contentDocument,win=run.frame.contentWindow;
+    const state=win.__fixedPreviewState;
+    const pending=Array.from(inner.images).filter(img=>!img.complete||(!img.getAttribute('src')&&!img.getAttribute('srcset')&&img.dataset.candidates)).length;
+    const missing=Array.from(inner.images).filter(img=>img.complete&&!img.naturalWidth).map(img=>'画像未読込: '+(img.getAttribute('src')||img.alt||'srcなし').split('?')[0]);
+    inner.querySelectorAll('.missing').forEach(()=>missing.push('画像の代替表示 .missing'));
+    const css=Array.from(inner.querySelectorAll('link[rel="stylesheet"]')).filter(link=>!link.sheet).map(link=>'CSS未読込: '+link.getAttribute('href').split('?')[0]);
+    const fontErrors=Array.from(inner.fonts).filter(font=>font.status==='error').map(font=>'フォント未読込: '+font.family);
+    return {pending:pending+(state?.pending||0)+(inner.fonts.status==='loading'?1:0),warnings:[...missing,...css,...fontErrors,...(state?.errors||[])],changed:state?.changed||Date.now()};
+  }
+  function refresh(run,info){
+    if(!active(run))return;
+    const next=Array.from(run.frame.contentDocument.querySelectorAll('.fixed-page'));
+    if(next.length!==run.pages.length||next.some((page,i)=>page!==run.pages[i])){
+      const selection=$('page-number').value;run.pages=next;
+      $('page-number').replaceChildren(...next.map((_,i)=>{const o=document.createElement('option');o.value=i;o.textContent=String(i+1).padStart(3,'0');return o;}));
+      $('page-number').value=String(Math.min(Number(selection)||0,Math.max(0,next.length-1)));
+    }
+    run.warnings=[...new Set(info.warnings)];
+    if(!next.length){status('.fixed-page がありません。診断を確認してください。',true);return;}
+    showPage();
   }
   async function load(){
-    const id=++generation;
-    pages=[];$('page-number').replaceChildren();$('paper').replaceChildren();frame=null;
-    status('読込中…');resize();
+    if(current){current.controller.abort();clearInterval(current.monitor);}
+    const run={id:++generation,revision:Date.now()+'-'+generation,controller:new AbortController(),frame:null,pages:[],warnings:[],log:[],readiness:'資産待ち'};
+    current=run;$('page-number').replaceChildren();$('paper').replaceChildren();$('diagnostic-log').textContent='';
+    record(run,'入口','JavaScript起動 / '+mode+' / native fetch');
+    record(run,'資産基準',root.origin+decodeURIComponent(root.pathname));
+    status('HTML本文を読込中…');resize();
     try{
-      const source=articlePath($('source').value);
-      const response=await deadline(read(source,{cache:'no-store'}));
-      if(!response.ok)throw new Error('HTML読込失敗: HTTP '+response.status);
-      const html=await response.text();if(id!==generation)return;
-      const doc=new DOMParser().parseFromString(html,'text/html');
-      if(doc.querySelector('base'))throw new Error('独自のbase要素を持つ記事はこの入口の対象外です。');
-      // 原本は書き換えない。以前の閲覧用装飾だけを表示コピーから除外する。
-      doc.querySelectorAll('script[src]').forEach(s=>{if(s.getAttribute('src').endsWith('/fixed_layout_screen_preview.js'))s.remove();});
-      const base=doc.createElement('base');base.href=new URL(source,resourceRoot).href;doc.head.prepend(base);
-      const bridge=doc.createElement('script');
-      bridge.textContent='('+childBridge.toString()+')('+JSON.stringify(source).replace(/</g,'\\u003c')+');';
-      base.after(bridge);
+      if(!root.pathname.endsWith('/')||/%2f/i.test(new URL(document.baseURI).pathname))throw new Error('未知の代理URL形式です。読込診断とCodeSwingの版を確認してください。');
+      const source=articlePath($('source').value);record(run,'HTML要求',source);
+      const response=await deadline(read(revised(source,run.revision),{cache:'no-store',signal:run.controller.signal}),'HTML本文',15000,run.controller.signal);
+      if(!response.ok)throw new Error('HTML読込失敗: HTTP '+response.status+' / '+source);
+      const html=await deadline(response.text(),'HTML本文データ',15000,run.controller.signal);
+      if(!active(run))return;record(run,'HTML本文','HTTP '+response.status+' / '+new TextEncoder().encode(html).length+' bytes');
       const next=document.createElement('iframe');next.title='固定紙面 1456×2056';next.setAttribute('scrolling','no');
       const loaded=new Promise(resolve=>next.addEventListener('load',resolve,{once:true}));
-      next.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;
-      frame=next;$('paper').replaceChildren(next);resize();
-      // 同一originのsrcdoc。信頼する記事コード専用で、未知のHTMLは読み込まない。
-      await deadline(loaded);if(id!==generation)return;
-      const inner=next.contentDocument;
-      let fontTimeout=false;
-      try{await deadline(inner.fonts.ready,5000);}catch{fontTimeout=true;}
-      const until=Date.now()+10000;
-      while(!inner.querySelector('.fixed-page')&&Date.now()<until)await new Promise(r=>setTimeout(r,100));
-      if(id!==generation)return;
-      pages=Array.from(inner.querySelectorAll('.fixed-page'));
-      if(!pages.length)throw new Error('.fixed-page がありません。スクリプトの実行結果を確認してください。');
-      await new Promise(r=>next.contentWindow.requestAnimationFrame(()=>next.contentWindow.requestAnimationFrame(r)));
-      const resourceErrors=Array.from(inner.querySelectorAll('link[rel="stylesheet"]')).filter(link=>!link.sheet).length;
-      const missing=Array.from(inner.images).filter(img=>!img.complete||!img.naturalWidth).length+inner.querySelectorAll('.missing').length;
-      assetWarning=(missing?' / 画像未読込・代替表示 '+missing+'件':'')+(resourceErrors?' / CSS未読込 '+resourceErrors+'件':'')+(fontTimeout?' / フォント待ちタイムアウト':'')+((next.contentWindow.__fixedPreviewErrors||[]).length?' / JavaScriptエラーあり':'');
-      pages.forEach((_,i)=>{const o=document.createElement('option');o.value=i;o.textContent=String(i+1).padStart(3,'0');$('page-number').append(o);});
-      showPage();
-    }catch(error){if(id===generation){pages=[];frame=null;$('paper').replaceChildren();status(error.message,true);}}
+      next.srcdoc=prepare(html,source,run);run.frame=next;$('paper').replaceChildren(next);resize();
+      status('画像・CSS・JavaScriptを読込中…');
+      await deadline(loaded,'iframe資産',15000,run.controller.signal);if(!active(run))return;
+      record(run,'iframe','load完了 / viewport '+next.contentWindow.innerWidth+'×'+next.contentWindow.innerHeight);
+      const until=Date.now()+15000;let info;
+      while(active(run)){
+        info=inspect(run);
+        if(!info.pending&&Date.now()-info.changed>=300&&next.contentDocument.querySelector('.fixed-page'))break;
+        if(Date.now()>until){info.warnings.push('紙面・資産の準備がタイムアウトしました');break;}
+        await deadline(new Promise(r=>setTimeout(r,100)),'資産待ち',15000,run.controller.signal);
+      }
+      if(!active(run))return;
+      run.readiness=info.pending?'資産待ち未完了':'読込検査完了';refresh(run,info);
+      record(run,'紙面',run.pages.length+'ページ / img '+next.contentDocument.images.length+'件 / pending '+info.pending);
+      record(run,'検査',run.warnings.length?run.warnings.join('\n'):'現在のimg・CSS・JS・使用フォントに検出エラーなし');
+      record(run,'範囲','背景画像・CSS内url/@import・遅延タイマーの全依存検査は未対応。dev実機の合格を自動認定しません。');
+      // Keep late mutations visible. A stale generation never updates newer UI.
+      let last=JSON.stringify(info);
+      run.monitor=setInterval(()=>{
+        if(!active(run))return;
+        const fresh=inspect(run),key=JSON.stringify(fresh);
+        if(key===last)return;last=key;
+        run.readiness=fresh.pending?'追加資産を読込中':'読込検査完了';
+        refresh(run,fresh);
+        if(fresh.warnings.length)record(run,'追加検査',[...new Set(fresh.warnings)].join('\n'));
+      },300);
+    }catch(error){
+      if(!active(run))return;
+      record(run,'停止',error.message);status(error.message,true);$('diagnostics').open=true;
+      // Retain a partially rendered article for diagnosis, but never call it ready.
+    }
   }
   $('reload').addEventListener('click',load);
   $('source').addEventListener('keydown',e=>{if(e.key==='Enter')load();});
@@ -124,11 +222,12 @@
   $('page-number').addEventListener('change',showPage);
   $('zoom').addEventListener('change',resize);$('guides').addEventListener('change',resize);
   window.addEventListener('resize',resize);
-  // 一覧はPages側と共用。読めなくても直接パス指定と既定の2記事は使える。
-  deadline(read('preview/articles.json',{cache:'no-store'}),4000).then(r=>r.json()).then(data=>{
+  // Keep the two existing articles usable if the optional catalogue fails.
+  deadline(read(revised('preview/articles.json',Date.now()),{cache:'no-store'}),'記事一覧',15000).then(r=>{if(!r.ok)throw new Error('一覧 HTTP '+r.status);return r.json();}).then(data=>{
+    const selected=$('source').value;
     const options=(data.articles||[]).map(item=>{const path=decodeURIComponent(new URL(item.src,'https://workspace.invalid/preview/').pathname.slice(1));articlePath(path);const o=document.createElement('option');o.value=path;o.textContent=item.label;return o;});
-    if(options.length)$('articles').replaceChildren(...options);
-  }).catch(()=>{});
+    if(options.length){$('articles').replaceChildren(...options);$('articles').value=selected;}
+  }).catch(()=>{if(current)record(current,'記事一覧','取得失敗。既定一覧・直接パス指定を使用できます。');});
   load();
 })();
 </script>

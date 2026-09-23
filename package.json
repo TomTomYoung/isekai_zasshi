@@ -9,9 +9,13 @@
     "build:issue-articles": "node tools/build_issue_articles.mjs",
     "collect:issue-pages": "node tools/collect_issue_pages.mjs",
     "build:epub": "python tools/build_fixed_layout_epub.py",
-    "check:fixed-layout": "python tools/check_fixed_layout_outputs.py"
+    "check:fixed-layout": "python tools/check_fixed_layout_outputs.py",
+    "test:preview": "node tests/preview/run.mjs"
   },
   "devDependencies": {
-    "playwright": "^1.46.0"
+    "playwright": "^1.46.0",
+    "fetch-mock": "9.11.0",
+    "vscode-uri": "3.2.0",
+    "pngjs": "7.0.0"
   }
 }

@@ -1,5 +1,7 @@
 (() => {
-  if (navigator.webdriver) return;
+  // Guides are opt-in; automation and normal browsing use the same default.
+  // Embedded viewers own their guide, so an iframe never adds another one.
+  if (window !== window.top || new URLSearchParams(location.search).get("fixedPreviewGuide") !== "1") return;
 
   const PAGE_W = 1456;
   const PAGE_H = 2056;
@@ -13,7 +15,6 @@
     const style = document.createElement("style");
     style.id = "fixed-layout-manual-preview-style";
     style.textContent = [
-      "html[data-fixed-layout-manual-preview=\"1\"] body{background:#e7f0ff !important;padding-top:42px !important;padding-bottom:64px !important;}",
       "html[data-fixed-layout-manual-preview=\"1\"] .fixed-page{outline:4px solid #1683ff !important;outline-offset:-4px !important;}",
       "html[data-fixed-layout-manual-preview=\"1\"] .fixed-page[data-preview-size-error]{outline-color:#dc2626 !important;}"
     ].join("\n");

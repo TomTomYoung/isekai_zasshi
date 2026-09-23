@@ -12,7 +12,7 @@
 
 `build_article.mjs` は、指定記事の既存固定HTMLを撮影して `pages/` と `intermediate/` を作ります。両フォルダを削除・再作成します。既存Markdownの中間コピーは行いますが、MarkdownからHTMLを生成する処理ではありません。fallback紙面が出る場合は正常記事として扱いません。
 
-両者ともNodeとPlaywright Chromiumが必要です。通常のdev単体では実行する環境がありません。dev用のHTMLプレビューは [直下index.html](../index.html) の別系統で、現在不調を調査中です。
+両者ともNodeとPlaywright Chromiumが必要です。通常のdev単体では実行する環境がありません。dev用のHTMLプレビューは [直下index.html](../index.html) の別系統で、日本語パスを修正済みで、dev実機確認が残っています。
 
 ## 号をまとめる
 

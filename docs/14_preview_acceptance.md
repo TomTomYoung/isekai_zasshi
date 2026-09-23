@@ -14,7 +14,9 @@
 
 `PNG_COMPARED`：対象ソース・環境を記録して出力PNGと比較。
 
-一つのラベルで全部を代用しません。現在は入口のSOURCE_REVIEWED、以前のMOCK_PASSEDという報告、利用者の不調報告があります。DEV_ARTICLE_PASSEDとPNG_COMPAREDは未達です。
+一つのラベルで全部を代用しません。今回の再現コード・環境・結果は [tests/preview](../tests/preview/README.md) に保存しています。旧入口の失敗を再現し、修正版の模擬・実記事HTTP試験と同一環境PNG比較を実施し、12件が成功しました。DEV_ARTICLE_PASSEDは未達です。GitHub Repositories認証の許可操作が自動承認レビューに拒否されたため、実機の資産表示・保存再読込へ進んでいません。
+
+PNG比較は、既存記事のソースを同じ環境のPlaywrightで撮影した検査用PNGとsrcdoc表示の比較です。既存の製品PNGの再生成やbuild_article全工程の検証ではありません。紙面内の全要素とテキスト行の相対座標を一致させた上で、描画時の小差を計測します。画素完全一致とは記載しません。
 
 ## 最初に残す環境情報
 
@@ -36,7 +38,7 @@ Consoleの最初のエラー：
 
 既存の直下indexを開いているかを確認します。「記事選択」「保存後に再読込」「倍率」等が目印です。CodeSwingの新規HTML-only試作品が表示されても、この入口の合格ではありません。
 
-同じ診断パネルで、スクリプト起動、CodeSwingの読取中継が用意されたか、HTML本文読取、資産読取、紙面準備の各段階を表示する設計にします。単一のタイムアウトだけでフォルダ選択ミスと断定しないでください。
+現行の「読込診断」で、スクリプト起動、Webview資産/native fetch経路、HTML本文読取、資産読取、紙面準備の各段階を表示します。単一のタイムアウトだけでフォルダ選択ミスと断定しないでください。
 
 ## ゲート2：読取経路を一種類ずつ確認
 
@@ -44,7 +46,7 @@ Consoleの最初のエラー：
 
 日本語フォルダ、空白を含むファイル、親フォルダの許可範囲内の相対参照、欠落ファイルも試します。HTTP成功だけでなく、CSSの期待プロパティ、JSの期待した表示、画像のnaturalWidth/Heightを検査します。404ページを画像やHTMLの成功データと取り違えません。
 
-CodeSwingの本文読取とWebview資産URLを別項目にします。`document.baseURI` とブラウザが要求したURLを、認証情報を除いた形で記録します。
+修正版は本文もWebview資産URLから読みます。本文、画像/CSS/JSは診断項目として分け、CORSやCSPは実機で確認します。`document.baseURI` とブラウザが要求したURLを、認証情報を除いた形で記録します。
 
 ## ゲート3：保存と再読込
 
@@ -78,7 +80,7 @@ iframe内の `innerWidth/innerHeight`、`.fixed-page` のborder-box、選択し�
 
 同一環境なら可能な範囲で画素比較、異なるOSなら主要要素の相対座標・改行・切れ・ページ数を中心に比較します。許容差は結果を見て明示し、失敗画像を正解へ自動更新して通しません。
 
-## 今回実行した限定的なURL検証
+## 前回の限定的なURL検証と今回の訂正
 
 2026-09-23、Node v22.16.0で以下の3assertが成功しました。使用ドメインは説明用です。実機のCodeSwingから取得したURLではありません。
 
@@ -97,7 +99,17 @@ assert.equal(new URL('.', normal).pathname, '/isekai_zasshi/');
 
 エンコードされた元URIを一つのセグメントに持つURLにdirname処理をすると、通常の階層URLとは違ってワークスペース情報を失う、という確認です。実機のURL形式、CodeSwingの導入版、要求の中継先を確認するまで、利用者の不調の原因とは確定しません。
 
-修正案の試験では、拡張側で元のVS Code URIをjoinしてからWebview URIへ変換するか、元URIを正しく復元してから再エンコードする設計を比較します。外側のURLへ相対パスを単純結合するだけの模擬試験を繰り返さないでください。
+同日後続の検証で、上記の例は実際のCodeSwing URI変換を再現していないことが分かりました。Uri.parseがデコードした後の代理pathは `/vscode-vfs://github/.../` で、Webview変換後も階層が保たれます。vscode-uri 3.2.0を使うテストを追加し、dirnameによるworkspace喪失仮説を撤回しました。
+
+新たに再現したのはfetch-mock 9.11.0のURL正規化とCodeSwing workspace.fs中継の不一致です。表紙のパスが `%E8%A1%A8%E7%B4%99` を文字どおり含む別名になります。修正は入口のテキスト読取をブラウザ本来のWebview資産fetchへ移すものです。拡張側のコードやURI形式を書き換える対応ではありません。
+
+## 自動試験の再実行
+
+Nodeを実行できる作業環境で `npm install`、`npx playwright install chromium`、`npm run test:preview` を実行します。dev単体でこのコマンドを実行できるという意味ではありません。既存Chromiumを使う場合はPREVIEW_CHROMIUMへ実行ファイルのパスを指定できます。
+
+試験用サーバーはloopback限定です。既存記事とGitにある資産を読み、独立fixtureをメモリで配信し、結果をexports/preview-testsへ保存します。202603や記事原本へ書き込みません。実機のWebview service worker / CORS / CSPまでは模擬しません。
+
+ソースhash、環境、検査対象、画素差の条件、未実施事項はtests/preview/README.mdとresults.jsonに記録します。CSS内部依存や背景画像、フォント全般を無条件で合格扱いにしないでください。
 
 ## 引き渡す成果物
 

@@ -1,0 +1,382 @@
+{
+  "date": "2026-09-23T13:22:13.611Z",
+  "sourceSha256": "eb40fba04b429f0c174217184a33c6710524673813d8a0cdd4a63c3a01b468f3",
+  "browser": "133.0.6943.0",
+  "playwrightVersion": "1.60.0",
+  "node": "v24.19.0",
+  "viewport": [
+    1456,
+    2056
+  ],
+  "dpr": 1,
+  "os": "linux",
+  "fontNote": "OS fonts apply. Reference run installed Noto Sans JP; see tests/preview/README.md. No font file is redistributed.",
+  "devArticlePassed": false,
+  "results": [
+    {
+      "name": "real URI serialization preserves directory",
+      "passed": true,
+      "detail": {
+        "library": "vscode-uri 3.2.0",
+        "proxyPath": "/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/"
+      }
+    },
+    {
+      "name": "fetch-mock 9.11.0 encodes Japanese before workspace join",
+      "passed": true,
+      "detail": {
+        "requested": "202604/00_表紙/fixed_layout.html",
+        "normalized": "/202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html",
+        "actual": "/TomTomYoung/isekai_zasshi/202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html"
+      }
+    },
+    {
+      "name": "MOCK: Japanese article and real cover",
+      "passed": true,
+      "detail": {
+        "viewport": [
+          1456,
+          2056
+        ],
+        "pages": [
+          {
+            "w": 1456,
+            "h": 2056,
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "images": [],
+        "missing": 0
+      }
+    },
+    {
+      "name": "MOCK: Japanese + spaces / CSS / JS / GET string URL Request",
+      "passed": true,
+      "detail": {
+        "viewport": [
+          1456,
+          2056
+        ],
+        "pages": [
+          {
+            "w": 1456,
+            "h": 2056,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "w": 1456,
+            "h": 2056,
+            "x": 0,
+            "y": 2056
+          },
+          {
+            "w": 1456,
+            "h": 2056,
+            "x": 0,
+            "y": 4112
+          }
+        ],
+        "images": [
+          {
+            "w": 32,
+            "h": 24,
+            "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+          },
+          {
+            "w": 32,
+            "h": 24,
+            "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+          }
+        ],
+        "missing": 0
+      }
+    },
+    {
+      "name": "MOCK: zoom / narrow / first middle last / guide invariance",
+      "passed": true,
+      "detail": [
+        {
+          "zoom": "0.25",
+          "viewport": [
+            1456,
+            2056
+          ],
+          "pages": [
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -4112
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -2056
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "images": [
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            },
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            }
+          ],
+          "missing": 0
+        },
+        {
+          "zoom": "0.5",
+          "viewport": [
+            1456,
+            2056
+          ],
+          "pages": [
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -4112
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -2056
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "images": [
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            },
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            }
+          ],
+          "missing": 0
+        },
+        {
+          "zoom": "1",
+          "viewport": [
+            1456,
+            2056
+          ],
+          "pages": [
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -4112
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -2056
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "images": [
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            },
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            }
+          ],
+          "missing": 0
+        },
+        {
+          "zoom": "auto",
+          "viewport": [
+            1456,
+            2056
+          ],
+          "pages": [
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -4112
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": -2056
+            },
+            {
+              "w": 1456,
+              "h": 2056,
+              "x": 0,
+              "y": 0
+            }
+          ],
+          "images": [
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            },
+            {
+              "w": 32,
+              "h": 24,
+              "src": "http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/%E7%94%BB%E5%83%8F%20%E7%A9%BA%E7%99%BD.svg?__fixedPreview=1790169708211-2"
+            }
+          ],
+          "missing": 0
+        }
+      ]
+    },
+    {
+      "name": "MOCK: saved HTML CSS JS image refresh without commit",
+      "passed": true,
+      "detail": {
+        "revisions": [
+          "1790169708211-2",
+          "1790169709031-3"
+        ]
+      }
+    },
+    {
+      "name": "MOCK: slow image and rapid reload cannot update next article",
+      "passed": true
+    },
+    {
+      "name": "MOCK: missing image CSS and script error remain failures",
+      "passed": true,
+      "detail": "3ページ / 選択ページ 1440×114.4375 CSS px / 読込検査完了 / 画像未読込: http://127.0.0.1:37159/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/202604/99_%E8%A9%A6%E9%A8%93%20%E7%A9%BA%E7%99%BD/missing.svg / CSS未読込 /vscode-vfs://github/TomTomYoung/isekai_zasshi/202604/99_試験 空白/様式 空白.css / JavaScript例外: Uncaught Error: fixture exception / サイズ不一致 3ページ / ページ先頭に整列できません。原本の余白を確認してください。"
+    },
+    {
+      "name": "MOCK: missing HTML gives immediate stage and path",
+      "passed": true,
+      "detail": "入口: JavaScript起動 / HTTP / native fetch\n資産基準: http://127.0.0.1:37159/vscode-vfs://github/TomTomYoung/isekai_zasshi/\nHTML要求: 202604/98_存在しない/fixed_layout.html\n停止: HTML読込失敗: HTTP 404 / 202604/98_存在しない/fixed_layout.html"
+    },
+    {
+      "name": "MOCK: no fixed-page is a bounded failure",
+      "passed": true
+    },
+    {
+      "name": "MOCK: protect 202603",
+      "passed": true
+    },
+    {
+      "name": "MOCK and HTTP real articles / geometry / PNG comparison",
+      "passed": true,
+      "detail": [
+        {
+          "article": "202604/00_表紙/fixed_layout.html",
+          "pages": 1,
+          "images": 0,
+          "pngComparisons": [
+            {
+              "name": "cover",
+              "geometryEqual": true,
+              "byteEqual": false,
+              "meanAbsoluteError": 0.13828985743504227,
+              "strongPixelFraction": 0.00041088532090477616,
+              "maxChannelDifference": 72
+            }
+          ]
+        },
+        {
+          "article": "202604/01_王都女学院春の制服名鑑/fixed_layout.html",
+          "pages": 5,
+          "images": 6,
+          "pngComparisons": [
+            {
+              "name": "uniforms-1",
+              "geometryEqual": true,
+              "byteEqual": false,
+              "meanAbsoluteError": 0.002131815574179387,
+              "strongPixelFraction": 3.140099200410484e-05,
+              "maxChannelDifference": 54
+            },
+            {
+              "name": "uniforms-2",
+              "geometryEqual": true,
+              "byteEqual": false,
+              "meanAbsoluteError": 0.000475134868374168,
+              "strongPixelFraction": 1.3362124257065891e-05,
+              "maxChannelDifference": 39
+            },
+            {
+              "name": "uniforms-3",
+              "geometryEqual": true,
+              "byteEqual": false,
+              "meanAbsoluteError": 0.000373137319878565,
+              "strongPixelFraction": 8.017274554239535e-06,
+              "maxChannelDifference": 38
+            },
+            {
+              "name": "uniforms-4",
+              "geometryEqual": true,
+              "byteEqual": false,
+              "meanAbsoluteError": 0.0003782594675104403,
+              "strongPixelFraction": 1.0689699405652712e-05,
+              "maxChannelDifference": 47
+            },
+            {
+              "name": "uniforms-5",
+              "geometryEqual": true,
+              "byteEqual": true,
+              "meanAbsoluteError": 0,
+              "strongPixelFraction": 0,
+              "maxChannelDifference": 0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sourceBaseCommit": "b6e8c40aff115628b6203706b8e5be691adc3bb5",
+  "files": {
+    "index.html": "eb40fba04b429f0c174217184a33c6710524673813d8a0cdd4a63c3a01b468f3",
+    "preview/fixed_layout_screen_preview.js": "a1697e97f90ee8d4968bca76b35d60dd3ad7251900f5df406cc1b4f93de8d380",
+    "202604/00_表紙/fixed_layout.html": "665168e99e10628ee8f7aceaaaddf3d51e755c58bd87dbccd1d0fb4e4f9d1bec",
+    "202604/01_王都女学院春の制服名鑑/fixed_layout.html": "398004b892b4eb5ff601a4841ab5832b7ecd8dc32fc8c20e506e1d1aa97723cd",
+    "202604/01_王都女学院春の制服名鑑/ouka.png": "f936f68ed34153100cfbc6267b98253ab3fa23d893eb28ede29ed75daa2abe23",
+    "202604/01_王都女学院春の制服名鑑/kinjishi.png": "5a91f610a0499e4906ffa9b789c835f4e4435ee64d210dc10b75fffd8ced29b2",
+    "202604/01_王都女学院春の制服名鑑/barajuji.png": "0210981fb95ef4f89541efe8c32f95cf661b61beced21d0298581de935be7605",
+    "tests/preview/run.mjs": "095319e950acb242d8f9e43c1e7ae9942d9c727afddcfefc9fd170026712343f",
+    "package-lock.json": "09bddbdf8343389f8673feb097c6b94ae2b4db80070af52b57276025f976e53f"
+  },
+  "fontSha256": "c2f3b4d463500a2ddcd3849cded1fceeb9fd6d1c32e6cbecd568453ba50fc68f",
+  "pixelTolerance": {
+    "geometry": "exact element and text line relative coordinates (rounded to .001 CSS px)",
+    "meanAbsoluteChannelErrorMax": 0.3,
+    "fractionPixelsWithChannelErrorOver16Max": 0.001,
+    "peakChannelErrorMax": 100
+  }
+}

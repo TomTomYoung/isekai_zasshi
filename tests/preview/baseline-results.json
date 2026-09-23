@@ -1,0 +1,55 @@
+{
+  "date": "2026-09-23T13:21:49.127Z",
+  "sourceSha256": "b8daa1336de1de0f057fcc55c8f6687c9fb8eb7b87ee35682b32c35d1f705602",
+  "browser": "133.0.6943.0",
+  "playwrightVersion": "1.60.0",
+  "node": "v24.19.0",
+  "viewport": [
+    1456,
+    2056
+  ],
+  "dpr": 1,
+  "os": "linux",
+  "fontNote": "OS fonts apply. Reference run installed Noto Sans JP; see tests/preview/README.md. No font file is redistributed.",
+  "devArticlePassed": false,
+  "results": [
+    {
+      "name": "real URI serialization preserves directory",
+      "passed": true,
+      "detail": {
+        "library": "vscode-uri 3.2.0",
+        "proxyPath": "/vscode-vfs%3A//github/TomTomYoung/isekai_zasshi/"
+      }
+    },
+    {
+      "name": "fetch-mock 9.11.0 encodes Japanese before workspace join",
+      "passed": true,
+      "detail": {
+        "requested": "202604/00_表紙/fixed_layout.html",
+        "normalized": "/202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html",
+        "actual": "/TomTomYoung/isekai_zasshi/202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html"
+      }
+    },
+    {
+      "name": "baseline remains without pages after Japanese read fails",
+      "passed": true,
+      "detail": {
+        "status": "読込中…",
+        "workspaceRequests": [
+          {
+            "requested": "/preview/articles.json",
+            "relative": "preview/articles.json"
+          },
+          {
+            "requested": "/202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html",
+            "relative": "202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html"
+          },
+          {
+            "requested": "/202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html",
+            "relative": "202604/00_%E8%A1%A8%E7%B4%99/fixed_layout.html"
+          }
+        ]
+      }
+    }
+  ]
+}

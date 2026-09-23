@@ -24,11 +24,11 @@ Pagesに表示されるのはGitHubへ届いて公開された版で、devの未
 
 `app.js` はiframeの幅を1456 CSS pxに保ち、外側を拡大縮小します。ただし高さは文書全体のscrollHeightに合わせて伸ばす実装です。常に1456×2056のviewportで開いている、という説明は不正確です。高さ依存のCSSがある紙面では、撮影時と組版条件が異なります。
 
-ページ境界はoutlineで表示しますが、同時にページ間のmarginも追加します。記事内に読み込まれる `fixed_layout_screen_preview.js` はbody余白と別のoutline・バッジを追加するため、青枠切替との二重制御も調査対象です。
+ページ境界はoutlineで表示しますが、app.jsは同時にページ間marginも追加します。このPages側の組版条件の差は未修正です。
 
-直接表示用ガイドは `navigator.webdriver` がtrueの場合に処理をスキップします。そのため、通常ブラウザと自動化されたブラウザの表示経路が一致するかは別途試験が必要です。PNGへガイドが入らないという設計意図と、出力の実検証を区別してください。
+`fixed_layout_screen_preview.js` は今回、直接表示URLの `?fixedPreviewGuide=1` を明示したときだけ起動する方式へ変更しました。navigator.webdriver分岐とbody余白変更を廃止し、iframe内では実行しないため、Pages/HTTPの青枠と二重に制御しません。指定なしは通常ブラウザも自動撮影も同じ素の表示です。
 
-以上のコードは今回の文書更新では修正していません。青枠は紙面を自動修正する機能ではなく、寸法確認だけで改行・はみ出し・資産の完全性まで保証しません。
+青枠は紙面を自動修正する機能ではなく、寸法確認だけで改行・はみ出し・資産の完全性まで保証しません。
 
 ## 記事一覧
 
@@ -38,6 +38,6 @@ Pagesに表示されるのはGitHubへ届いて公開された版で、devの未
 
 ## devでの確認と今後の選択
 
-dev用入口も現在は利用者環境で不調です。まず [CodeSwing文書](../docs/06_codeswing_dev_preview.md) と [検証手順](../docs/14_preview_acceptance.md) に従い、入口・本文読取・画像/CSS/JS・保存再読込を順に切り分けます。
+dev用入口は日本語パスの中継不整合を修正し、模擬・通常HTTP試験を追加しました。利用者のdev実機は認証許可の自動承認レビュー拒否により未確認です。まず [CodeSwing文書](../docs/06_codeswing_dev_preview.md) と [検証手順](../docs/14_preview_acceptance.md) に従い、入口・本文読取・画像/CSS/JS・保存再読込を順に切り分けます。
 
 Pages、通常HTTP、CodeSwing、実PNG確認は用途が異なります。未実装の代替案を含めて [方式比較](../docs/12_preview_methods.md) にまとめています。
