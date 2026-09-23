@@ -1,235 +1,94 @@
 # 異世界雑誌
 
-## 最重要ルール：記事本体は `.md`
+異世界の事件、店、人物、商品、広告などを実話誌風のビジュアル雑誌として制作するリポジトリです。
 
-**記事の本体・正本は必ず `.md` ファイルです。**
+文書更新日：2026-09-23。実装照合の基準コミット：`7c1f911b0e321de73648df3e38ce1a9bb3abb628`。
 
-HTMLは本文の正本ではありません。HTMLは `.md` から生成・変換される派生物です。
+## 次の作業はここから
 
-各記事ディレクトリでは、本文を書く・直す・増補する場合、必ず以下の本文Markdownを作成・編集します。
+再開用の起点は [HANDOFF.md](HANDOFF.md) です。文書の適用範囲は [docs/README.md](docs/README.md)、プレビューの選択肢は [方式比較](docs/12_preview_methods.md)、旧説明との不一致は [文書監査](docs/13_documentation_audit.md) にまとめています。
 
-```text
-202604/NN_記事名/記事名.md
-```
+現在の最優先は、ブラウザ版devで固定紙面を確認する仕組みの不調切り分けです。CodeSwing用の入口は実装されていますが、ユーザーから動作不調の報告があり、失敗する段階はまだ特定されていません。実装の存在や模擬試験を、利用者のdevでの成功と扱いません。
 
-`企画.md` は記事設計メモです。本文本体ではありません。
+`202603/` は今回の変更・再生成対象外です。旧文書にある全号ビルドや同期処理を、202604の作業開始時に実行しないでください。
 
-```text
-企画.md        = 記事設計・構成メモ
-記事名.md      = 記事本文の正本
-記事名.html    = 中間HTML
-fixed_layout.html = 固定レイアウト用HTML
-```
+## 本文の正本と紙面の関係
 
-**本文更新をHTMLだけで済ませてはいけません。**
-
----
-
-## まずこれ：記事単体の固定レイアウト確認
-
-記事を直したら、いきなりEPUBを作らず、先にその記事だけ画像化して確認します。
-
-### VSCodeでやる場合
-
-1. 確認したい記事フォルダ内の `fixed_layout.html` を開く。
-2. `Ctrl + Shift + P` を押す。
-3. `Tasks: Run Task` を選ぶ。
-4. `Preview current article` を選ぶ。
-
-これで、今開いているファイルのフォルダで `preview.mjs` が実行されます。
-
-出力先：
+記事本文の正本は各記事フォルダの現行Markdownです。
 
 ```text
-202604/NN_記事名/preview/
-  001.png
-  002.png
-  003.png
-  ...
+企画.md            記事設計。本文の正本ではありません。
+記事名.md          本文の正本。
+記事名.html        中間HTML。
+fixed_layout.html  固定紙面を定義するHTML。
+fixed_layout.css   存在する場合の固定紙面CSS。
 ```
 
-### ダブルクリックでやる場合
+本文の変更はMarkdownへ反映します。HTMLだけを書き換えて本文を更新済みにしません。一方、紙面の配置・サイズ・スタイルをHTML/CSSで調整することは、本文正本の置換とは別です。
 
-記事フォルダ内のこれをダブルクリックします。
+現在確認したビューアーと `build_article.mjs` は、既存の `fixed_layout.html` を表示・撮影する処理です。Markdownから固定HTMLへ自動変換する処理ではありません。最新のMarkdownや素材が、既存HTMLへ同期されているかは別途確認します。[正本規則](docs/09_markdown_source_rule.md) を参照してください。
+
+## 三つのプレビュー入口を区別する
+
+### dev内で編集中の紙面を見る入口
+
+リポジトリ直下の [index.html](index.html) と [codeswing.json](codeswing.json) です。
+
+意図した操作は、CodeSwingで既存リポジトリの最上位を開き、記事の固定HTMLを保存して、ビューアーの「保存後に再読込」を押すことです。毎回PNGを生成したり、commit/pushしたりしない確認を目指しています。ただし、利用者環境では現在不調です。
+
+`New Swing...` で作ったHTML-only試作品と、既存リポジトリの入口は別です。`Initialize Workspace as Swing` で既存ファイルを上書きする必要はありません。未保存・未commit変更を保護してから扱ってください。
+
+詳細は [CodeSwing用入口](docs/06_codeswing_dev_preview.md)、次に調べる順序は [検証手順](docs/14_preview_acceptance.md) です。
+
+### Pages / HTTP上で紙面を見る入口
+
+[preview/index.html](preview/index.html) は、通常のHTTP配信で記事URLを読む別のビューアーです。記事ページのPNG一覧を表示する画面ではありません。
+
+公開用ビルドとworkflowは存在しますが、2026-09-23のGitHub API確認では `has_pages=false` です。公開URLの開通・動作は確認できていません。現在の実装には、iframeの高さや画面ガイドが撮影条件と異なる箇所もあります。
+
+GitHub Pagesは公開されたソースを表示するので、devで保存しただけの未commit変更は反映されません。[プレビューREADME](preview/README.md) を参照してください。
+
+### 実際に生成されたPNGを確認する入口
+
+記事フォルダ内の `preview/*.png` または `pages/*.png` は、Playwrightで実際に撮影した画像です。通常の編集時のHTML確認と、最終PNGの確認は併用できます。
 
 ```text
-preview.bat
+リポジトリ直下 index.html   dev用HTMLビューアー
+preview/index.html         Pages / HTTP用HTMLビューアー
+記事フォルダ/preview/      記事単体の確認用PNG出力先
+記事フォルダ/pages/        記事ビルドのPNG出力先
 ```
 
-同じく、記事フォルダ内の `preview/` に確認用PNGが出ます。
+名前が似ていても役割は異なります。固定紙面の基準は1456×2056 CSS px、PNGの期待寸法は1456×2056画像ピクセルです。青枠は確認用ガイドで、はみ出しを自動修正する機能ではありません。
 
-### 初回だけ必要
+## Nodeを実行できる環境での記事単体PNG
 
-リポジトリ直下で一度だけ実行します。
+以下はデスクトップや接続した計算環境向けです。通常の `vscode.dev` / `github.dev` 単体でNodeやbatを実行する手順ではありません。
+
+依存関係はリポジトリ直下のlockfileを基準に用意し、Playwright用Chromiumも導入します。これは環境準備の説明であり、今回の文書監査で実行済みという意味ではありません。
 
 ```bash
-npm install
+npm ci
 npx playwright install chromium
 ```
 
-### 何をやっているか
-
-```text
-記事フォルダの fixed_layout.html
-  ↓
-ローカルHTTPサーバーで開く
-  ↓
-PlaywrightのChromiumで表示する
-  ↓
-.fixed-page を探す
-  ↓
-各 .fixed-page を 1456×2056px のPNGとして保存する
-  ↓
-記事フォルダ内の preview/ に 001.png, 002.png ... として出す
-```
-
-画像リンク切れもログに出ます。
-
-```text
-images: 3
-broken images: 1
-- images/example.png
-```
-
-`broken images` が 0 なら、とりあえず画像リンクは通っています。
-
-### 関係するファイル
-
-```text
-.vscode/tasks.json
-  VSCodeの Preview current article タスク
-
-tools/preview_fixed_layout_article_here.mjs
-  実際に fixed_layout.html を開いてPNG化する共通処理
-
-202604/NN_記事名/preview.mjs
-  共通処理を呼ぶだけの記事内ランチャー
-
-202604/NN_記事名/preview.bat
-  ダブルクリック用ランチャー
-
-202604/NN_記事名/preview/
-  確認用PNGの出力先
-```
-
----
-
-## 概要
-
-このリポジトリは、異世界雑誌の原稿・固定レイアウト版HTML/CSS・リフロー版HTML・画像・制作手順を管理するためのものです。
-
-`202603` 号 fixed_layout 版は、KDP公開済みです。
-
-```text
-fixed_layout版
-= 固定紙面向け。1456×2056pxの紙面をPNG画像として書き出す版。
-= 202603号ではKDP公開済みの主成果物。
-
-reflow版
-= EPUB等のリフロー本文向け。読者環境に応じて本文が流れる版。
-= fixed_layout版とは別系統の派生候補。
-```
-
----
-
-## 現在の優先作業
-
-```text
-1. 異世界雑誌 202603号 公開後整理
-2. 異世界雑誌 202604号 企画・誌面テンプレート設計
-3. 異世界雑誌 202603号 reflow v1.0
-```
-
-202603号 fixed_layout 版は、KDP公開まで到達したため制作フェーズを閉じます。
-
-次の主眼は、公開済み号の制作記録を残し、202604号以降へ再利用できる制作ルール・テンプレートへ落とし込むことです。
-
----
-
-## fixed_layout 作業導線
-
-作業手順：
-
-1. [`docs/02_fixed_layout_build_steps.md`](docs/02_fixed_layout_build_steps.md)
-   - `fixed_layout.html` / `fixed_layout.css` の存在確認、PNG書き出し、Kindle用連番PNG、固定レイアウトEPUB生成の手順。
-
-2. [`docs/04_202603_post_release_notes.md`](docs/04_202603_post_release_notes.md)
-   - 202603号 fixed_layout 版のKDP公開後メモ。制作方式、最終出力、反省点、次号への改善ルール。
-
-固定レイアウト版をEPUBまでまとめて生成するには、リポジトリ直下で以下を実行します。
+既存固定HTMLのある制服名鑑を確認用PNGへ出す例です。
 
 ```bash
-npm run build:fixed-layout-epub
+cd "202604/01_王都女学院春の制服名鑑"
+node ../../tools/preview_fixed_layout_article_here.mjs --fail-on-broken-image
 ```
 
-号数別の正規出力先：
+この処理は記事内 `preview/` を削除して作り直します。手作業のファイルをその出力フォルダへ置かないでください。画像の読込失敗チェックにも限界があり、成功ログだけで全資産・紙面品質を保証しません。
 
-```text
-exports/202603/fixed_layout_images/
-exports/202603/kindle_pages/
-exports/202603/isekai_marumie_jitsuwa_202603_fixed_layout.epub
-```
+記事manifestを伴う `pages/` 出力は別コマンドです。入力、削除範囲、fallback、号統合の現状は [記事単位ビルド仕様](docs/10_article_level_build_spec.md) を確認してください。
 
-固定レイアウト版の主要ファイル：
+`npm run build:fixed-layout-epub` 等の従来コマンドには202603固定の経路が残っています。202604のプレビュー確認のために実行しません。
 
-```text
-202603/*/fixed_layout.html
-202603/*/fixed_layout.css
-tools/export_fixed_layout_images.mjs
-tools/prepare_kindle_pages.mjs
-tools/build_fixed_layout_epub.py
-exports/202603/fixed_layout_images/
-exports/202603/kindle_pages/
-```
+## 編集履歴と旧資料
 
----
+原稿の承認待ち事項、現行企画、画像制作の記録は [202604/HANDOFF.md](202604/HANDOFF.md)、[STATUS.md](202604/STATUS.md)、[編集監査](202604/EDITORIAL_AUDIT.md)、[編集ログ](202604/EDIT_LOG.md) を参照します。日付の古い画像点数や改稿予定を、再確認せず現在の状態として使わないでください。
 
-## reflow v1.0 作業導線
+202603の発売・制作記録は保存されていますが、このREADMEの更新で再公開・再検証したものではありません。過去工程の文書は [文書案内](docs/README.md) から参照します。旧202604企画2文書の原文は [日付付きlegacy](docs/legacy/2026-09-23/README.md) に保存しました。
 
-reflow版は fixed_layout版とは別系統の派生候補です。
-
-作業は以下の順に確認します。
-
-1. [`docs/01_isekai_zasshi_v1_checklist.md`](docs/01_isekai_zasshi_v1_checklist.md)
-   - 収録記事、reflow構造、画像、目次、表紙、奥付、読了テストのチェックリスト。
-
-2. [`docs/02_reflow_build_steps.md`](docs/02_reflow_build_steps.md)
-   - reflow版ビルド手順。
-   - `tools/create_reflow_files.py` と `tools/normalize_reflow_html.py` の実行、HTML正規化、目次・CSS・画像確認を含む。
-
-3. [`docs/03_reflow_v1_release_notes.md`](docs/03_reflow_v1_release_notes.md)
-   - reflow v1.0リリースノート。
-   - v1.0に含めるもの、v1.0では要求しない品質、v1.1以降に回すもの、タグ名案、リリース文案。
-
-互換用の旧文書：
-
-```text
-docs/02_epub_build_steps.md
-docs/03_epub_v1_release_notes.md
-```
-
----
-
-## 重要ファイル
-
-### fixed_layout版
-
-```text
-202603/*/fixed_layout.html
-202603/*/fixed_layout.css
-tools/export_fixed_layout_images.mjs
-tools/prepare_kindle_pages.mjs
-tools/build_fixed_layout_epub.py
-exports/202603/fixed_layout_images/
-exports/202603/kindle_pages/
-```
-
-### reflow版
-
-```text
-202603/reflow.css
-202603/目次_reflow.html
-202603/*/*_reflow.html
-tools/create_reflow_files.py
-tools/normalize_reflow_html.py
-```
+今回の変更は文書だけです。プレビューの修理完了、全記事のHTML同期、PNG/EPUB生成、記事の校了を意味しません。
