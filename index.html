@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<title>dev 紙面プレビュー</title>
+<style>
+  html,body{margin:0;padding:0;background:#e8edf4;color:#182333;font:14px/1.5 system-ui,sans-serif}
+  #controls{position:sticky;top:0;z-index:2;background:#fff;padding:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  #controls input,#controls select,#controls button{font:inherit;padding:6px;border:1px solid #98a7ba;border-radius:4px}
+  #source{flex:1 1 400px;min-width:180px}
+  #status{margin:0;padding:8px 12px;white-space:pre-wrap}
+  #status[data-error="true"]{color:#b42318}
+  #workspace{padding:12px;overflow:auto}
+  #paper{position:relative;margin:0 auto;outline:2px solid #1683ff;background:#fff}
+  #paper iframe{position:absolute;top:0;left:0;width:1456px;height:2056px;border:0;transform-origin:top left}
+</style>
+<header id="controls">
+  <select id="articles" aria-label="記事"><option value="202604/00_表紙/fixed_layout.html">00 表紙</option><option value="202604/01_王都女学院春の制服名鑑/fixed_layout.html">01 制服名鑑</option></select>
+  <input id="source" aria-label="リポジトリ相対パス" value="202604/00_表紙/fixed_layout.html" spellcheck="false">
+  <button id="reload" type="button">保存後に再読込</button>
+  <select id="page-number" aria-label="ページ"></select>
+  <select id="zoom" aria-label="表示倍率"><option value="auto">幅に合わせる</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="1">100%</option></select>
+  <label><input id="guides" type="checkbox" checked>青枠</label>
+</header>
+<p id="status" role="status">HTMLを読み込みます。PNG生成・pushは不要です。</p>
+<main id="workspace"><div id="paper"></div></main>
+<script>
+(() => {
+  const W=1456,H=2056,$=id=>document.getElementById(id);
+  const resourceRoot=new URL('.',document.baseURI);
+  const read=window.fetch.bind(window); // CodeSwingでは相対パスをworkspace.fsへ渡す。
+  let frame=null,pages=[],generation=0,assetWarning='';
+  function status(text,error=false){$('status').textContent=text;$('status').dataset.error=String(error);}
+  function deadline(promise,ms=10000){
+    let timer;
+    return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('読込待ちがタイムアウトしました。リポジトリ直下をOpen Swingで開いているか確認してください。')),ms);})]).finally(()=>clearTimeout(timer));
+  }
+  function articlePath(value){
+    const path=String(value).trim();
+    if(!/^202604\/\d{2}_[^/]+\/fixed_layout\.html$/.test(path)||path.includes('\\')||path.includes('%')||path.includes('?')||path.includes('#')){
+      throw new Error('対象は202604/記事フォルダ/fixed_layout.htmlです。202603は対象外です。');
+    }
+    return path;
+  }
+  function resize(){
+    const scale=$('zoom').value==='auto'?Math.max(.1,Math.min(1,($('workspace').clientWidth-24)/W)):Number($('zoom').value);
+    $('paper').style.width=W*scale+'px';$('paper').style.height=H*scale+'px';
+    if(frame)frame.style.transform='scale('+scale+')';
+    $('paper').style.outlineStyle=$('guides').checked?'solid':'none';
+  }
+  function showPage(){
+    const el=pages[Number($('page-number').value)||0];if(!el||!frame)return;
+    const win=frame.contentWindow,rect=el.getBoundingClientRect();
+    win.scrollTo({left:rect.left+win.scrollX,top:rect.top+win.scrollY,behavior:'instant'});
+    const wrong=pages.filter(p=>{const r=p.getBoundingClientRect();return Math.abs(r.width-W)>.5||Math.abs(r.height-H)>.5;}).length;
+    $('paper').style.outlineColor=wrong?'#c62828':'#1683ff';
+    const aligned=el.getBoundingClientRect();
+    const alignmentWarning=Math.abs(aligned.top)>.5||Math.abs(aligned.left)>.5?' / ページ先頭に整列できません。原本の余白を確認してください。':'';
+    status(pages.length+'ページ / 選択ページ '+rect.width+'×'+rect.height+' CSS px'+(wrong?' / サイズ不一致 '+wrong+'ページ':'')+assetWarning+alignmentWarning,Boolean(wrong||assetWarning||alignmentWarning));
+    resize();
+  }
+  // srcdoc内の相対fetchも、記事フォルダを基準にCodeSwingの読取ブリッジへ渡す。
+  window.__fixedPreviewRead=(article,input,init={})=>{
+    const method=String(init.method||'GET').toUpperCase();
+    if(method!=='GET')return Promise.reject(new Error('プレビューのファイル読取はGETのみです。'));
+    const base=new URL(article,'https://workspace.invalid/');
+    const url=new URL(String(input),base);
+    if(url.origin!=='https://workspace.invalid')return Promise.reject(new Error('外部fetchはプレビュー対象外です。'));
+    const path=decodeURIComponent(url.pathname.slice(1));
+    if(!path.startsWith('202604/')||path.includes('\\'))return Promise.reject(new Error('読取対象外のパスです。'));
+    return deadline(read(path,{...init,cache:'no-store'}));
+  };
+  function childBridge(article){
+    window.__fixedPreviewErrors=[];
+    window.addEventListener('error',e=>{if(e.error||e.target instanceof HTMLScriptElement)window.__fixedPreviewErrors.push(e.message||'script load error');},true);
+    window.addEventListener('unhandledrejection',e=>window.__fixedPreviewErrors.push(String(e.reason)));
+    const nativeFetch=window.fetch.bind(window);
+    window.fetch=(input,init)=>{
+      if(typeof input==='string'&&!/^[a-z][a-z\d+.-]*:|^\/\//i.test(input))return parent.__fixedPreviewRead(article,input,init);
+      return nativeFetch(input,init);
+    };
+  }
+  async function load(){
+    const id=++generation;
+    pages=[];$('page-number').replaceChildren();$('paper').replaceChildren();frame=null;
+    status('読込中…');resize();
+    try{
+      const source=articlePath($('source').value);
+      const response=await deadline(read(source,{cache:'no-store'}));
+      if(!response.ok)throw new Error('HTML読込失敗: HTTP '+response.status);
+      const html=await response.text();if(id!==generation)return;
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      if(doc.querySelector('base'))throw new Error('独自のbase要素を持つ記事はこの入口の対象外です。');
+      // 原本は書き換えない。以前の閲覧用装飾だけを表示コピーから除外する。
+      doc.querySelectorAll('script[src]').forEach(s=>{if(s.getAttribute('src').endsWith('/fixed_layout_screen_preview.js'))s.remove();});
+      const base=doc.createElement('base');base.href=new URL(source,resourceRoot).href;doc.head.prepend(base);
+      const bridge=doc.createElement('script');
+      bridge.textContent='('+childBridge.toString()+')('+JSON.stringify(source).replace(/</g,'\\u003c')+');';
+      base.after(bridge);
+      const next=document.createElement('iframe');next.title='固定紙面 1456×2056';next.setAttribute('scrolling','no');
+      const loaded=new Promise(resolve=>next.addEventListener('load',resolve,{once:true}));
+      next.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;
+      frame=next;$('paper').replaceChildren(next);resize();
+      // 同一originのsrcdoc。信頼する記事コード専用で、未知のHTMLは読み込まない。
+      await deadline(loaded);if(id!==generation)return;
+      const inner=next.contentDocument;
+      let fontTimeout=false;
+      try{await deadline(inner.fonts.ready,5000);}catch{fontTimeout=true;}
+      const until=Date.now()+10000;
+      while(!inner.querySelector('.fixed-page')&&Date.now()<until)await new Promise(r=>setTimeout(r,100));
+      if(id!==generation)return;
+      pages=Array.from(inner.querySelectorAll('.fixed-page'));
+      if(!pages.length)throw new Error('.fixed-page がありません。スクリプトの実行結果を確認してください。');
+      await new Promise(r=>next.contentWindow.requestAnimationFrame(()=>next.contentWindow.requestAnimationFrame(r)));
+      const resourceErrors=Array.from(inner.querySelectorAll('link[rel="stylesheet"]')).filter(link=>!link.sheet).length;
+      const missing=Array.from(inner.images).filter(img=>!img.complete||!img.naturalWidth).length+inner.querySelectorAll('.missing').length;
+      assetWarning=(missing?' / 画像未読込・代替表示 '+missing+'件':'')+(resourceErrors?' / CSS未読込 '+resourceErrors+'件':'')+(fontTimeout?' / フォント待ちタイムアウト':'')+((next.contentWindow.__fixedPreviewErrors||[]).length?' / JavaScriptエラーあり':'');
+      pages.forEach((_,i)=>{const o=document.createElement('option');o.value=i;o.textContent=String(i+1).padStart(3,'0');$('page-number').append(o);});
+      showPage();
+    }catch(error){if(id===generation){pages=[];frame=null;$('paper').replaceChildren();status(error.message,true);}}
+  }
+  $('reload').addEventListener('click',load);
+  $('source').addEventListener('keydown',e=>{if(e.key==='Enter')load();});
+  $('articles').addEventListener('change',()=>{$('source').value=$('articles').value;load();});
+  $('page-number').addEventListener('change',showPage);
+  $('zoom').addEventListener('change',resize);$('guides').addEventListener('change',resize);
+  window.addEventListener('resize',resize);
+  // 一覧はPages側と共用。読めなくても直接パス指定と既定の2記事は使える。
+  deadline(read('preview/articles.json',{cache:'no-store'}),4000).then(r=>r.json()).then(data=>{
+    const options=(data.articles||[]).map(item=>{const path=decodeURIComponent(new URL(item.src,'https://workspace.invalid/preview/').pathname.slice(1));articlePath(path);const o=document.createElement('option');o.value=path;o.textContent=item.label;return o;});
+    if(options.length)$('articles').replaceChildren(...options);
+  }).catch(()=>{});
+  load();
+})();
+</script>
+</html>
