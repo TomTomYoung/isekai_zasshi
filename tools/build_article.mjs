@@ -5,6 +5,7 @@ import { promises as fs } from 'node:fs';
 import { createReadStream } from 'node:fs';
 import { chromium } from 'playwright';
 import safety from '../preview/layout_safety.js';
+import { verifyArticleSource, sha256 } from './article_source.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,7 +63,7 @@ async function exists(filePath) {
   }
 }
 
-function startServer() {
+function startServer(overrides = new Map()) {
   const server = http.createServer(async (req, res) => {
     try {
       const rawPath = decodeURIComponent((req.url || '/').split('?')[0]);
@@ -72,6 +73,12 @@ function startServer() {
       if (!isWithin(ROOT, filePath)) {
         res.writeHead(403);
         res.end('Forbidden');
+        return;
+      }
+
+      if (overrides.has(filePath)) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(overrides.get(filePath));
         return;
       }
 
@@ -197,8 +204,9 @@ async function assetState(page) {
     }
     const state = window.__fixedArticleExportState;
     errors.push(...(state?.errors || []));
+    if (window.__articleComposition?.status === 'failed') errors.push(`Composition failed: ${window.__articleComposition.error}`);
     return {
-      pending: images.filter(img => !img.complete || (!img.getAttribute('src') && !img.getAttribute('srcset') && img.dataset.candidates)).length,
+      pending: images.filter(img => !img.complete || (!img.getAttribute('src') && !img.getAttribute('srcset') && img.dataset.candidates)).length + (window.__articleComposition?.status === 'pending' ? 1 : 0),
       fontsLoading: document.fonts.status === 'loading',
       images: images.length,
       fonts: [...document.fonts].map(font => ({ family: font.family, status: font.status })),
@@ -278,7 +286,7 @@ async function collectGeometry(page) {
   }, PAGE_SELECTOR), 5000, 'collect page geometry');
 }
 
-async function copyIntermediate(articleDir, intermediateDir) {
+async function copyIntermediate(articleDir, intermediateDir, sourceSync) {
   const fixedLayout = path.join(articleDir, 'fixed_layout.html');
   if (!(await exists(fixedLayout))) {
     throw new Error(`Missing fixed_layout.html: ${fixedLayout}`);
@@ -292,7 +300,7 @@ async function copyIntermediate(articleDir, intermediateDir) {
   }
 
   const articleName = path.basename(articleDir).replace(/^\d{2}_/, '');
-  const mdPath = path.join(articleDir, `${articleName}.md`);
+  const mdPath = path.join(articleDir, sourceSync?.status === 'verified' ? sourceSync.source : `${articleName}.md`);
   if (await exists(mdPath)) {
     const md = await fs.readFile(mdPath, 'utf8');
     await fs.writeFile(path.join(intermediateDir, 'article.md'), md, 'utf8');
@@ -326,6 +334,16 @@ function assertSafety(report) {
       .map(issue => `page ${issue.pageIndex ?? '?'} ${issue.type}: ${issue.message}`);
     throw new Error(`Layout safety check failed:\n${details.join('\n')}`);
   }
+}
+
+async function inspectComposition(page) {
+  const report = await page.evaluate(() => {
+    if (!document.querySelector('meta[name="article-source-contract"]')) return null;
+    if (window.__articleComposition?.status !== 'ready' || typeof window.auditArticleComposition !== 'function') throw new Error('Generated article composition did not complete.');
+    return window.auditArticleComposition();
+  });
+  if (report && !report.ok) throw new Error(`Composition audit failed: ${report.errors.join('; ')}`);
+  return report;
 }
 
 // Two directories cannot be renamed atomically together. Keep both old versions
@@ -375,13 +393,14 @@ async function publishStaged(articleDir, stageDir) {
   }
 }
 
-async function exportArticle(articleDir, options, result) {
+export async function exportArticle(articleDir, options, result) {
   const fixedLayoutPath = path.join(articleDir, 'fixed_layout.html');
-  if (!(await exists(fixedLayoutPath))) throw new Error(`Missing fixed_layout.html: ${fixedLayoutPath}`);
+  if (options.sourceHtml !== undefined && !options.checkOnly) throw new Error('In-memory source is only supported for preflight.');
+  if (options.sourceHtml === undefined) result.sourceSync = await verifyArticleSource(articleDir);
   let server, browser, page, stageDir;
   let preserveStage = false;
   try {
-    const serving = await startServer();
+    const serving = await startServer(options.sourceHtml === undefined ? new Map() : new Map([[fixedLayoutPath, options.sourceHtml]]));
     server = serving.server;
     browser = await chromium.launch({
       headless: true, executablePath: process.env.PREVIEW_CHROMIUM || undefined,
@@ -403,7 +422,9 @@ async function exportArticle(articleDir, options, result) {
     await assertNoPreviewGuides(page);
     result.layoutSafety = await inspectSafety(page, options.safetyPx);
     assertSafety(result.layoutSafety);
+    result.composition = await inspectComposition(page);
     if (options.checkOnly) {
+      if (options.sourceHtml === undefined && JSON.stringify(await verifyArticleSource(articleDir)) !== JSON.stringify(result.sourceSync)) throw new Error('Source changed during preflight.');
       result.ok = true;
       return;
     }
@@ -415,7 +436,7 @@ async function exportArticle(articleDir, options, result) {
     const pagesDir = path.join(stageDir, 'pages');
     await fs.mkdir(intermediateDir);
     await fs.mkdir(pagesDir);
-    await copyIntermediate(articleDir, intermediateDir);
+    await copyIntermediate(articleDir, intermediateDir, result.sourceSync);
     const geometry = await collectGeometry(page);
     const locators = await withTimeout(page.locator(PAGE_SELECTOR).all(), 5000, 'collect fixed pages');
     for (let i = 0; i < locators.length; i += 1) {
@@ -424,6 +445,7 @@ async function exportArticle(articleDir, options, result) {
       await assertNoPreviewGuides(page);
       const beforeShot = await inspectSafety(page, options.safetyPx);
       assertSafety(beforeShot);
+      await inspectComposition(page);
       const buffer = await locators[i].screenshot({ animations: 'disabled', scale: 'css', timeout: 12000 });
       const dimensions = pngDimensions(buffer);
       if (dimensions.width !== VIEWPORT_WIDTH || dimensions.height !== VIEWPORT_HEIGHT) {
@@ -431,12 +453,15 @@ async function exportArticle(articleDir, options, result) {
       }
       const fileName = `${String(i + 1).padStart(3, '0')}.png`;
       await fs.writeFile(path.join(pagesDir, fileName), buffer);
-      result.pages.push({ articlePage: i + 1, file: `pages/${fileName}`, ...dimensions });
+      result.pages.push({ articlePage: i + 1, file: `pages/${fileName}`, sha256: sha256(buffer), ...dimensions });
     }
     result.readiness = await waitForAssets(page, network);
     await assertNoPreviewGuides(page);
     result.layoutSafety = await inspectSafety(page, options.safetyPx);
     assertSafety(result.layoutSafety);
+    result.composition = await inspectComposition(page);
+    const finalSource = await verifyArticleSource(articleDir);
+    if (JSON.stringify(finalSource) !== JSON.stringify(result.sourceSync)) throw new Error('Source changed during export; existing outputs are retained.');
     if (JSON.stringify(await collectGeometry(page)) !== JSON.stringify(geometry)) {
       throw new Error('Page geometry changed during export. No output has been replaced; stabilize the article and retry.');
     }
@@ -555,7 +580,7 @@ async function main() {
   } else if (options.checkOnly) process.stdout.write(json);
 }
 
-main().catch(error => {
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) main().catch(error => {
   console.error(error.message);
   process.exitCode = 1;
 });

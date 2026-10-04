@@ -6,6 +6,10 @@
 
 今回の対象外である `202603/` は、旧スクリプトの既定値や固定パスに使われています。既存スクリプトが全般的に202603を保護する実装ではないため、実行する対象・書込先を先に確認します。今回の検査は202604の既存HTMLと独立fixtureを対象にしています。
 
+## Markdownから組版する
+
+`sync_article_layout.mjs` は `layout-source.json` で正本を指定した202604の記事を組版し、実測合格後に固定HTMLを置き換えます。`--check-only` は候補をメモリ上で検査するだけです。最初の適用記事は04花見です。対応記法・フォント・分割・版管理は [docs/16](../docs/16_markdown_article_composition.md) を参照してください。
+
 ## 記事を見る・撮影する
 
 `preview_fixed_layout_article_here.mjs` は、カレントディレクトリの記事を一時HTTPサーバーで開き、`.fixed-page` を記事内 `preview/001.png` 等へ撮影します。開始時にその `preview/` を削除します。`.fixed-page` 不在はエラーです。壊れたimgに対しては `--fail-on-broken-image` を指定できますが、完全な資産検査器ではありません。

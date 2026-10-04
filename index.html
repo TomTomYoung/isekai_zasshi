@@ -82,6 +82,11 @@
     }
     try{
       run.layout=run.frame.contentWindow.FixedLayoutSafety.inspect({pageWidth:W,pageHeight:H,safetyPx,tolerancePx:.5});
+      const composition=run.frame.contentWindow.auditArticleComposition?.();
+      if(composition&&!composition.ok){
+        run.layout.ok=false;
+        run.layout.issues.push(...composition.errors.map(message=>({level:'error',type:'source-composition',message})));
+      }
       run.layoutError='';
     }catch(error){run.layout=null;run.layoutError='紙面検査を実行できません: '+error.message;}
   }
@@ -101,6 +106,7 @@
     element.textContent=(report.ok?'要素・文字行の検査：余白基準内':'要素・文字行の検査：要修正 '+errors.length+'件')+
       ' / 必要な余白 '+report.safetyPx+'px'+
       (margin?'\n選択ページの残り：上 '+px(margin.top)+' / 右 '+px(margin.right)+' / 下 '+px(margin.bottom)+' / 左 '+px(margin.left):'')+
+      (run.sourceVerified?'\n最新原稿・採用画像・テンプレートとの同期を確認済みです。':'')+
       '\n影・疑似要素・装飾の重なりは、この合格判定に含みません。';
     const describe=item=>{
       const remaining=item.data?.clearance;
@@ -180,6 +186,29 @@
     new MutationObserver(()=>{state.changed=Date.now();}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,characterData:true});
   }
   function revised(url,revision){const result=new URL(url,root);result.searchParams.set('__fixedPreview',revision);return result.href;}
+  async function verifySource(html,run){
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    if(!doc.querySelector('meta[name="article-source-contract"]'))return;
+    const manifest=JSON.parse(doc.getElementById('article-source')?.textContent||'null')?.manifest;
+    if(!manifest?.files?.length)throw new Error('原稿の同期記録がありません。固定HTMLを再生成してください。');
+    if(!crypto.subtle)throw new Error('この環境では原稿との同期を検査できません。');
+    const digestOf=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
+    const stamp=html.match(/<meta name="article-render-sha256" content="([a-f0-9]{64})">/);
+    if(!stamp||await digestOf(new TextEncoder().encode(html.replace(stamp[0],'')))!==stamp[1])throw new Error('生成後に固定HTMLが変更されています。正本から再組版してください。');
+    const files=[...manifest.files];
+    await Promise.all(Array.from({length:Math.min(4,files.length)},async()=>{
+      while(files.length){
+        const file=files.shift();
+        if(!/^(202604|tools)\//.test(file.path)||file.path.split('/').includes('..')||/[\\%?#]/.test(file.path))throw new Error('同期記録のパスが不正です。');
+        const response=await deadline(read(revised(file.path,run.revision),{cache:'no-store',signal:run.controller.signal}),'原稿同期',15000,run.controller.signal);
+        if(!response.ok)throw new Error('同期対象を読めません: '+file.path);
+        const bytes=await deadline(response.arrayBuffer(),'同期対象の読取',15000,run.controller.signal);
+        const digest=await digestOf(bytes);
+        if(digest!==file.sha256)throw new Error('固定HTMLが古くなっています。記事を再組版してください: '+file.path);
+      }
+    }));
+    run.sourceVerified=true;record(run,'原稿同期','Markdown・採用画像・フォント・テンプレートの版を確認');
+  }
   function prepare(html,source,run){
     const doc=new DOMParser().parseFromString(html,'text/html');
     if(doc.querySelector('base'))throw new Error('独自のbase要素を持つ記事は対象外です。');
@@ -210,7 +239,7 @@
     inner.querySelectorAll('.missing').forEach(()=>missing.push('画像の代替表示 .missing'));
     const css=Array.from(inner.querySelectorAll('link[rel="stylesheet"]')).filter(link=>!link.sheet).map(link=>'CSS未読込: '+link.getAttribute('href').split('?')[0]);
     const fontErrors=Array.from(inner.fonts).filter(font=>font.status==='error').map(font=>'フォント未読込: '+font.family);
-    return {pending:pending+(state?.pending||0)+(inner.fonts.status==='loading'?1:0),warnings:[...missing,...css,...fontErrors,...(state?.errors||[])],changed:state?.changed||Date.now()};
+    return {pending:pending+(state?.pending||0)+(inner.fonts.status==='loading'?1:0)+(win.__articleComposition?.status==='pending'?1:0),warnings:[...missing,...css,...fontErrors,...(state?.errors||[])],changed:state?.changed||Date.now()};
   }
   function refresh(run,info){
     if(!active(run))return;
@@ -240,6 +269,8 @@
       if(!response.ok)throw new Error('HTML読込失敗: HTTP '+response.status+' / '+source);
       const html=await deadline(response.text(),'HTML本文データ',15000,run.controller.signal);
       if(!active(run))return;record(run,'HTML本文','HTTP '+response.status+' / '+new TextEncoder().encode(html).length+' bytes');
+      await verifySource(html,run);
+      if(!active(run))return;
       const safetyResponse=await deadline(read(revised('preview/layout_safety.js',run.revision),{cache:'no-store',signal:run.controller.signal}),'紙面検査の読込',15000,run.controller.signal);
       if(!safetyResponse.ok)throw new Error('紙面検査の読込失敗: HTTP '+safetyResponse.status);
       run.safetySource=await deadline(safetyResponse.text(),'紙面検査コード',15000,run.controller.signal);

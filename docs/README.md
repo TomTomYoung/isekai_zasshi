@@ -4,7 +4,7 @@
 
 ## 作業開始点
 
-技術作業は [直下のHANDOFF](../HANDOFF.md) から開始します。現在の最優先は日本語パスを修正した入口のdev実機確認です。模擬・HTTP試験の結果は [tests/preview](../tests/preview/README.md) にあります。文書が存在すること、実装が存在すること、利用者環境で動くことを区別します。
+技術作業は [直下のHANDOFF](../HANDOFF.md) から開始します。最新の実装は04花見記事のMarkdown同期・安全な組版です。次は別記事への適用と、版を照合する号収集工程です。dev実機確認も残っています。模擬・HTTP試験の結果は [tests/preview](../tests/preview/README.md) にあります。文書が存在すること、実装が存在すること、利用者環境で動くことを区別します。
 
 2026-10-04に、共通の紙面実測検査と記事PNG出力前の停止処理を追加しました。必要余白の数値、保証できる範囲、今後の組版条件は [15 紙面の安全余裕](15_layout_safety_contract.md) に集約しています。
 
@@ -27,6 +27,8 @@
 [14 切り分け・合格条件](14_preview_acceptance.md)：試験の順番、証拠の段階、実機で必要な確認。
 
 [15 紙面の安全余裕](15_layout_safety_contract.md)：実測した上下左右の余白、文字切れの検査、出力停止、28pxの意味と保証の限界。
+
+[16 Markdown組版](16_markdown_article_composition.md)：最新原稿と採用画像からの固定HTML、改ページ、内容照合、フォント、画像面積、同期確認とPNG。
 
 操作場所別の入口は [プレビューREADME](../preview/README.md) と [tools README](../tools/README.md) です。
 
