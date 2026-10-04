@@ -1,0 +1,156 @@
+{
+  "results": [
+    {
+      "name": "real article: source, selected images, six pages, read-only check",
+      "ok": true,
+      "ms": 1163,
+      "composition": {
+        "ok": true,
+        "sourceBlocks": 45,
+        "selectedImages": 5,
+        "pages": [
+          {
+            "page": 1,
+            "imageArea": 1174837.5,
+            "textArea": 649392,
+            "imageToText": 1.8091345443122182,
+            "bottom": 1546,
+            "figure": "b007",
+            "repeated": false
+          },
+          {
+            "page": 2,
+            "imageArea": 1174837.5,
+            "textArea": 726416,
+            "imageToText": 1.617306749851325,
+            "bottom": 1622,
+            "figure": "b015",
+            "repeated": false
+          },
+          {
+            "page": 3,
+            "imageArea": 1174837.5,
+            "textArea": 893744,
+            "imageToText": 1.3145123212015968,
+            "bottom": 1784,
+            "figure": "b026",
+            "repeated": false
+          },
+          {
+            "page": 4,
+            "imageArea": 1174837.5,
+            "textArea": 869840,
+            "imageToText": 1.3506363239216408,
+            "bottom": 1658,
+            "figure": "b026",
+            "repeated": true
+          },
+          {
+            "page": 5,
+            "imageArea": 849022.6818830243,
+            "textArea": 782192,
+            "imageToText": 1.0854402523715716,
+            "bottom": 1827,
+            "figure": "b034",
+            "repeated": false
+          },
+          {
+            "page": 6,
+            "imageArea": 1174837.5,
+            "textArea": 1019904,
+            "imageToText": 1.1519098856362953,
+            "bottom": 1843,
+            "figure": "b043",
+            "repeated": false
+          }
+        ],
+        "errors": []
+      },
+      "environment": {
+        "browser": "133.0.6943.0",
+        "platform": "linux",
+        "deviceScaleFactor": 1
+      }
+    },
+    {
+      "name": "candidate preflight does not replace HTML or outputs",
+      "ok": true,
+      "ms": 665
+    },
+    {
+      "name": "paragraph and table split preserve all source content and repeat selected image",
+      "ok": true,
+      "ms": 1560,
+      "pages": 7
+    },
+    {
+      "name": "oversized heading stops and preserves old HTML/PNG",
+      "ok": true,
+      "ms": 580
+    },
+    {
+      "name": "unsupported syntax and multiple/missing selected images fail closed",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "name": "missing image and missing font glyph preserve old outputs",
+      "ok": true,
+      "ms": 110
+    },
+    {
+      "name": "Markdown, image and generated HTML changes block stale export",
+      "ok": true,
+      "ms": 1545
+    },
+    {
+      "name": "valid generated article PNG has source hashes and PNG hash",
+      "ok": true,
+      "ms": 1879
+    },
+    {
+      "name": "live composition audit detects removed text and overlapping blocks",
+      "ok": true,
+      "ms": 460
+    },
+    {
+      "name": "preview matches all six PNGs and blocks a stale Markdown reload",
+      "ok": true,
+      "ms": 4824,
+      "diff": [
+        {
+          "page": 1,
+          "changedRatio": 0,
+          "meanAbsoluteError": 0
+        },
+        {
+          "page": 2,
+          "changedRatio": 0,
+          "meanAbsoluteError": 0
+        },
+        {
+          "page": 3,
+          "changedRatio": 0,
+          "meanAbsoluteError": 0
+        },
+        {
+          "page": 4,
+          "changedRatio": 0,
+          "meanAbsoluteError": 0
+        },
+        {
+          "page": 5,
+          "changedRatio": 0,
+          "meanAbsoluteError": 0
+        },
+        {
+          "page": 6,
+          "changedRatio": 0,
+          "meanAbsoluteError": 0
+        }
+      ]
+    }
+  ],
+  "passed": 10,
+  "failed": 0
+}

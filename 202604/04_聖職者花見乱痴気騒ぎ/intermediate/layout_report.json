@@ -1,0 +1,1348 @@
+{
+  "article": "04_聖職者花見乱痴気騒ぎ",
+  "pages": [
+    {
+      "pageIndex": 1,
+      "width": 1456,
+      "height": 2056,
+      "elementCount": 14,
+      "elements": [
+        {
+          "index": 0,
+          "tag": "header",
+          "className": "running-head",
+          "x": 64,
+          "y": 64,
+          "w": 1328,
+          "h": 52
+        },
+        {
+          "index": 1,
+          "tag": "span",
+          "className": "",
+          "x": 64,
+          "y": 64,
+          "w": 224,
+          "h": 36
+        },
+        {
+          "index": 2,
+          "tag": "span",
+          "className": "",
+          "x": 1175,
+          "y": 64,
+          "w": 217,
+          "h": 36
+        },
+        {
+          "index": 3,
+          "tag": "figure",
+          "className": "scene",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 929
+        },
+        {
+          "index": 4,
+          "tag": "img",
+          "className": "scene-image",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 885
+        },
+        {
+          "index": 5,
+          "tag": "figcaption",
+          "className": "",
+          "x": 64,
+          "y": 1033,
+          "w": 1328,
+          "h": 32
+        },
+        {
+          "index": 6,
+          "tag": "div",
+          "className": "article-body",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 459
+        },
+        {
+          "index": 7,
+          "tag": "h1",
+          "className": "",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 68
+        },
+        {
+          "index": 8,
+          "tag": "h2",
+          "className": "",
+          "x": 64,
+          "y": 1173,
+          "w": 1328,
+          "h": 49
+        },
+        {
+          "index": 9,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1240,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 10,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1300,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 11,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1360,
+          "w": 1328,
+          "h": 126
+        },
+        {
+          "index": 12,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1504,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 13,
+          "tag": "footer",
+          "className": "folio",
+          "x": 64,
+          "y": 1972,
+          "w": 1328,
+          "h": 36
+        }
+      ]
+    },
+    {
+      "pageIndex": 2,
+      "width": 1456,
+      "height": 2056,
+      "elementCount": 15,
+      "elements": [
+        {
+          "index": 0,
+          "tag": "header",
+          "className": "running-head",
+          "x": 64,
+          "y": 64,
+          "w": 1328,
+          "h": 52
+        },
+        {
+          "index": 1,
+          "tag": "span",
+          "className": "",
+          "x": 64,
+          "y": 64,
+          "w": 224,
+          "h": 36
+        },
+        {
+          "index": 2,
+          "tag": "span",
+          "className": "",
+          "x": 1175,
+          "y": 64,
+          "w": 217,
+          "h": 36
+        },
+        {
+          "index": 3,
+          "tag": "figure",
+          "className": "scene",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 929
+        },
+        {
+          "index": 4,
+          "tag": "img",
+          "className": "scene-image",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 885
+        },
+        {
+          "index": 5,
+          "tag": "figcaption",
+          "className": "",
+          "x": 64,
+          "y": 1033,
+          "w": 1328,
+          "h": 32
+        },
+        {
+          "index": 6,
+          "tag": "div",
+          "className": "article-body",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 535
+        },
+        {
+          "index": 7,
+          "tag": "h2",
+          "className": "",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 49
+        },
+        {
+          "index": 8,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1154,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 9,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1256,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 10,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1358,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 11,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1418,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 12,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1478,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 13,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1538,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 14,
+          "tag": "footer",
+          "className": "folio",
+          "x": 64,
+          "y": 1972,
+          "w": 1328,
+          "h": 36
+        }
+      ]
+    },
+    {
+      "pageIndex": 3,
+      "width": 1456,
+      "height": 2056,
+      "elementCount": 17,
+      "elements": [
+        {
+          "index": 0,
+          "tag": "header",
+          "className": "running-head",
+          "x": 64,
+          "y": 64,
+          "w": 1328,
+          "h": 52
+        },
+        {
+          "index": 1,
+          "tag": "span",
+          "className": "",
+          "x": 64,
+          "y": 64,
+          "w": 224,
+          "h": 36
+        },
+        {
+          "index": 2,
+          "tag": "span",
+          "className": "",
+          "x": 1175,
+          "y": 64,
+          "w": 217,
+          "h": 36
+        },
+        {
+          "index": 3,
+          "tag": "figure",
+          "className": "scene",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 929
+        },
+        {
+          "index": 4,
+          "tag": "img",
+          "className": "scene-image",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 885
+        },
+        {
+          "index": 5,
+          "tag": "figcaption",
+          "className": "",
+          "x": 64,
+          "y": 1033,
+          "w": 1328,
+          "h": 32
+        },
+        {
+          "index": 6,
+          "tag": "div",
+          "className": "article-body",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 697
+        },
+        {
+          "index": 7,
+          "tag": "h2",
+          "className": "",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 49
+        },
+        {
+          "index": 8,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1154,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 9,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1256,
+          "w": 1328,
+          "h": 126
+        },
+        {
+          "index": 10,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1400,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 11,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1460,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 12,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1520,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 13,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1580,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 14,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1640,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 15,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1700,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 16,
+          "tag": "footer",
+          "className": "folio",
+          "x": 64,
+          "y": 1972,
+          "w": 1328,
+          "h": 36
+        }
+      ]
+    },
+    {
+      "pageIndex": 4,
+      "width": 1456,
+      "height": 2056,
+      "elementCount": 41,
+      "elements": [
+        {
+          "index": 0,
+          "tag": "header",
+          "className": "running-head",
+          "x": 64,
+          "y": 64,
+          "w": 1328,
+          "h": 52
+        },
+        {
+          "index": 1,
+          "tag": "span",
+          "className": "",
+          "x": 64,
+          "y": 64,
+          "w": 224,
+          "h": 36
+        },
+        {
+          "index": 2,
+          "tag": "span",
+          "className": "",
+          "x": 1175,
+          "y": 64,
+          "w": 217,
+          "h": 36
+        },
+        {
+          "index": 3,
+          "tag": "figure",
+          "className": "scene",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 929
+        },
+        {
+          "index": 4,
+          "tag": "img",
+          "className": "scene-image",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 885
+        },
+        {
+          "index": 5,
+          "tag": "figcaption",
+          "className": "",
+          "x": 64,
+          "y": 1033,
+          "w": 1328,
+          "h": 32
+        },
+        {
+          "index": 6,
+          "tag": "div",
+          "className": "article-body",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 571
+        },
+        {
+          "index": 7,
+          "tag": "h3",
+          "className": "",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 44
+        },
+        {
+          "index": 8,
+          "tag": "table",
+          "className": "",
+          "x": 64,
+          "y": 1149,
+          "w": 1328,
+          "h": 407
+        },
+        {
+          "index": 9,
+          "tag": "thead",
+          "className": "",
+          "x": 64.5,
+          "y": 1149.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 10,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1149.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 11,
+          "tag": "th",
+          "className": "",
+          "x": 64.5,
+          "y": 1149.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 12,
+          "tag": "th",
+          "className": "",
+          "x": 506.83,
+          "y": 1149.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 13,
+          "tag": "th",
+          "className": "",
+          "x": 949.16,
+          "y": 1149.5,
+          "w": 442.34,
+          "h": 58
+        },
+        {
+          "index": 14,
+          "tag": "tbody",
+          "className": "",
+          "x": 64.5,
+          "y": 1207.5,
+          "w": 1327,
+          "h": 348
+        },
+        {
+          "index": 15,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1207.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 16,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1207.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 17,
+          "tag": "td",
+          "className": "",
+          "x": 506.83,
+          "y": 1207.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 18,
+          "tag": "td",
+          "className": "",
+          "x": 949.16,
+          "y": 1207.5,
+          "w": 442.34,
+          "h": 58
+        },
+        {
+          "index": 19,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1265.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 20,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1265.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 21,
+          "tag": "td",
+          "className": "",
+          "x": 506.83,
+          "y": 1265.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 22,
+          "tag": "td",
+          "className": "",
+          "x": 949.16,
+          "y": 1265.5,
+          "w": 442.34,
+          "h": 58
+        },
+        {
+          "index": 23,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1323.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 24,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1323.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 25,
+          "tag": "td",
+          "className": "",
+          "x": 506.83,
+          "y": 1323.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 26,
+          "tag": "td",
+          "className": "",
+          "x": 949.16,
+          "y": 1323.5,
+          "w": 442.34,
+          "h": 58
+        },
+        {
+          "index": 27,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1381.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 28,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1381.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 29,
+          "tag": "td",
+          "className": "",
+          "x": 506.83,
+          "y": 1381.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 30,
+          "tag": "td",
+          "className": "",
+          "x": 949.16,
+          "y": 1381.5,
+          "w": 442.34,
+          "h": 58
+        },
+        {
+          "index": 31,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1439.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 32,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1439.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 33,
+          "tag": "td",
+          "className": "",
+          "x": 506.83,
+          "y": 1439.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 34,
+          "tag": "td",
+          "className": "",
+          "x": 949.16,
+          "y": 1439.5,
+          "w": 442.34,
+          "h": 58
+        },
+        {
+          "index": 35,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1497.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 36,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1497.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 37,
+          "tag": "td",
+          "className": "",
+          "x": 506.83,
+          "y": 1497.5,
+          "w": 442.33,
+          "h": 58
+        },
+        {
+          "index": 38,
+          "tag": "td",
+          "className": "",
+          "x": 949.16,
+          "y": 1497.5,
+          "w": 442.34,
+          "h": 58
+        },
+        {
+          "index": 39,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1574,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 40,
+          "tag": "footer",
+          "className": "folio",
+          "x": 64,
+          "y": 1972,
+          "w": 1328,
+          "h": 36
+        }
+      ]
+    },
+    {
+      "pageIndex": 5,
+      "width": 1456,
+      "height": 2056,
+      "elementCount": 16,
+      "elements": [
+        {
+          "index": 0,
+          "tag": "header",
+          "className": "running-head",
+          "x": 64,
+          "y": 64,
+          "w": 1328,
+          "h": 52
+        },
+        {
+          "index": 1,
+          "tag": "span",
+          "className": "",
+          "x": 64,
+          "y": 64,
+          "w": 224,
+          "h": 36
+        },
+        {
+          "index": 2,
+          "tag": "span",
+          "className": "",
+          "x": 1175,
+          "y": 64,
+          "w": 217,
+          "h": 36
+        },
+        {
+          "index": 3,
+          "tag": "figure",
+          "className": "scene portrait",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 1074
+        },
+        {
+          "index": 4,
+          "tag": "img",
+          "className": "scene-image",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 1030
+        },
+        {
+          "index": 5,
+          "tag": "figcaption",
+          "className": "",
+          "x": 64,
+          "y": 1178,
+          "w": 1328,
+          "h": 32
+        },
+        {
+          "index": 6,
+          "tag": "div",
+          "className": "article-body",
+          "x": 64,
+          "y": 1232,
+          "w": 1328,
+          "h": 595
+        },
+        {
+          "index": 7,
+          "tag": "h2",
+          "className": "",
+          "x": 64,
+          "y": 1232,
+          "w": 1328,
+          "h": 49
+        },
+        {
+          "index": 8,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1299,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 9,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1359,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 10,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1419,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 11,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1521,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 12,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1581,
+          "w": 1328,
+          "h": 126
+        },
+        {
+          "index": 13,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1725,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 14,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1785,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 15,
+          "tag": "footer",
+          "className": "folio",
+          "x": 64,
+          "y": 1972,
+          "w": 1328,
+          "h": 36
+        }
+      ]
+    },
+    {
+      "pageIndex": 6,
+      "width": 1456,
+      "height": 2056,
+      "elementCount": 29,
+      "elements": [
+        {
+          "index": 0,
+          "tag": "header",
+          "className": "running-head",
+          "x": 64,
+          "y": 64,
+          "w": 1328,
+          "h": 52
+        },
+        {
+          "index": 1,
+          "tag": "span",
+          "className": "",
+          "x": 64,
+          "y": 64,
+          "w": 224,
+          "h": 36
+        },
+        {
+          "index": 2,
+          "tag": "span",
+          "className": "",
+          "x": 1175,
+          "y": 64,
+          "w": 217,
+          "h": 36
+        },
+        {
+          "index": 3,
+          "tag": "figure",
+          "className": "scene",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 929
+        },
+        {
+          "index": 4,
+          "tag": "img",
+          "className": "scene-image",
+          "x": 64,
+          "y": 136,
+          "w": 1328,
+          "h": 885
+        },
+        {
+          "index": 5,
+          "tag": "figcaption",
+          "className": "",
+          "x": 64,
+          "y": 1033,
+          "w": 1328,
+          "h": 32
+        },
+        {
+          "index": 6,
+          "tag": "div",
+          "className": "article-body",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 756
+        },
+        {
+          "index": 7,
+          "tag": "h2",
+          "className": "",
+          "x": 64,
+          "y": 1087,
+          "w": 1328,
+          "h": 49
+        },
+        {
+          "index": 8,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1154,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 9,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1256,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 10,
+          "tag": "table",
+          "className": "",
+          "x": 64,
+          "y": 1358,
+          "w": 1328,
+          "h": 233
+        },
+        {
+          "index": 11,
+          "tag": "thead",
+          "className": "",
+          "x": 64.5,
+          "y": 1358.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 12,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1358.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 13,
+          "tag": "th",
+          "className": "",
+          "x": 64.5,
+          "y": 1358.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 14,
+          "tag": "th",
+          "className": "",
+          "x": 728,
+          "y": 1358.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 15,
+          "tag": "tbody",
+          "className": "",
+          "x": 64.5,
+          "y": 1416.5,
+          "w": 1327,
+          "h": 174
+        },
+        {
+          "index": 16,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1416.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 17,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1416.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 18,
+          "tag": "td",
+          "className": "",
+          "x": 728,
+          "y": 1416.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 19,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1474.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 20,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1474.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 21,
+          "tag": "td",
+          "className": "",
+          "x": 728,
+          "y": 1474.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 22,
+          "tag": "tr",
+          "className": "",
+          "x": 64.5,
+          "y": 1532.5,
+          "w": 1327,
+          "h": 58
+        },
+        {
+          "index": 23,
+          "tag": "td",
+          "className": "",
+          "x": 64.5,
+          "y": 1532.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 24,
+          "tag": "td",
+          "className": "",
+          "x": 728,
+          "y": 1532.5,
+          "w": 663.5,
+          "h": 58
+        },
+        {
+          "index": 25,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1609,
+          "w": 1328,
+          "h": 84
+        },
+        {
+          "index": 26,
+          "tag": "p",
+          "className": "",
+          "x": 64,
+          "y": 1711,
+          "w": 1328,
+          "h": 42
+        },
+        {
+          "index": 27,
+          "tag": "blockquote",
+          "className": "",
+          "x": 64,
+          "y": 1771,
+          "w": 1328,
+          "h": 72
+        },
+        {
+          "index": 28,
+          "tag": "footer",
+          "className": "folio",
+          "x": 64,
+          "y": 1972,
+          "w": 1328,
+          "h": 36
+        }
+      ]
+    }
+  ],
+  "layoutSafety": {
+    "version": "1.0.0",
+    "scope": "rendered-element-boxes-and-nonblank-text-fragments",
+    "pageCount": 6,
+    "safetyPx": 28,
+    "tolerancePx": 0.5,
+    "ok": true,
+    "issues": [],
+    "pages": [
+      {
+        "pageIndex": 1,
+        "width": 1456,
+        "height": 2056,
+        "clearance": {
+          "top": 64,
+          "right": 64,
+          "bottom": 48,
+          "left": 64
+        },
+        "measuredBoxes": 14,
+        "textFragments": 12,
+        "ok": true,
+        "issues": []
+      },
+      {
+        "pageIndex": 2,
+        "width": 1456,
+        "height": 2056,
+        "clearance": {
+          "top": 64,
+          "right": 64,
+          "bottom": 48,
+          "left": 64
+        },
+        "measuredBoxes": 15,
+        "textFragments": 14,
+        "ok": true,
+        "issues": []
+      },
+      {
+        "pageIndex": 3,
+        "width": 1456,
+        "height": 2056,
+        "clearance": {
+          "top": 64,
+          "right": 64,
+          "bottom": 48,
+          "left": 64
+        },
+        "measuredBoxes": 17,
+        "textFragments": 17,
+        "ok": true,
+        "issues": []
+      },
+      {
+        "pageIndex": 4,
+        "width": 1456,
+        "height": 2056,
+        "clearance": {
+          "top": 64,
+          "right": 64,
+          "bottom": 48,
+          "left": 64
+        },
+        "measuredBoxes": 41,
+        "textFragments": 28,
+        "ok": true,
+        "issues": []
+      },
+      {
+        "pageIndex": 5,
+        "width": 1456,
+        "height": 2056,
+        "clearance": {
+          "top": 64,
+          "right": 64,
+          "bottom": 48,
+          "left": 64
+        },
+        "measuredBoxes": 16,
+        "textFragments": 15,
+        "ok": true,
+        "issues": []
+      },
+      {
+        "pageIndex": 6,
+        "width": 1456,
+        "height": 2056,
+        "clearance": {
+          "top": 64,
+          "right": 64,
+          "bottom": 48,
+          "left": 64
+        },
+        "measuredBoxes": 29,
+        "textFragments": 21,
+        "ok": true,
+        "issues": []
+      }
+    ],
+    "limitations": [
+      "合格は、現在描画されている要素箱と非空白テキスト行箱の幾何に限ります。",
+      "疑似要素、影、フィルター、輪郭線、clip-path、mask、contain:paint/strict/content、従来のCSS clip、角丸の切抜き、回転・傾斜を含む切抜き、画像やcanvas内部の描画は完全には計測しません。",
+      "要素どうしの重なり、本文の欠落や原稿との同期、画像の意図したトリミング、読みやすさは判定しません。",
+      "後続のJavaScript、未開始の資産読込、別のブラウザやフォントへの変更後まで保証する検査ではありません。"
+    ]
+  }
+}

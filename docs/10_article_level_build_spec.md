@@ -9,7 +9,7 @@
 
 Node.jsとPlaywright Chromiumを実行できるPC・サーバー等が必要です。Pythonを使用する後段ではPythonも必要です。通常の `vscode.dev` / `github.dev` 単体にこれらの実行環境がある前提にしません。
 
-本文はMarkdownが正本ですが、これらのPNGビルドは既存の固定HTMLを撮影する処理です。MarkdownからHTMLの生成・同期は別工程です。[正本規則](09_markdown_source_rule.md) を参照してください。
+本文はMarkdownが正本ですが、これらのPNGビルドは既存の固定HTMLを撮影する処理です。MarkdownからHTMLの生成・同期は、04花見記事に追加した `sync_article_layout.mjs` の別工程です。[16 組版仕様](16_markdown_article_composition.md) を参照してください。[正本規則](09_markdown_source_rule.md) を参照してください。
 
 lockfileを使う環境準備の例です。リポジトリ直下で実行するもので、文書監査中に実行済みとはしていません。
 
@@ -100,7 +100,7 @@ npm run build:article -- "202604/00_表紙" --safety-px=28
 → 置換成功後に旧出力の退避分を削除
 ```
 
-Markdownの中間コピーは本文変換ではありません。元HTMLとMarkdownの同期チェックも行いません。`layout_report.json` には既存の矩形記録と、新しい `layoutSafety` の検査結果を保存します。
+Markdownの中間コピーは本文変換ではありません。`layout-source.json` のある新経路では元HTMLとMarkdown・資産・テンプレートの同期も検査します。設定のない旧HTMLは `legacy-untracked` と記録します。`layout_report.json` には既存の矩形記録と、新しい `layoutSafety` の検査結果を保存します。
 
 `.fixed-page` がない場合、画像や使用Webフォントが欠落した場合、資産待機がタイムアウトした場合、共通紙面検査にerrorがある場合は失敗します。原因確認用のfallback紙面を作って成功出力する処理は廃止しました。画像の候補ファイルを順に試して、最終的な画像が正常に読めた場合は、使わなかった候補の404だけで失敗させません。最終画像の欠落、`.missing` の代替表示、参照中の背景画像等の通信失敗は拒否します。
 
@@ -136,7 +136,7 @@ Markdownの中間コピーは本文変換ではありません。元HTMLとMarkd
 
 実際のJSONには `readiness`、`layoutSafety`、`environment`、`errors` も含みます。`pages[].width/height` はPNGヘッダーから読んだ実寸です。`--check-only` のJSONは `mode: "check-only"` となり、撮影しないため `pages` は空配列です。測定ページ数とページごとの問題は `layoutSafety` を参照します。
 
-現在のmanifestは、依存画像・CSS・本文のハッシュが揃ったことや、最新のMarkdownがHTMLへ反映済みであることまで証明するものではありません。
+新経路のmanifestには `sourceSync`（入力群とHTMLのハッシュ）、`composition`（内容・画像面積・重なりの検査）、`pages[].sha256` が加わります。既存の旧HTMLに対するmanifestではMarkdown同期を保証せず、`sourceSync.status` は `legacy-untracked` です。旧号収集処理はまだこれらのハッシュを検証しません。
 
 ## 号内一括ビルドとmissing-only
 
