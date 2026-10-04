@@ -1,11 +1,12 @@
 # 記事単位ビルド：短い案内
 
-更新日：2026-09-23。詳細と制限は [記事単位ビルド仕様](10_article_level_build_spec.md) に集約します。この文書に独立した別仕様を持たせません。
+更新日：2026-10-04。詳細と制限は [記事単位ビルド仕様](10_article_level_build_spec.md) に集約します。この文書に独立した別仕様を持たせません。
 
 ## 現在の役割
 
 ```text
 既存fixed_layout.html
+→ 資産の準備待ち・要素と文字行の余白検査
 → 記事単位でPlaywright撮影
 → 記事のpages/*.pngとintermediate/のmanifest・計測結果
 → 入力と収録順を確認した後に号全体へ統合
@@ -22,7 +23,9 @@ NodeとPlaywright Chromiumを用意した環境で、リポジトリ直下から
 npm run build:article -- "202604/01_王都女学院春の制服名鑑"
 ```
 
-対象記事の `intermediate/` と `pages/` は削除・再生成されます。既存成果物の保全と、元HTMLが最新かの確認を先に行います。通常のdev単体では実行できません。
+対象記事の `intermediate/` と `pages/` は、検査と一時領域への全PNG生成が成功してから置き換えます。検査に失敗した場合は既存出力を保持します。元HTMLが最新かの確認は別に必要です。通常のdev単体では実行できません。
+
+`--check-only --safety-px=28` を付けると記事フォルダへ書き込まずに検査できます。余白の定義と検査範囲は [紙面の安全余裕](15_layout_safety_contract.md) を参照してください。
 
 記事内 `preview/` へ確認用PNGだけを出す処理は別です。`preview_fixed_layout_article_here.mjs` と `build_article.mjs` の出力を取り違えないでください。
 

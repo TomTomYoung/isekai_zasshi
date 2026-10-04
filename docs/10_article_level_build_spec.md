@@ -1,7 +1,7 @@
 # 記事単位ビルド：現行実装と運用上の制限
 
-更新日：2026-09-23。
-照合基準：`7c1f911b0e321de73648df3e38ce1a9bb3abb628`。
+更新日：2026-10-04。
+記事単位の検査・出力節は今回の `tools/build_article.mjs` に対応します。号全体・EPUBの後段は今回変更していません。
 
 この文書は現在のコードが行う処理を示します。今回ビルドを実行した記録や、202604全号がビルド可能という宣言ではありません。202603は今回の変更・再生成対象外です。
 
@@ -53,7 +53,7 @@ node ../../tools/preview_fixed_layout_article_here.mjs --fail-on-broken-image
 
 対象記事の既存 `fixed_layout.html` を一時HTTPサーバー経由で開き、`.fixed-page` ごとに `preview/001.png` から保存します。viewportは1456×2056、deviceScaleFactorは1です。
 
-開始時に記事の `preview/` を削除して作り直します。記事原稿用の保存場所ではありません。`.fixed-page` がなければ失敗します。このスクリプトに記事ビルド側と同じfallback生成があるわけではありません。
+開始時に記事の `preview/` を削除して作り直します。記事原稿用の保存場所ではありません。`.fixed-page` がなければ失敗します。この確認用スクリプトには、以下の `build_article.mjs` の安全検査・一時出力・既存出力の復元処理は追加していません。
 
 `--fail-on-broken-image` は検出した壊れたimgで処理を止めるオプションです。ただし背景画像や、img自体を代替表示へ置換した場合などを含む完全な検査ではありません。フォント・画像待機には上限があり、全資産の準備完了を厳密に保証するコードとはしていません。
 
@@ -62,25 +62,51 @@ node ../../tools/preview_fixed_layout_article_here.mjs --fail-on-broken-image
 実装は `tools/build_article.mjs`。リポジトリ直下から対象記事を明示します。
 
 ```bash
-npm run build:article -- "202604/01_王都女学院春の制服名鑑"
+npm run build:article -- "202604/00_表紙" --check-only --safety-px=28
+```
+
+`--check-only` は元HTMLを実際のChromiumで開き、画像・フォント等の準備と共通の紙面検査を行います。記事フォルダへの書込、PNG撮影、出力ディレクトリの作成は行いません。成功・失敗ともJSONを標準出力へ返し、失敗時は終了コードが0以外になります。ログは標準エラー出力へ分けます。
+
+検査結果をファイルで受け取る場合は `--report <path>` を指定します。これは `--check-only` 専用です。この場合はJSONを指定先へ書き、標準出力には出しません。記事ディレクトリ内の指定は実パスも含めて拒否します。相対レポートパスは実行時のカレントディレクトリを基準に解釈します。通常のビルドでは `intermediate/` 内のレポートを使用します。
+
+```bash
+node tools/build_article.mjs "202604/00_表紙" --check-only --report /tmp/isekai-cover-check.json
+```
+
+既存Chromiumを指定する場合は環境変数 `PREVIEW_CHROMIUM` を使用できます。指定がない場合はPlaywright既定のChromiumです。
+
+```bash
+PREVIEW_CHROMIUM=/absolute/path/to/chromium node tools/build_article.mjs "202604/00_表紙" --check-only
+```
+
+検査結果と対象HTMLの内容を確認した後、PNGも生成する場合は `--check-only` を外します。
+
+```bash
+npm run build:article -- "202604/00_表紙" --safety-px=28
 ```
 
 現在の処理は次の順です。
 
 ```text
-対象記事のintermediate/とpages/を削除・再作成
-→ fixed_layout.html、存在するCSS・本文Markdownを中間フォルダへコピー
-→ 元のfixed_layout.htmlを一時HTTPサーバーで開く
-→ .fixed-pageの検出、資産待機、DOMの矩形取得
-→ pages/001.png、002.png … を撮影
-→ intermediate/article_manifest.json等を保存
+元のfixed_layout.htmlを一時HTTPサーバーで開く
+→ 画像decode・使用フォント・通信・DOMの静止を待機
+→ ガイド非混入、.fixed-pageの寸法・安全域・内部クリップ等を実測検査
+→ 検査成功後に記事内の一時ディレクトリを作成
+→ fixed_layout.html、存在するCSS・本文Markdownを一時出力へコピー
+→ 各ページの撮影直前にも再検査して、一時出力へPNGを保存
+→ PNGヘッダーの実寸1456×2056と、撮影中の幾何変化がないことを確認
+→ 一時出力へarticle_manifest.json・layout_report.jsonを保存
+→ 既存pages/・intermediate/を退避し、新しい2フォルダへ置換
+→ 置換成功後に旧出力の退避分を削除
 ```
 
-Markdownの中間コピーは本文変換ではありません。元HTMLとMarkdownの同期チェックも行いません。`layout_report.json` に矩形が書かれても、それだけで配置の合格判定をしたことにはなりません。
+Markdownの中間コピーは本文変換ではありません。元HTMLとMarkdownの同期チェックも行いません。`layout_report.json` には既存の矩形記録と、新しい `layoutSafety` の検査結果を保存します。
 
-`.fixed-page` がない場合は原因確認用のfallback紙面を作り、記事manifestに `fallback: true` を記録します。これは正常な記事ページではありません。後段で自動的に除外される実装にはなっていないため、統合前に人または検査処理が拒否する必要があります。
+`.fixed-page` がない場合、画像や使用Webフォントが欠落した場合、資産待機がタイムアウトした場合、共通紙面検査にerrorがある場合は失敗します。原因確認用のfallback紙面を作って成功出力する処理は廃止しました。画像の候補ファイルを順に試して、最終的な画像が正常に読めた場合は、使わなかった候補の404だけで失敗させません。最終画像の欠落、`.missing` の代替表示、参照中の背景画像等の通信失敗は拒否します。
 
-既存の `intermediate/` と `pages/` は削除され、失敗時には途中出力が残る可能性があります。必要な旧成果物は別の場所に保全してから実行します。manifestのwidth/heightは期待値の定数であり、PNGヘッダーを読んだ実寸検査ではありません。
+既存の `intermediate/` と `pages/` は、検査・撮影の失敗時には変更しません。2フォルダの置換の途中で通常のI/Oエラーが起きた場合も復元します。復元自体が失敗した場合は退避ディレクトリを残して場所を報告します。2つのディレクトリを同時に原子的に置換する仕組みではないため、置換中の強制終了や電源断からの自動復旧は未実装です。
+
+`--safety-px` の既定値28は仮の運用基準です。適合するDOM要素の箱と文字行が紙面の内側に収まることを、現在のブラウザ・フォント環境で実測します。影、疑似要素、画像の内部に描かれた文字などには別の限界があり、warning・limitationsを伴う結果でも `ok: true` になり得ます。異なる環境や今後の原稿にも絶対にはみ出しがないという証明にはしません。[安全検査の契約](15_layout_safety_contract.md)を参照してください。
 
 ## 記事manifest
 
@@ -91,8 +117,11 @@ Markdownの中間コピーは本文変換ではありません。元HTMLとMarkd
   "article": "01_王都女学院春の制服名鑑",
   "articleDir": "202604/01_王都女学院春の制服名鑑",
   "sourceHtml": "202604/01_王都女学院春の制服名鑑/fixed_layout.html",
+  "mode": "build",
+  "ok": true,
   "width": 1456,
   "height": 2056,
+  "safetyPx": 28,
   "fallback": false,
   "pages": [
     {
@@ -105,7 +134,9 @@ Markdownの中間コピーは本文変換ではありません。元HTMLとMarkd
 }
 ```
 
-現在のmanifestは、依存画像・CSS・本文のハッシュが揃ったことや、最新の保存内容を使ったことまで証明するものではありません。
+実際のJSONには `readiness`、`layoutSafety`、`environment`、`errors` も含みます。`pages[].width/height` はPNGヘッダーから読んだ実寸です。`--check-only` のJSONは `mode: "check-only"` となり、撮影しないため `pages` は空配列です。測定ページ数とページごとの問題は `layoutSafety` を参照します。
+
+現在のmanifestは、依存画像・CSS・本文のハッシュが揃ったことや、最新のMarkdownがHTMLへ反映済みであることまで証明するものではありません。
 
 ## 号内一括ビルドとmissing-only
 
@@ -156,6 +187,6 @@ EPUB生成側はPNGの実寸や全記事の存在を検証しません。出力�
 
 ## 改善候補と合格判定
 
-明示的な収録記事リスト、依存資産込みのソース版記録、全入力を検証してからの出力置換、fallbackの統合拒否、厳密な資産待機、PNG実寸確認を改善候補として残します。今回これらのコード修正はしていません。
+記事単位の `build_article.mjs` には、資産待機の失敗拒否、共通の紙面実測検査、PNG実寸確認、検査後の出力置換を追加しました。旧確認用PNG・号全体の出力・号統合・EPUBには同じ変更を広げていません。明示的な収録記事リスト、依存資産込みのソース版記録、号全体の全入力検証後の出力置換、過去のfallback manifestの統合拒否は引き続き改善候補です。
 
 HTMLの読込と実際の紙面表示を先に検証し、必要な時点だけPNGを作ります。devでの確認は [方式比較](12_preview_methods.md)、最終PNGとの対応を含む試験は [検証手順](14_preview_acceptance.md) を参照してください。

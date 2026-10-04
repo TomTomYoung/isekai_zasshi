@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { promises as fs } from 'node:fs';
 import { createReadStream } from 'node:fs';
 import { chromium } from 'playwright';
+import safety from '../preview/layout_safety.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,7 +13,8 @@ const ROOT = path.resolve(__dirname, '..');
 const PAGE_SELECTOR = '.fixed-page';
 const VIEWPORT_WIDTH = 1456;
 const VIEWPORT_HEIGHT = 2056;
-const TARGET_TIMEOUT_MS = 25000;
+const ASSET_TIMEOUT_MS = 15000;
+const SETTLE_MS = 300;
 
 const MIME_TYPES = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -28,8 +30,9 @@ const MIME_TYPES = new Map([
 ]);
 
 function usage() {
-  console.error('usage: node tools/build_article.mjs <issue/article-dir>');
-  console.error('example: node tools/build_article.mjs 202603/06_裏賭博場実態記事');
+  console.error('usage: node tools/build_article.mjs <issue/article-dir> [--check-only] [--safety-px=28] [--report <path>]');
+  console.error('example: node tools/build_article.mjs 202604/00_表紙 --check-only');
+  console.error('--check-only writes JSON to stdout; its optional --report writes it outside the article directory instead.');
 }
 
 function withTimeout(promise, ms, label) {
@@ -40,8 +43,9 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-function safeName(name) {
-  return name.replace(/[\\/:*?"<>|]/g, '_');
+function isWithin(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
 }
 
 function toUrlPath(filePath) {
@@ -58,11 +62,6 @@ async function exists(filePath) {
   }
 }
 
-async function cleanDir(dir) {
-  await fs.rm(dir, { recursive: true, force: true });
-  await fs.mkdir(dir, { recursive: true });
-}
-
 function startServer() {
   const server = http.createServer(async (req, res) => {
     try {
@@ -70,7 +69,7 @@ function startServer() {
       const normalizedPath = path.normalize(rawPath).replace(/^([/\\])+/, '');
       const filePath = path.join(ROOT, normalizedPath);
 
-      if (!filePath.startsWith(ROOT)) {
+      if (!isWithin(ROOT, filePath)) {
         res.writeHead(403);
         res.end('Forbidden');
         return;
@@ -106,7 +105,32 @@ function startServer() {
 }
 
 function attachPageLogging(page, targetName) {
+  const state = { pending: new Set(), failures: new Map(), imageFailures: new Map(), errors: [], changed: Date.now() };
+  const critical = new Set(['document', 'stylesheet', 'script', 'font', 'fetch', 'xhr']);
+  const fail = (request, detail) => {
+    const type = request.resourceType();
+    if (type === 'image') state.imageFailures.set(request.url(), detail);
+    else if (critical.has(type)) state.failures.set(request.url(), detail);
+  };
+  page.on('request', request => {
+    state.pending.add(request);
+    state.changed = Date.now();
+  });
+  page.on('requestfinished', request => {
+    state.pending.delete(request);
+    state.changed = Date.now();
+  });
+  page.on('requestfailed', request => {
+    state.pending.delete(request);
+    state.changed = Date.now();
+    fail(request, request.failure()?.errorText || 'request failed');
+  });
+  page.on('response', response => {
+    if (response.status() >= 400) fail(response.request(), `HTTP ${response.status()}`);
+    else if (response.request().resourceType() === 'image') state.imageFailures.delete(response.url());
+  });
   page.on('pageerror', error => {
+    state.errors.push(error.message);
     console.warn(`page error: ${targetName}: ${error.message}`);
   });
   page.on('console', message => {
@@ -114,33 +138,120 @@ function attachPageLogging(page, targetName) {
       console.warn(`browser console error: ${targetName}: ${message.text()}`);
     }
   });
+  return state;
 }
 
-async function waitForAssets(page) {
-  await withTimeout(page.evaluate(async () => {
-    if (document.fonts && document.fonts.ready) {
-      await Promise.race([
-        document.fonts.ready,
-        new Promise(resolve => setTimeout(resolve, 1500)),
-      ]);
+async function installReadinessObserver(page) {
+  await page.addInitScript(() => {
+    const state = { changed: Date.now(), errors: [] };
+    window.__fixedArticleExportState = state;
+    new MutationObserver(() => { state.changed = Date.now(); }).observe(document, {
+      childList: true, subtree: true, attributes: true, characterData: true,
+    });
+    window.addEventListener('unhandledrejection', event => {
+      state.errors.push(String(event.reason?.message || event.reason || 'Unhandled promise rejection'));
+    });
+  });
+}
+
+async function assetState(page) {
+  return withTimeout(page.evaluate(() => {
+    // Every page will be exported, including images outside the initial viewport.
+    for (const img of document.images) if (img.loading === 'lazy') img.loading = 'eager';
+    const images = [...document.images];
+    const requiredImageUrls = new Set(images.map(img => img.currentSrc || img.src).filter(Boolean));
+    const candidateUrls = new Set();
+    for (const img of images) {
+      for (const candidate of (img.dataset.candidates || '').split('|').filter(Boolean)) {
+        candidateUrls.add(new URL(candidate.trim(), document.baseURI).href);
+      }
     }
+    const addUrls = value => {
+      for (const match of value.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)/g)) {
+        const url = match[1] ?? match[2] ?? match[3];
+        if (url) requiredImageUrls.add(new URL(url.trim(), document.baseURI).href);
+      }
+    };
+    for (const element of document.querySelectorAll('.fixed-page, .fixed-page *')) {
+      for (const pseudo of [null, '::before', '::after']) {
+        const style = getComputedStyle(element, pseudo);
+        for (const property of ['backgroundImage', 'borderImageSource', 'listStyleImage', 'maskImage', 'content']) {
+          addUrls(style[property] || '');
+        }
+      }
+    }
+    for (const image of document.querySelectorAll('svg image')) {
+      const href = image.href?.baseVal;
+      if (href) requiredImageUrls.add(new URL(href, document.baseURI).href);
+    }
+    const errors = images.filter(img => img.complete && !img.naturalWidth && (img.src || !img.dataset.candidates))
+      .map(img => `Image missing: ${img.getAttribute('src') || img.alt || '(no src)'}`);
+    for (const element of document.querySelectorAll('.missing, .export-fallback-page')) {
+      errors.push(`Fallback content present: .${element.className}`);
+    }
+    for (const link of document.querySelectorAll('link[rel~="stylesheet"]')) {
+      if (!link.disabled && !link.sheet) errors.push(`Stylesheet missing: ${link.getAttribute('href')}`);
+    }
+    for (const font of document.fonts) {
+      if (font.status === 'error') errors.push(`Font failed: ${font.family}`);
+    }
+    const state = window.__fixedArticleExportState;
+    errors.push(...(state?.errors || []));
+    return {
+      pending: images.filter(img => !img.complete || (!img.getAttribute('src') && !img.getAttribute('srcset') && img.dataset.candidates)).length,
+      fontsLoading: document.fonts.status === 'loading',
+      images: images.length,
+      fonts: [...document.fonts].map(font => ({ family: font.family, status: font.status })),
+      changed: state?.changed || 0,
+      requiredImageUrls: [...requiredImageUrls],
+      candidateUrls: [...candidateUrls],
+      errors,
+    };
+  }), 5000, 'inspect asset readiness');
+}
 
-    await Promise.all(Array.from(document.images).map(img => {
-      if (img.complete) return Promise.resolve();
-      return new Promise(resolve => {
-        const done = () => resolve();
-        img.addEventListener('load', done, { once: true });
-        img.addEventListener('error', done, { once: true });
-        setTimeout(done, 2000);
-      });
-    }));
+function readinessErrors(info, network) {
+  const required = new Set(info.requiredImageUrls);
+  const candidates = new Set(info.candidateUrls);
+  const failures = [...network.failures];
+  // Existing articles try several candidate filenames. Only failures of unused
+  // candidates may be ignored; a missing selected image or CSS image still fails.
+  for (const [url, detail] of network.imageFailures) {
+    if (required.has(url) || !candidates.has(url)) failures.push([url, detail]);
+  }
+  return [...info.errors, ...network.errors, ...failures.map(([url, detail]) => `${detail}: ${url}`)];
+}
 
-    await new Promise(resolve => requestAnimationFrame(resolve));
-  }), 5000, 'waitForAssets');
+async function waitForAssets(page, network) {
+  const deadline = Date.now() + ASSET_TIMEOUT_MS;
+  let info;
+  while (Date.now() < deadline) {
+    info = await assetState(page);
+    if (!info.pending && !info.fontsLoading && !network.pending.size &&
+        Date.now() - Math.max(info.changed, network.changed) >= SETTLE_MS) {
+      const errors = readinessErrors(info, network);
+      if (errors.length) throw new Error(`Asset readiness failed:\n${errors.join('\n')}`);
+      await withTimeout(page.evaluate(async () => {
+        await document.fonts.ready;
+        await Promise.all([...document.images].map(img => img.decode()));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }), Math.max(1, deadline - Date.now()), 'decode images and load fonts');
+      const final = await assetState(page);
+      const finalErrors = readinessErrors(final, network);
+      if (finalErrors.length) throw new Error(`Asset readiness failed:\n${finalErrors.join('\n')}`);
+      if (!final.pending && !final.fontsLoading && !network.pending.size &&
+          final.changed === info.changed && Date.now() - network.changed >= SETTLE_MS) {
+        return { status: 'ready', images: final.images, fonts: final.fonts, settleMs: SETTLE_MS };
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 75));
+  }
+  const details = info ? readinessErrors(info, network) : [];
+  throw new Error(`Asset readiness timed out after ${ASSET_TIMEOUT_MS}ms: ${info?.pending ?? '?'} images pending, ${network.pending.size} requests pending, fonts loading=${info?.fontsLoading ?? '?'}${details.length ? `\n${details.join('\n')}` : ''}`);
 }
 
 async function collectGeometry(page) {
-  return await page.evaluate(selector => {
+  return withTimeout(page.evaluate(selector => {
     const pages = Array.from(document.querySelectorAll(selector));
     return pages.map((pageEl, pageIndex) => {
       const pageRect = pageEl.getBoundingClientRect();
@@ -164,44 +275,7 @@ async function collectGeometry(page) {
         elements,
       };
     });
-  }, PAGE_SELECTOR);
-}
-
-async function ensureFixedPage(page, targetName) {
-  const count = await withTimeout(page.locator(PAGE_SELECTOR).count(), 3000, 'count fixed pages');
-  if (count > 0) return false;
-
-  await withTimeout(page.evaluate(({ targetName, width, height }) => {
-    document.body.innerHTML = '';
-    document.documentElement.style.margin = '0';
-    document.body.style.margin = '0';
-    document.body.style.background = '#c8beb0';
-
-    const fixedPage = document.createElement('main');
-    fixedPage.className = 'fixed-page export-fallback-page';
-    fixedPage.style.width = `${width}px`;
-    fixedPage.style.height = `${height}px`;
-    fixedPage.style.boxSizing = 'border-box';
-    fixedPage.style.margin = '0 auto';
-    fixedPage.style.padding = '86px 66px 72px';
-    fixedPage.style.overflow = 'hidden';
-    fixedPage.style.background = '#f4ecd2';
-    fixedPage.style.borderLeft = '14px solid #111';
-    fixedPage.style.borderRight = '14px solid #111';
-    fixedPage.innerHTML = `
-      <section class="article-sheet" style="font-family: sans-serif; font-size: 34px; line-height: 1.5;">
-        <header style="border: 8px solid #111; background: #fff4b8; padding: 24px; box-shadow: 10px 10px 0 #111;">
-          <div style="display:inline-block; padding:8px 16px; background:#c40018; color:white; font-weight:900;">記事単位固定レイアウト生成エラー</div>
-          <h1 style="font-size:64px; line-height:1.1;">${targetName}</h1>
-        </header>
-        <div style="margin-top:32px; padding:24px; border:6px solid #c40018; background:#ffe2df; font-weight:700;">
-          <p>.fixed-page が生成されなかったため、記事単位ビルド側でフォールバック紙面を生成しました。</p>
-          <p>該当記事の fixed_layout.html、元記事HTML名、画像パスを確認してください。</p>
-        </div>
-      </section>`;
-    document.body.appendChild(fixedPage);
-  }, { targetName, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }), 5000, 'create fallback fixed page');
-  return true;
+  }, PAGE_SELECTOR), 5000, 'collect page geometry');
 }
 
 async function copyIntermediate(articleDir, intermediateDir) {
@@ -225,99 +299,263 @@ async function copyIntermediate(articleDir, intermediateDir) {
   }
 }
 
-async function exportArticle(articleDir) {
-  const articleName = path.basename(articleDir);
-  const intermediateDir = path.join(articleDir, 'intermediate');
-  const pagesDir = path.join(articleDir, 'pages');
-  const fixedLayoutPath = path.join(articleDir, 'fixed_layout.html');
+function pngDimensions(buffer) {
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (buffer.length < 24 || !buffer.subarray(0, 8).equals(signature) || buffer.toString('ascii', 12, 16) !== 'IHDR') {
+    throw new Error('Screenshot is not a PNG with an IHDR header.');
+  }
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
 
-  await cleanDir(intermediateDir);
-  await cleanDir(pagesDir);
-  await copyIntermediate(articleDir, intermediateDir);
+async function assertNoPreviewGuides(page) {
+  const found = await withTimeout(page.evaluate(() => Boolean(document.querySelector(
+    '#fixed-layout-manual-preview-style, #fixed-layout-manual-preview-badge, #fixed-layout-pages-preview-guide, [data-fixed-layout-manual-preview="1"]',
+  ))), 3000, 'check preview guides');
+  if (found) throw new Error('Preview guides are active. Export must use the unadorned fixed_layout.html.');
+}
 
-  const { server, baseUrl } = await startServer();
-  const browser = await chromium.launch();
-  const page = await browser.newPage({
-    viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
-    deviceScaleFactor: 1,
-  });
-  page.setDefaultTimeout(12000);
-  page.setDefaultNavigationTimeout(12000);
-  attachPageLogging(page, articleName);
+async function inspectSafety(page, safetyPx) {
+  return withTimeout(page.evaluate(safety.inspect, {
+    pageWidth: VIEWPORT_WIDTH, pageHeight: VIEWPORT_HEIGHT, safetyPx, tolerancePx: 0.5,
+  }), 10000, 'layout safety inspection');
+}
 
-  const result = {
-    article: articleName,
-    articleDir: path.relative(ROOT, articleDir).split(path.sep).join('/'),
-    sourceHtml: path.relative(ROOT, fixedLayoutPath).split(path.sep).join('/'),
-    width: VIEWPORT_WIDTH,
-    height: VIEWPORT_HEIGHT,
-    fallback: false,
-    pages: [],
-  };
+function assertSafety(report) {
+  if (!report.ok) {
+    const details = report.issues.filter(issue => issue.level === 'error')
+      .map(issue => `page ${issue.pageIndex ?? '?'} ${issue.type}: ${issue.message}`);
+    throw new Error(`Layout safety check failed:\n${details.join('\n')}`);
+  }
+}
 
+// Two directories cannot be renamed atomically together. Keep both old versions
+// until both new directories are installed, and restore them on an I/O failure.
+// A forced process kill or power loss during these renames still needs recovery.
+async function publishStaged(articleDir, stageDir) {
+  const items = ['pages', 'intermediate'].map(name => ({
+    name, target: path.join(articleDir, name), staged: path.join(stageDir, name),
+    backup: path.join(stageDir, `old-${name}`), backedUp: false, installed: false,
+  }));
   try {
-    const url = baseUrl + toUrlPath(fixedLayoutPath);
-    await withTimeout(page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 }), 12000, 'goto');
-    await page.waitForTimeout(500);
-    result.fallback = await ensureFixedPage(page, articleName);
-
-    try {
-      await waitForAssets(page);
-    } catch (error) {
-      console.warn(`asset wait skipped: ${articleName}: ${error.message}`);
-    }
-
-    const geometry = await collectGeometry(page);
-    await fs.writeFile(path.join(intermediateDir, 'layout_report.json'), JSON.stringify({ article: articleName, pages: geometry }, null, 2), 'utf8');
-
-    const locators = await withTimeout(page.locator(PAGE_SELECTOR).all(), 5000, 'collect fixed pages');
-    if (locators.length === 0) {
-      throw new Error('No .fixed-page elements available after fallback.');
-    }
-
-    for (let i = 0; i < locators.length; i += 1) {
-      const fileName = `${String(i + 1).padStart(3, '0')}.png`;
-      const outputPath = path.join(pagesDir, fileName);
-      await withTimeout(locators[i].screenshot({ path: outputPath, animations: 'disabled', timeout: 12000 }), 15000, `screenshot ${i + 1}`);
-      result.pages.push({
-        articlePage: i + 1,
-        file: `pages/${fileName}`,
-        width: VIEWPORT_WIDTH,
-        height: VIEWPORT_HEIGHT,
+    for (const item of items) {
+      const stat = await fs.lstat(item.target).catch(error => {
+        if (error.code === 'ENOENT') return null;
+        throw error;
       });
-      console.log(`exported: ${path.relative(ROOT, outputPath)}`);
+      if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) {
+        throw new Error(`Output path must be a normal directory: ${item.target}`);
+      }
+      item.existed = Boolean(stat);
+    }
+    for (const item of items) {
+      if (item.existed) {
+        await fs.rename(item.target, item.backup);
+        item.backedUp = true;
+      }
+    }
+    for (const item of items) {
+      await fs.rename(item.staged, item.target);
+      item.installed = true;
+    }
+  } catch (error) {
+    const rollbackErrors = [];
+    for (const item of [...items].reverse()) {
+      try {
+        if (item.installed) await fs.rename(item.target, item.staged);
+        if (item.backedUp) await fs.rename(item.backup, item.target);
+      } catch (rollbackError) {
+        rollbackErrors.push(`${item.name}: ${rollbackError.message}`);
+      }
+    }
+    if (rollbackErrors.length) {
+      error.preserveStage = true;
+      error.message += `\nRollback incomplete; preserved backups at ${stageDir}:\n${rollbackErrors.join('\n')}`;
+    }
+    throw error;
+  }
+}
+
+async function exportArticle(articleDir, options, result) {
+  const fixedLayoutPath = path.join(articleDir, 'fixed_layout.html');
+  if (!(await exists(fixedLayoutPath))) throw new Error(`Missing fixed_layout.html: ${fixedLayoutPath}`);
+  let server, browser, page, stageDir;
+  let preserveStage = false;
+  try {
+    const serving = await startServer();
+    server = serving.server;
+    browser = await chromium.launch({
+      headless: true, executablePath: process.env.PREVIEW_CHROMIUM || undefined,
+      args: ['--no-sandbox', '--disable-gpu'],
+    });
+    page = await browser.newPage({
+      viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT }, deviceScaleFactor: 1,
+    });
+    page.setDefaultTimeout(12000);
+    page.setDefaultNavigationTimeout(12000);
+    const network = attachPageLogging(page, result.article);
+    await installReadinessObserver(page);
+    result.environment = { browser: browser.version(), platform: process.platform, deviceScaleFactor: 1 };
+    const response = await page.goto(serving.baseUrl + toUrlPath(fixedLayoutPath), {
+      waitUntil: 'domcontentloaded', timeout: 12000,
+    });
+    if (!response?.ok()) throw new Error(`Article load failed: HTTP ${response?.status() ?? '(no response)'}`);
+    result.readiness = await waitForAssets(page, network);
+    await assertNoPreviewGuides(page);
+    result.layoutSafety = await inspectSafety(page, options.safetyPx);
+    assertSafety(result.layoutSafety);
+    if (options.checkOnly) {
+      result.ok = true;
+      return;
     }
 
-    await fs.writeFile(path.join(intermediateDir, 'article_manifest.json'), JSON.stringify(result, null, 2), 'utf8');
-    console.log(`article manifest: ${path.relative(ROOT, path.join(intermediateDir, 'article_manifest.json'))}`);
+    // The check-only path never reaches any mkdir, copy, screenshot or rename.
+    // A failed preflight likewise leaves the existing output untouched.
+    stageDir = await fs.mkdtemp(path.join(articleDir, '.article-build-'));
+    const intermediateDir = path.join(stageDir, 'intermediate');
+    const pagesDir = path.join(stageDir, 'pages');
+    await fs.mkdir(intermediateDir);
+    await fs.mkdir(pagesDir);
+    await copyIntermediate(articleDir, intermediateDir);
+    const geometry = await collectGeometry(page);
+    const locators = await withTimeout(page.locator(PAGE_SELECTOR).all(), 5000, 'collect fixed pages');
+    for (let i = 0; i < locators.length; i += 1) {
+      // Catch assets or layout that changed after the first inspection as well.
+      await waitForAssets(page, network);
+      await assertNoPreviewGuides(page);
+      const beforeShot = await inspectSafety(page, options.safetyPx);
+      assertSafety(beforeShot);
+      const buffer = await locators[i].screenshot({ animations: 'disabled', scale: 'css', timeout: 12000 });
+      const dimensions = pngDimensions(buffer);
+      if (dimensions.width !== VIEWPORT_WIDTH || dimensions.height !== VIEWPORT_HEIGHT) {
+        throw new Error(`Page ${i + 1} PNG is ${dimensions.width}×${dimensions.height}; expected ${VIEWPORT_WIDTH}×${VIEWPORT_HEIGHT}.`);
+      }
+      const fileName = `${String(i + 1).padStart(3, '0')}.png`;
+      await fs.writeFile(path.join(pagesDir, fileName), buffer);
+      result.pages.push({ articlePage: i + 1, file: `pages/${fileName}`, ...dimensions });
+    }
+    result.readiness = await waitForAssets(page, network);
+    await assertNoPreviewGuides(page);
+    result.layoutSafety = await inspectSafety(page, options.safetyPx);
+    assertSafety(result.layoutSafety);
+    if (JSON.stringify(await collectGeometry(page)) !== JSON.stringify(geometry)) {
+      throw new Error('Page geometry changed during export. No output has been replaced; stabilize the article and retry.');
+    }
+    result.ok = true;
+    await fs.writeFile(path.join(intermediateDir, 'layout_report.json'), JSON.stringify({
+      article: result.article, pages: geometry, layoutSafety: result.layoutSafety,
+    }, null, 2) + '\n', 'utf8');
+    await fs.writeFile(path.join(intermediateDir, 'article_manifest.json'), JSON.stringify(result, null, 2) + '\n', 'utf8');
+    await publishStaged(articleDir, stageDir);
+    for (const item of result.pages) console.log(`exported: ${result.articleDir}/${item.file}`);
+    console.log(`article manifest: ${result.articleDir}/intermediate/article_manifest.json`);
+  } catch (error) {
+    preserveStage = Boolean(error.preserveStage);
+    result.ok = false;
+    throw error;
   } finally {
-    await page.close().catch(() => {});
-    await browser.close().catch(() => {});
-    await new Promise(resolve => server.close(resolve));
+    if (page) await page.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
+    if (server) {
+      server.closeAllConnections?.();
+      await new Promise(resolve => server.close(resolve));
+    }
+    if (stageDir && !preserveStage) {
+      await fs.rm(stageDir, { recursive: true, force: true }).catch(error => {
+        console.warn(`Temporary build directory could not be removed: ${stageDir}: ${error.message}`);
+      });
+    }
+  }
+}
+
+function parseArgs(args) {
+  const options = { article: null, checkOnly: false, safetyPx: 28, report: null };
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === '--check-only') options.checkOnly = true;
+    else if (arg === '--safety-px' || arg.startsWith('--safety-px=')) {
+      const value = arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : args[++i];
+      options.safetyPx = value?.trim() ? Number(value) : NaN;
+    } else if (arg === '--report' || arg.startsWith('--report=')) {
+      const value = arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : args[++i];
+      if (!value || value.startsWith('--')) throw new Error('--report needs a file path.');
+      options.report = path.resolve(value);
+    } else if (arg.startsWith('--')) throw new Error(`Unknown option: ${arg}`);
+    else if (options.article) throw new Error(`Unexpected argument: ${arg}`);
+    else options.article = arg;
+  }
+  if (!options.article) throw new Error('An article directory is required.');
+  if (options.report && !options.checkOnly) throw new Error('--report is available with --check-only. Builds save reports in intermediate/.');
+  if (!Number.isFinite(options.safetyPx) || options.safetyPx < 0 || options.safetyPx >= VIEWPORT_WIDTH / 2) {
+    throw new Error('--safety-px must be a finite number from 0 up to (but not including) 728.');
+  }
+  return options;
+}
+
+async function resolvedDestination(filePath) {
+  try { return await fs.realpath(filePath); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    const parent = path.dirname(filePath);
+    if (parent === filePath) throw error;
+    return path.join(await resolvedDestination(parent), path.basename(filePath));
+  }
+}
+
+async function writeReport(filePath, json) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const temporary = await fs.mkdtemp(path.join(path.dirname(filePath), '.layout-report-'));
+  try {
+    const staged = path.join(temporary, 'report.json');
+    await fs.writeFile(staged, json, 'utf8');
+    // Replacing the name also avoids modifying an article through a hard link.
+    await fs.rename(staged, filePath);
+  } finally {
+    await fs.rm(temporary, { recursive: true, force: true });
   }
 }
 
 async function main() {
-  const arg = process.argv[2];
-  if (!arg) {
-    usage();
-    process.exit(1);
+  let options;
+  try { options = parseArgs(process.argv.slice(2)); }
+  catch (error) { usage(); throw error; }
+  const articleDir = path.resolve(ROOT, options.article);
+  const result = {
+    article: path.basename(articleDir),
+    articleDir: path.relative(ROOT, articleDir).split(path.sep).join('/'),
+    sourceHtml: path.relative(ROOT, path.join(articleDir, 'fixed_layout.html')).split(path.sep).join('/'),
+    mode: options.checkOnly ? 'check-only' : 'build', ok: false,
+    width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT, safetyPx: options.safetyPx,
+    fallback: false, readiness: null, layoutSafety: null, environment: null, pages: [], errors: [],
+  };
+  let reportAllowed = false;
+  try {
+    if (!isWithin(ROOT, articleDir) || articleDir === ROOT) throw new Error(`Invalid article directory: ${articleDir}`);
+    const realArticle = await fs.realpath(articleDir);
+    if (!isWithin(await fs.realpath(ROOT), realArticle) || !(await fs.stat(articleDir)).isDirectory()) {
+      throw new Error(`Article directory must be inside the repository: ${articleDir}`);
+    }
+    if (options.report) {
+      const destination = await resolvedDestination(options.report);
+      if (isWithin(articleDir, options.report) || isWithin(realArticle, destination)) {
+        throw new Error('--report must be outside the article directory to preserve read-only checks and existing outputs.');
+      }
+      reportAllowed = true;
+    }
+    await exportArticle(articleDir, options, result);
+  } catch (error) {
+    result.ok = false;
+    result.errors.push(error.message);
+    process.exitCode = 1;
+    console.error(error.message);
   }
-
-  const articleDir = path.resolve(ROOT, arg);
-  if (!articleDir.startsWith(ROOT)) {
-    throw new Error(`Article dir escapes repository root: ${articleDir}`);
-  }
-
-  const stat = await fs.stat(articleDir).catch(() => null);
-  if (!stat || !stat.isDirectory()) {
-    throw new Error(`Article dir not found: ${articleDir}`);
-  }
-
-  await withTimeout(exportArticle(articleDir), TARGET_TIMEOUT_MS, `build article ${path.basename(articleDir)}`);
+  const json = JSON.stringify(result, null, 2) + '\n';
+  if (options.report && reportAllowed) {
+    await writeReport(options.report, json);
+    console.error(`report: ${options.report}`);
+  } else if (options.checkOnly) process.stdout.write(json);
 }
 
 main().catch(error => {
-  console.error(error);
-  process.exit(1);
+  console.error(error.message);
+  process.exitCode = 1;
 });

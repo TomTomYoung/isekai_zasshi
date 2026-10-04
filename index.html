@@ -9,6 +9,11 @@
   #source{flex:1 1 400px;min-width:180px}
   #status{margin:0;padding:8px 12px;white-space:pre-wrap}
   #status[data-error="true"]{color:#b42318}
+  #layout-status{margin:0;padding:8px 12px;white-space:pre-wrap;background:#f3f6fa;border-top:1px solid #d8e0ea}
+  #layout-status[data-state="failed"]{color:#b42318;background:#fff1f0}
+  #layout-status[data-state="passed"]{color:#14532d;background:#f0fdf4}
+  #layout-details{padding:0 12px} #layout-report{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+  #safety-margin{width:64px}
   #diagnostics{padding:0 12px} #diagnostic-log{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
   #workspace{padding:12px;overflow:auto}
   #paper{position:relative;margin:0 auto;outline:2px solid #1683ff;background:#fff}
@@ -21,8 +26,11 @@
   <select id="page-number" aria-label="ページ"></select>
   <select id="zoom" aria-label="表示倍率"><option value="auto">幅に合わせる</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="1">100%</option></select>
   <label><input id="guides" type="checkbox" checked>青枠</label>
+  <label>必要な余白 <input id="safety-margin" type="number" min="0" max="728" step="1" value="28" aria-label="紙面端から必要な余白">px</label>
 </header>
 <p id="status" role="status">入口のスクリプト起動待ちです。このままならCodeSwingのConsoleを確認してください。</p>
+<p id="layout-status" role="status" data-state="pending">紙面検査待ちです。余白は紙面の外縁から要素・文字行までを測ります。</p>
+<details id="layout-details"><summary>紙面検査の詳細と検査範囲</summary><pre id="layout-report"></pre></details>
 <details id="diagnostics"><summary>読込診断（実機確認時にこの内容を共有）</summary><pre id="diagnostic-log"></pre></details>
 <main id="workspace"><div id="paper"></div></main>
 <script>
@@ -66,6 +74,50 @@
     if(current?.frame)current.frame.style.transform='scale('+scale+')';
     $('paper').style.outlineStyle=$('guides').checked?'solid':'none';
   }
+  function measureLayout(run,info){
+    if(info.pending){run.layout=null;return;}
+    const safetyPx=Number($('safety-margin').value);
+    if(!$('safety-margin').checkValidity()||!Number.isFinite(safetyPx)){
+      run.layout=null;run.layoutError='必要な余白は0〜728の数値で指定してください。';return;
+    }
+    try{
+      run.layout=run.frame.contentWindow.FixedLayoutSafety.inspect({pageWidth:W,pageHeight:H,safetyPx,tolerancePx:.5});
+      run.layoutError='';
+    }catch(error){run.layout=null;run.layoutError='紙面検査を実行できません: '+error.message;}
+  }
+  function layoutStatus(run){
+    const report=run.layout,element=$('layout-status');
+    if(!report){
+      element.dataset.state=run.layoutError?'failed':'pending';
+      element.textContent=run.layoutError||'紙面検査待ちです。資産の準備が完了してから余白を測ります。';
+      $('layout-report').textContent='';return Boolean(run.layoutError);
+    }
+    const selected=report.pages[Number($('page-number').value)||0];
+    const errors=report.issues.filter(item=>item.level==='error');
+    const warnings=report.issues.filter(item=>item.level==='warning');
+    const px=value=>Number.isFinite(value)?Math.floor(value*10)/10+'px':'未計測';
+    const margin=selected?.clearance;
+    element.dataset.state=report.ok?'passed':'failed';
+    element.textContent=(report.ok?'要素・文字行の検査：余白基準内':'要素・文字行の検査：要修正 '+errors.length+'件')+
+      ' / 必要な余白 '+report.safetyPx+'px'+
+      (margin?'\n選択ページの残り：上 '+px(margin.top)+' / 右 '+px(margin.right)+' / 下 '+px(margin.bottom)+' / 左 '+px(margin.left):'')+
+      '\n影・疑似要素・装飾の重なりは、この合格判定に含みません。';
+    const describe=item=>{
+      const remaining=item.data?.clearance;
+      const edges=remaining?'\n残り：上 '+px(remaining.top)+' / 右 '+px(remaining.right)+' / 下 '+px(remaining.bottom)+' / 左 '+px(remaining.left):'';
+      return 'ページ '+(item.pageIndex||'?')+' / '+item.type+' / '+item.selector+'\n'+item.message+edges;
+    };
+    const detail=[
+      '28pxは調整可能な初期値です。どの環境・原稿でも安全になる値ではありません。',
+      '紙面外へのはみ出し、要素・文字行の余白不足、親の枠による切れを検査します。',
+      ...errors.map(describe),
+      '検査範囲の注意 '+warnings.length+'件',
+      ...warnings.map(describe),
+      ...(report.limitations||[]),
+    ];
+    $('layout-report').textContent=detail.join('\n');
+    return !report.ok;
+  }
   function showPage(){
     const run=current,el=run?.pages[Number($('page-number').value)||0];if(!el)return;
     const win=run.frame.contentWindow,rect=el.getBoundingClientRect();
@@ -76,7 +128,8 @@
     if(wrong)warnings.push('サイズ不一致 '+wrong+'ページ');
     if(Math.abs(aligned.top)>.5||Math.abs(aligned.left)>.5)warnings.push('ページ先頭に整列できません。原本の余白を確認してください。');
     if(win.innerWidth!==W||win.innerHeight!==H)warnings.push('内部viewport不一致');
-    $('paper').style.outlineColor=warnings.length?'#c62828':'#1683ff';
+    const unsafe=layoutStatus(run);
+    $('paper').style.outlineColor=warnings.length||unsafe?'#c62828':'#1683ff';
     status(run.pages.length+'ページ / 選択ページ '+rect.width+'×'+rect.height+' CSS px / '+run.readiness+(warnings.length?' / '+warnings.join(' / '):''),Boolean(warnings.length));
     resize();
   }
@@ -144,6 +197,9 @@
     const bridge=doc.createElement('script');
     bridge.textContent='('+childBridge.toString()+')('+JSON.stringify({base:baseUrl.href,root:root.href,revision:run.revision}).replace(/</g,'\\u003c')+');';
     base.after(bridge);
+    const inspector=doc.createElement('script');
+    inspector.textContent=run.safetySource.replace(/<\/script/gi,'<\\/script');
+    bridge.after(inspector);
     return '<!doctype html>'+doc.documentElement.outerHTML;
   }
   function inspect(run){
@@ -165,16 +221,18 @@
       $('page-number').value=String(Math.min(Number(selection)||0,Math.max(0,next.length-1)));
     }
     run.warnings=[...new Set(info.warnings)];
-    if(!next.length){status('.fixed-page がありません。診断を確認してください。',true);return;}
+    measureLayout(run,info);
+    if(!next.length){status('.fixed-page がありません。診断を確認してください。',true);layoutStatus(run);$('paper').style.outlineColor='#c62828';return;}
     showPage();
   }
   async function load(){
     if(current){current.controller.abort();clearInterval(current.monitor);}
-    const run={id:++generation,revision:Date.now()+'-'+generation,controller:new AbortController(),frame:null,pages:[],warnings:[],log:[],readiness:'資産待ち'};
+    const run={id:++generation,revision:Date.now()+'-'+generation,controller:new AbortController(),frame:null,pages:[],warnings:[],log:[],readiness:'資産待ち',layout:null,layoutError:'',safetySource:''};
     current=run;$('page-number').replaceChildren();$('paper').replaceChildren();$('diagnostic-log').textContent='';
     record(run,'入口','JavaScript起動 / '+mode+' / native fetch');
     record(run,'資産基準',root.origin+decodeURIComponent(root.pathname));
     status('HTML本文を読込中…');resize();
+    layoutStatus(run);
     try{
       if(!root.pathname.endsWith('/')||/%2f/i.test(new URL(document.baseURI).pathname))throw new Error('未知の代理URL形式です。読込診断とCodeSwingの版を確認してください。');
       const source=articlePath($('source').value);record(run,'HTML要求',source);
@@ -182,6 +240,10 @@
       if(!response.ok)throw new Error('HTML読込失敗: HTTP '+response.status+' / '+source);
       const html=await deadline(response.text(),'HTML本文データ',15000,run.controller.signal);
       if(!active(run))return;record(run,'HTML本文','HTTP '+response.status+' / '+new TextEncoder().encode(html).length+' bytes');
+      const safetyResponse=await deadline(read(revised('preview/layout_safety.js',run.revision),{cache:'no-store',signal:run.controller.signal}),'紙面検査の読込',15000,run.controller.signal);
+      if(!safetyResponse.ok)throw new Error('紙面検査の読込失敗: HTTP '+safetyResponse.status);
+      run.safetySource=await deadline(safetyResponse.text(),'紙面検査コード',15000,run.controller.signal);
+      if(!active(run))return;
       const next=document.createElement('iframe');next.title='固定紙面 1456×2056';next.setAttribute('scrolling','no');
       const loaded=new Promise(resolve=>next.addEventListener('load',resolve,{once:true}));
       next.srcdoc=prepare(html,source,run);run.frame=next;$('paper').replaceChildren(next);resize();
@@ -201,10 +263,11 @@
       record(run,'検査',run.warnings.length?run.warnings.join('\n'):'現在のimg・CSS・JS・使用フォントに検出エラーなし');
       record(run,'範囲','背景画像・CSS内url/@import・遅延タイマーの全依存検査は未対応。dev実機の合格を自動認定しません。');
       // Keep late mutations visible. A stale generation never updates newer UI.
-      let last=JSON.stringify(info);
+      let last=JSON.stringify({info,layout:run.layout});
       run.monitor=setInterval(()=>{
         if(!active(run))return;
-        const fresh=inspect(run),key=JSON.stringify(fresh);
+        const fresh=inspect(run);measureLayout(run,fresh);
+        const key=JSON.stringify({info:fresh,layout:run.layout});
         if(key===last)return;last=key;
         run.readiness=fresh.pending?'追加資産を読込中':'読込検査完了';
         refresh(run,fresh);
@@ -213,6 +276,7 @@
     }catch(error){
       if(!active(run))return;
       record(run,'停止',error.message);status(error.message,true);$('diagnostics').open=true;
+      run.layout=null;run.layoutError='読込が完了していないため、紙面検査は未完了です。';layoutStatus(run);
       // Retain a partially rendered article for diagnosis, but never call it ready.
     }
   }
@@ -221,6 +285,7 @@
   $('articles').addEventListener('change',()=>{$('source').value=$('articles').value;load();});
   $('page-number').addEventListener('change',showPage);
   $('zoom').addEventListener('change',resize);$('guides').addEventListener('change',resize);
+  $('safety-margin').addEventListener('input',()=>{if(current?.frame){measureLayout(current,inspect(current));showPage();}});
   window.addEventListener('resize',resize);
   // Keep the two existing articles usable if the optional catalogue fails.
   deadline(read(revised('preview/articles.json',Date.now()),{cache:'no-store'}),'記事一覧',15000).then(r=>{if(!r.ok)throw new Error('一覧 HTTP '+r.status);return r.json();}).then(data=>{

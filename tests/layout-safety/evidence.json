@@ -1,0 +1,29 @@
+{
+  "baseCommit": "817ee167c908a3422ff6225d085146d6b62c5454",
+  "sourceSha256": {
+    "index.html": "7c04a9fa6e1df39971bfd7fd8e55d5a19cb04c6a72d978094a6d5c40cdc07f81",
+    "preview/layout_safety.js": "c5f477dd553cf4788ad463f69178cb5967e04d13939297f6b4c8349d3263ba81",
+    "tools/build_article.mjs": "e02ac73e1234e6bc041ddafb242c613f37026cd45eee63d128213347b4a38932",
+    "tests/layout-safety/run.mjs": "923f5e4b3a45e1b58d2e38b3245a9e4c8b22cf8e5b6edd301d28107d313a7a2b",
+    "tests/layout-safety/export.mjs": "e9ebcfb16a9cb9478ac5f613b01efe8da0236915ac71cd53e300542cc0693733",
+    "tests/preview/run.mjs": "80ae723528c6002acb35195f6cc8ede2c31a0bdebe4aebd28c22676ea6686ad9"
+  },
+  "font": {
+    "family": "Noto Sans CJK JP",
+    "style": "Regular",
+    "sha256": "68a3fc98800b2a27b371f2fb79991daf3633bd89309d4ffaa6946fd587f375b5",
+    "source": "https://github.com/notofonts/noto-cjk/blob/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf",
+    "use": "Linux fontconfig fallback; not redistributed"
+  },
+  "tests": {
+    "geometry": 24,
+    "preview": 16,
+    "export": 16,
+    "failed": 0
+  },
+  "devArticlePassed": false,
+  "protectedTrees": {
+    "202603": "6dde79372cc505e2b732f31193b38b8bdda47bcb",
+    "202604": "d1d2e3a8ca2474575318e9267227abf2ee96ce2f"
+  }
+}

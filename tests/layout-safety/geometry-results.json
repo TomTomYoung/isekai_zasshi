@@ -1,0 +1,142 @@
+{
+  "generatedAt": "2026-10-04T01:14:20.524Z",
+  "browser": "133.0.6943.0",
+  "viewport": [
+    1456,
+    2056
+  ],
+  "dpr": 1,
+  "scope": "independent in-memory geometry fixtures",
+  "passed": 24,
+  "failed": 0,
+  "results": [
+    {
+      "name": "exact 28px perimeter is accepted without changing the document",
+      "passed": true,
+      "detail": {
+        "top": 28,
+        "right": 28,
+        "bottom": 28,
+        "left": 28
+      }
+    },
+    {
+      "name": "safety buffer is a measured threshold and can be increased",
+      "passed": true,
+      "detail": {
+        "requested": 40,
+        "measured": {
+          "top": 28,
+          "right": 28,
+          "bottom": 28,
+          "left": 28
+        }
+      }
+    },
+    {
+      "name": "the 28px threshold rejects both 26px and 27.6px despite geometry tolerance",
+      "passed": true
+    },
+    {
+      "name": "20px page overflow is rejected even inside the old 24px allowance",
+      "passed": true,
+      "detail": {
+        "bottomClearance": -20,
+        "types": [
+          "page-overflow",
+          "clipped-content"
+        ]
+      }
+    },
+    {
+      "name": "an inner overflow:hidden clips content while all boxes remain inside the page",
+      "passed": true
+    },
+    {
+      "name": "an outer wrapper can clip text that still fits within its fixed page",
+      "passed": true
+    },
+    {
+      "name": "the document viewport does not falsely clip later pages",
+      "passed": true
+    },
+    {
+      "name": "paint containment and legacy clip are explicit measurement limitations",
+      "passed": true
+    },
+    {
+      "name": "nowrap text is inspected as line rectangles, not only its paragraph box",
+      "passed": true,
+      "detail": {
+        "textFragments": 1,
+        "rightClearance": -3440.40625
+      }
+    },
+    {
+      "name": "text cut by its own paragraph is rejected even when its parent is safe",
+      "passed": true
+    },
+    {
+      "name": "scrollable content is rejected when a still PNG would hide its bottom",
+      "passed": true
+    },
+    {
+      "name": "object-fit cover inside an equally sized image box remains valid",
+      "passed": true
+    },
+    {
+      "name": "hidden off-page elements do not cause an overflow finding",
+      "passed": true
+    },
+    {
+      "name": "a visible child of a visibility:hidden parent still gets inspected",
+      "passed": true
+    },
+    {
+      "name": "a clip under a rotated ancestor is explicitly outside strict clip measurement",
+      "passed": true
+    },
+    {
+      "name": "wrong dimensions and missing pages cannot pass",
+      "passed": true
+    },
+    {
+      "name": "broken images and removed-image placeholders cannot pass",
+      "passed": true
+    },
+    {
+      "name": "an image whose request is still pending cannot pass",
+      "passed": true
+    },
+    {
+      "name": "a FontFace load error cannot pass after fonts.ready resolves",
+      "passed": true
+    },
+    {
+      "name": "a fallback page is an error even when it fits",
+      "passed": true
+    },
+    {
+      "name": "animation must be stopped before geometry is accepted",
+      "passed": true
+    },
+    {
+      "name": "unmeasured shadows and pseudo-elements are warnings, not a false paint guarantee",
+      "passed": true,
+      "detail": {
+        "scope": "rendered-element-boxes-and-nonblank-text-fragments",
+        "warningTypes": [
+          "unmeasured-paint"
+        ]
+      }
+    },
+    {
+      "name": "page-relative clearance is unchanged by scrolling and page number stays one-based",
+      "passed": true
+    },
+    {
+      "name": "browser global and Node-exported inspector give the same result",
+      "passed": true
+    }
+  ]
+}

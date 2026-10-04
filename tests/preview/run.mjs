@@ -18,6 +18,8 @@ const proxy=URI.parse('codeswing-proxy:/'+encodeURIComponent(root.toString()));
 const proxyPath=URI.from({scheme:'https',authority:'preview.invalid',path:proxy.path}).toString().replace('https://preview.invalid','');
 const workspacePrefix=root.path;
 const fixture='202604/99_試験 空白/fixed_layout.html';
+const safeFixture='202604/97_余白検査/fixed_layout.html';
+const overflowFixture='202604/96_本文はみ出し/fixed_layout.html';
 const cover='202604/00_表紙/fixed_layout.html';
 const uniforms='202604/01_王都女学院春の制服名鑑/fixed_layout.html';
 let revision=1,delay=0,broken=false,missingCss=false,throwJs=false,noPages=false;
@@ -27,6 +29,13 @@ const fixtureHTML=()=>`<!doctype html><html><head><meta charset="utf-8"><link re
 <main class="${noPages?'absent':'fixed-page'}"><h1 id="text">保存版 ${revision}</h1><div id="css">CSS</div><img src="${broken?'missing.svg':'画像 空白.svg'}"><img id="late"><span id="fetch"></span><span id="script"></span></main>
 <main class="${noPages?'absent':'fixed-page'}"><h1>中間</h1></main><main class="${noPages?'absent':'fixed-page'}"><h1>末尾</h1></main>
 <script src="処理 空白.js"></script></body></html>`;
+// These pages keep exact export geometry while independently varying content
+// safety. Everything is served from memory; existing articles are untouched.
+const safetyFixtureHTML=overflow=>`<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0}.fixed-page{position:relative;box-sizing:border-box;width:1456px;height:2056px;overflow:hidden;background:#fff;font:24px/36px monospace;color:#111}
+.panel{position:absolute;left:80px;top:80px;box-sizing:border-box;width:1296px;height:1800px;border:1px solid #111;background:#f8fafc}.fixed-page:nth-child(2) .panel{height:1700px}
+.panel p{margin:20px}.overhang{position:absolute;left:80px;top:2030px;margin:0;font:32px/64px monospace}
+</style></head><body><main class="fixed-page"><div class="panel"><p>Safe page one</p></div>${overflow?'<p id="overhang" class="overhang">This line extends below the page.</p>':''}</main><main class="fixed-page"><div class="panel"><p>Safe page two</p></div></main></body></html>`;
 const mime=file=>({'.html':'text/html; charset=utf-8','.css':'text/css','.js':'application/javascript','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[path.extname(file)]||'application/octet-stream';
 const wrapper=(base,content)=>`<!doctype html><html><head><base href="${base}"><script src="/__fetch-mock.js"></script><script>
 window.__workspaceRequests=[];
@@ -40,6 +49,7 @@ fetchMock.any(url=>new Promise(async resolve=>{
 </script></head><body>${content}</body></html>`;
 async function contentFor(relative){
  if(relative===fixture)return Buffer.from(fixtureHTML());
+ if(relative===safeFixture||relative===overflowFixture)return Buffer.from(safetyFixtureHTML(relative===overflowFixture));
  if(relative==='202604/99_試験 空白/様式 空白.css'){
   if(missingCss)throw Error('fixture missing CSS');
   return Buffer.from(`html,body{margin:0;padding:0}.fixed-page{box-sizing:border-box;width:1456px;height:2056px;overflow:hidden;background:white}h1{margin:0}#css{color:rgb(${revision===1?'1, 2, 3':'4, 5, 6'})}.fixed-page:last-child{background:#eee}@media(min-height:2057px){#css{color:red}}`);
@@ -97,6 +107,11 @@ const choose=async value=>{await page.locator('#source').fill(value);await page.
 const ready=async()=>page.waitForFunction(()=>document.querySelector('#status').textContent.includes('読込検査完了'),{},{timeout:22000});
 const articleFrame=()=>page.frames().find(f=>f.name()===''&&f.url()==='about:srcdoc');
 const metrics=async()=>articleFrame().evaluate(()=>({viewport:[innerWidth,innerHeight],pages:[...document.querySelectorAll('.fixed-page')].map(p=>{const r=p.getBoundingClientRect();return {w:r.width,h:r.height,x:r.x,y:r.y}}),images:[...document.images].map(i=>({w:i.naturalWidth,h:i.naturalHeight,src:i.currentSrc})),missing:document.querySelectorAll('.missing').length}));
+const layoutReady=async expected=>page.waitForFunction(state=>document.querySelector('#layout-status').dataset.state===state,expected,{timeout:5000});
+const layoutMetrics=async()=>articleFrame().evaluate(()=>{
+ const report=window.FixedLayoutSafety.inspect({pageWidth:1456,pageHeight:2056,safetyPx:28,tolerancePx:.5});
+ return {ok:report.ok,pages:report.pages.map(p=>p.clearance)};
+});
 try{
  await check('real URI serialization preserves directory',()=>{
   assert.equal(proxy.path,'/vscode-vfs://github/TomTomYoung/isekai_zasshi/');
@@ -178,6 +193,68 @@ try{
   await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('対象は202604'));
   assert.ok(!requests.slice(count).some(r=>r.relative.startsWith('202603/')));
  });
+ await check('MOCK: content overflow fails independently of ready assets and exact page dimensions',async()=>{
+  await choose(overflowFixture);await ready();await layoutReady('failed');
+  const m=await metrics();assert.deepEqual(m.viewport,[1456,2056]);
+  assert.equal(m.pages.length,2);assert.ok(m.pages.every(p=>p.w===1456&&p.h===2056));
+  assert.equal(await page.locator('#status').getAttribute('data-error'),'false');
+  const detail=await page.locator('#layout-report').textContent();assert.match(detail,/#overhang/);
+  const geometry=await articleFrame().locator('#overhang').evaluate(e=>({bottom:e.getBoundingClientRect().bottom,pageBottom:e.closest('.fixed-page').getBoundingClientRect().bottom,overflow:getComputedStyle(e.closest('.fixed-page')).overflow}));
+  assert.equal(geometry.overflow,'hidden');assert.ok(geometry.bottom>geometry.pageBottom);
+  return {geometry,status:await page.locator('#layout-status').textContent()};
+ });
+ await check('MOCK: changing the required margin changes safety without changing source geometry',async()=>{
+  await choose(safeFixture);await ready();await layoutReady('passed');
+  assert.equal(await page.locator('#status').getAttribute('data-error'),'false');
+  const before=await layoutMetrics();assert.equal(before.ok,true);assert.equal(before.pages.length,2);
+  await page.locator('#safety-margin').fill('81');await layoutReady('failed');
+  assert.match(await page.locator('#layout-status').textContent(),/必要な余白 81px/);
+  assert.match(await page.locator('#layout-report').textContent(),/\.panel/);
+  assert.deepEqual(await layoutMetrics(),before,'the margin control must not alter article layout');
+  await page.locator('#safety-margin').fill('28');await layoutReady('passed');
+  assert.match(await page.locator('#layout-status').textContent(),/必要な余白 28px/);
+  assert.deepEqual(await layoutMetrics(),before);return before;
+ });
+ await check('MOCK: safety clearances survive zoom, narrow viewport and page selection',async()=>{
+  const before=await layoutMetrics(),statusByPage=[];
+  for(const p of ['0','1']){
+   await page.locator('#page-number').selectOption(p);await layoutReady('passed');
+   statusByPage.push(await page.locator('#layout-status').textContent());
+  }
+  assert.notEqual(statusByPage[0],statusByPage[1],'selected page must display its own clearance');
+  for(const zoom of ['0.25','0.5','1','auto']){
+   await page.locator('#zoom').selectOption(zoom);
+   for(const p of ['0','1']){
+    await page.locator('#page-number').selectOption(p);await layoutReady('passed');
+    assert.equal(await page.locator('#layout-status').textContent(),statusByPage[Number(p)]);
+    assert.deepEqual(await layoutMetrics(),before,'zoom/page selection changes measured clearances');
+   }
+  }
+  await page.setViewportSize({width:450,height:800});
+  assert.deepEqual(await layoutMetrics(),before);
+  assert.equal(await page.locator('#layout-status').textContent(),statusByPage[1]);
+  await page.setViewportSize({width:1100,height:900});return before;
+ });
+ await check('MOCK: delayed text revokes a prior safety pass and switching articles clears it',async()=>{
+  await page.locator('#page-number').selectOption('0');await layoutReady('passed');
+  await articleFrame().evaluate(()=>setTimeout(()=>{
+   const paragraph=document.createElement('p');paragraph.id='late-overhang';paragraph.className='overhang';
+   paragraph.textContent='Text added after the initial readiness check.';
+   document.querySelector('.fixed-page').append(paragraph);
+  },120));
+  await layoutReady('failed');
+  assert.match(await page.locator('#layout-report').textContent(),/#late-overhang/);
+  assert.equal(await page.locator('#status').getAttribute('data-error'),'false');
+  const delayedStatus=await page.locator('#layout-status').textContent();
+  await choose(safeFixture);await ready();await layoutReady('passed');
+  assert.doesNotMatch(await page.locator('#layout-report').textContent(),/#late-overhang/);
+  assert.equal(await articleFrame().locator('#late-overhang').count(),0);
+  await articleFrame().evaluate(()=>document.querySelectorAll('.fixed-page').forEach(element=>element.remove()));
+  await layoutReady('failed');
+  assert.match(await page.locator('#layout-report').textContent(),/missing-fixed-page/);
+  await choose(safeFixture);await ready();await layoutReady('passed');
+  return {delayedStatus,resetStatus:await page.locator('#layout-status').textContent()};
+ });
  await check('MOCK and HTTP real articles / geometry / PNG comparison',async()=>{
   const comparisons=[];
   const direct=await context.newPage();await direct.setViewportSize({width:1456,height:2056});
@@ -193,8 +270,21 @@ try{
    await page.goto(origin+'/__mock');await choose(article);await ready();const mock=await metrics();
    assert.equal(await page.locator('#status').getAttribute('data-error'),'false');
    await page.locator('#guides').uncheck();await page.locator('#zoom').selectOption('1');
-   const mockFrame=articleFrame();await page.setViewportSize({width:1550,height:2250});
-   const mockShots=[];for(let i=0;i<mock.pages.length;i++){await page.locator('#page-number').selectOption(String(i));mockShots.push(await mockFrame.locator('.fixed-page').nth(i).screenshot());}
+   // The safety readout adds height above the fixed-size iframe. Fit the entire
+   // paper on the outer screen so the capture cannot include clipped screen
+   // pixels or a sticky toolbar. This does not change the article viewport.
+   const mockFrame=articleFrame();await page.setViewportSize({width:1550,height:2800});
+   await page.evaluate(()=>window.scrollTo(0,0));
+   const mockShots=[];for(let i=0;i<mock.pages.length;i++){
+    await page.locator('#page-number').selectOption(String(i));
+    const capture=await page.locator('#paper iframe').evaluate(frame=>{
+     const rect=frame.getBoundingClientRect(),controls=document.querySelector('#controls').getBoundingClientRect();
+     return {left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,controlsBottom:controls.bottom,width:innerWidth,height:innerHeight,frameWidth:frame.contentWindow.innerWidth,frameHeight:frame.contentWindow.innerHeight};
+    });
+    assert.ok(capture.left>=0&&capture.right<=capture.width&&capture.top>=capture.controlsBottom&&capture.bottom<=capture.height,'paper must fit the capture screen without toolbar overlap');
+    assert.deepEqual([capture.frameWidth,capture.frameHeight],[1456,2056]);
+    mockShots.push(await mockFrame.locator('.fixed-page').nth(i).screenshot());
+   }
    await direct.goto(origin+'/'+article);await direct.evaluate(()=>document.fonts.ready);await direct.waitForFunction(()=>[...document.images].every(i=>i.complete&&i.naturalWidth>0)&&!document.querySelector('.missing'));
    const directPages=direct.locator('.fixed-page');assert.equal(await directPages.count(),mock.pages.length);
    const pngComparisons=[];

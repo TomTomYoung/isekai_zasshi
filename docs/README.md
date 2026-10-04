@@ -1,10 +1,12 @@
 # 文書案内：現行手順と履歴の区分
 
-更新日：2026-09-23。対象は `TomTomYoung/isekai_zasshi`。
+更新日：2026-10-04。対象は `TomTomYoung/isekai_zasshi`。
 
 ## 作業開始点
 
 技術作業は [直下のHANDOFF](../HANDOFF.md) から開始します。現在の最優先は日本語パスを修正した入口のdev実機確認です。模擬・HTTP試験の結果は [tests/preview](../tests/preview/README.md) にあります。文書が存在すること、実装が存在すること、利用者環境で動くことを区別します。
+
+2026-10-04に、共通の紙面実測検査と記事PNG出力前の停止処理を追加しました。必要余白の数値、保証できる範囲、今後の組版条件は [15 紙面の安全余裕](15_layout_safety_contract.md) に集約しています。
 
 今回の保護対象は `202603/` とその既存制作・出力経路です。旧資料のコマンドを実行して再同期しません。
 
@@ -23,6 +25,8 @@
 [13 文書・実装監査](13_documentation_audit.md)：旧説明との不一致、今回訂正したこと、未修正のコード課題。
 
 [14 切り分け・合格条件](14_preview_acceptance.md)：試験の順番、証拠の段階、実機で必要な確認。
+
+[15 紙面の安全余裕](15_layout_safety_contract.md)：実測した上下左右の余白、文字切れの検査、出力停止、28pxの意味と保証の限界。
 
 操作場所別の入口は [プレビューREADME](../preview/README.md) と [tools README](../tools/README.md) です。
 
