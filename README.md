@@ -2,13 +2,15 @@
 
 異世界の事件、店、人物、商品、広告などを実話誌風のビジュアル雑誌として制作するリポジトリです。
 
-文書更新日：2026-09-23。実装照合の基準コミット：`7c1f911b0e321de73648df3e38ce1a9bb3abb628`。
+文書更新日：2026-10-04。今回の開始時master：`817ee167c908a3422ff6225d085146d6b62c5454`。
 
 ## 次の作業はここから
 
 再開用の起点は [HANDOFF.md](HANDOFF.md) です。文書の適用範囲は [docs/README.md](docs/README.md)、プレビューの選択肢は [方式比較](docs/12_preview_methods.md)、旧説明との不一致は [文書監査](docs/13_documentation_audit.md) にまとめています。
 
 現在の最優先は、ブラウザ版devで固定紙面を確認する仕組みの不調切り分けです。CodeSwing用入口の日本語パスの読取不整合を修正し、旧版の失敗再現と修正版の試験を追加しました。利用者のdevでは認証許可が自動承認レビューで拒否されたため、表示・保存再読込は未確認です。実装の存在や模擬試験を、利用者のdevでの成功と扱いません。
+
+直下プレビューに、要素・文字行のはみ出しと上下左右の残り余白を表示する検査を追加しました。記事単位PNG出力も同じ検査を通し、失敗時は既存出力を保持します。必要余白28pxは変更できる初期値で、影・疑似要素等の完全な描画保証ではありません。[安全余裕の仕様](docs/15_layout_safety_contract.md) と [試験記録](tests/layout-safety/README.md) を参照してください。
 
 `202603/` は今回の変更・再生成対象外です。旧文書にある全号ビルドや同期処理を、202604の作業開始時に実行しないでください。
 
@@ -44,7 +46,7 @@ fixed_layout.css   存在する場合の固定紙面CSS。
 
 [preview/index.html](preview/index.html) は、通常のHTTP配信で記事URLを読む別のビューアーです。記事ページのPNG一覧を表示する画面ではありません。
 
-公開用ビルドとworkflowは存在しますが、2026-09-23のGitHub API確認では `has_pages=false` です。公開URLの開通・動作は確認できていません。現在の実装には、iframeの高さや画面ガイドが撮影条件と異なる箇所もあります。
+公開用ビルドとworkflowは存在しますが、2026-10-04のGitHub API確認でも `has_pages=false` です。公開URLの開通・動作は確認できていません。現在の実装には、iframeの高さや画面ガイドが撮影条件と異なる箇所もあります。
 
 GitHub Pagesは公開されたソースを表示するので、devで保存しただけの未commit変更は反映されません。[プレビューREADME](preview/README.md) を参照してください。
 
@@ -65,7 +67,7 @@ preview/index.html         Pages / HTTP用HTMLビューアー
 
 以下はデスクトップや接続した計算環境向けです。通常の `vscode.dev` / `github.dev` 単体でNodeやbatを実行する手順ではありません。
 
-依存関係はリポジトリ直下のlockfileを基準に用意し、Playwright用Chromiumも導入します。これは環境準備の説明であり、今回の文書監査で実行済みという意味ではありません。
+依存関係はリポジトリ直下のlockfileを基準に用意し、Playwright用Chromiumも導入します。今回の検証に使った実環境は試験記録を参照してください。
 
 ```bash
 npm ci
@@ -83,6 +85,12 @@ node ../../tools/preview_fixed_layout_article_here.mjs --fail-on-broken-image
 
 記事manifestを伴う `pages/` 出力は別コマンドです。入力、削除範囲、fallback、号統合の現状は [記事単位ビルド仕様](docs/10_article_level_build_spec.md) を確認してください。
 
+余白・文字切れの検査だけなら、記事フォルダへ書き込まず実行できます。
+
+```bash
+node tools/build_article.mjs 202604/01_王都女学院春の制服名鑑 --check-only --safety-px=28
+```
+
 `npm run build:fixed-layout-epub` 等の従来コマンドには202603固定の経路が残っています。202604のプレビュー確認のために実行しません。
 
 ## 編集履歴と旧資料
@@ -91,4 +99,4 @@ node ../../tools/preview_fixed_layout_article_here.mjs --fail-on-broken-image
 
 202603の発売・制作記録は保存されていますが、このREADMEの更新で再公開・再検証したものではありません。過去工程の文書は [文書案内](docs/README.md) から参照します。旧202604企画2文書の原文は [日付付きlegacy](docs/legacy/2026-09-23/README.md) に保存しました。
 
-今回の変更は文書だけです。プレビューの修理完了、全記事のHTML同期、PNG/EPUB生成、記事の校了を意味しません。
+今回の変更は紙面実測と記事出力の検査です。利用者devでの修理完了、全記事のHTML同期、全号PNG/EPUB生成、記事の校了を意味しません。

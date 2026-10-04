@@ -1,0 +1,155 @@
+{
+  "generatedAt": "2026-10-04T01:14:47.426Z",
+  "node": "v24.19.0",
+  "results": [
+    {
+      "name": "check-only is JSON and makes no article writes",
+      "ok": true,
+      "ms": 792,
+      "report": {
+        "article": "readonly",
+        "articleDir": ".export-fixtures-rqSyAK/readonly",
+        "sourceHtml": ".export-fixtures-rqSyAK/readonly/fixed_layout.html",
+        "mode": "check-only",
+        "ok": true,
+        "width": 1456,
+        "height": 2056,
+        "safetyPx": 28,
+        "fallback": false,
+        "readiness": {
+          "status": "ready",
+          "images": 0,
+          "fonts": [],
+          "settleMs": 300
+        },
+        "layoutSafety": {
+          "version": "1.0.0",
+          "scope": "rendered-element-boxes-and-nonblank-text-fragments",
+          "pageCount": 1,
+          "safetyPx": 28,
+          "tolerancePx": 0.5,
+          "ok": true,
+          "issues": [],
+          "pages": [
+            {
+              "pageIndex": 1,
+              "width": 1456,
+              "height": 2056,
+              "clearance": {
+                "top": 64,
+                "right": 64,
+                "bottom": 1944,
+                "left": 64
+              },
+              "measuredBoxes": 1,
+              "textFragments": 1,
+              "ok": true,
+              "issues": []
+            }
+          ],
+          "limitations": [
+            "合格は、現在描画されている要素箱と非空白テキスト行箱の幾何に限ります。",
+            "疑似要素、影、フィルター、輪郭線、clip-path、mask、contain:paint/strict/content、従来のCSS clip、角丸の切抜き、回転・傾斜を含む切抜き、画像やcanvas内部の描画は完全には計測しません。",
+            "要素どうしの重なり、本文の欠落や原稿との同期、画像の意図したトリミング、読みやすさは判定しません。",
+            "後続のJavaScript、未開始の資産読込、別のブラウザやフォントへの変更後まで保証する検査ではありません。"
+          ]
+        },
+        "environment": {
+          "browser": "133.0.6943.0",
+          "platform": "linux",
+          "deviceScaleFactor": 1
+        },
+        "pages": [],
+        "errors": []
+      }
+    },
+    {
+      "name": "external --report succeeds without stdout",
+      "ok": true,
+      "ms": 752
+    },
+    {
+      "name": "article-local and build-mode reports are rejected without writes",
+      "ok": true,
+      "ms": 607
+    },
+    {
+      "name": "report aliases do not modify article files",
+      "ok": true,
+      "ms": 1070
+    },
+    {
+      "name": "successful build replaces both outputs and verifies PNG size",
+      "ok": true,
+      "ms": 986,
+      "png": {
+        "width": 1456,
+        "height": 2056
+      }
+    },
+    {
+      "name": "overflow preserves both old outputs",
+      "ok": true,
+      "ms": 728,
+      "failure": "Layout safety check failed:\npage 1 page-overflow: 描画領域がページ外へはみ出しています。\npage 1 clipped-content: 親要素の表示範囲で内容が切れます。\npage 1 page-overflow: 描画領域がページ外へはみ出しています。\npage 1 clipped-content: 親要素の表示範囲で内容が切れます。"
+    },
+    {
+      "name": "no-page preserves both old outputs",
+      "ok": true,
+      "ms": 718,
+      "failure": "Layout safety check failed:\npage ? missing-fixed-page: .fixed-page がありません。"
+    },
+    {
+      "name": "missing-image preserves both old outputs",
+      "ok": true,
+      "ms": 740,
+      "failure": "browser console error: missing-image: Failed to load resource: the server responded with a status of 404 (Not Found)\nAsset readiness failed:\nImage missing: missing.png\nHTTP 404: http://127.0.0.1:44115/.export-fixtures-rqSyAK/missing-image/missing.png"
+    },
+    {
+      "name": "missing-font preserves both old outputs",
+      "ok": true,
+      "ms": 719,
+      "failure": "browser console error: missing-font: Failed to load resource: the server responded with a status of 404 (Not Found)\nAsset readiness failed:\nFont failed: Broken\nnet::ERR_ABORTED: http://127.0.0.1:40975/.export-fixtures-rqSyAK/missing-font/missing.woff2"
+    },
+    {
+      "name": "missing-background preserves both old outputs",
+      "ok": true,
+      "ms": 716,
+      "failure": "browser console error: missing-background: Failed to load resource: the server responded with a status of 404 (Not Found)\nAsset readiness failed:\nHTTP 404: http://127.0.0.1:38393/.export-fixtures-rqSyAK/missing-background/missing-bg.png"
+    },
+    {
+      "name": "preview-guide preserves both old outputs",
+      "ok": true,
+      "ms": 719,
+      "failure": "Preview guides are active. Export must use the unadorned fixed_layout.html."
+    },
+    {
+      "name": "script-error preserves both old outputs",
+      "ok": true,
+      "ms": 756,
+      "failure": "page error: script-error: fixture-script-error\nAsset readiness failed:\nfixture-script-error"
+    },
+    {
+      "name": "fractional-png-size preserves both old outputs",
+      "ok": true,
+      "ms": 962,
+      "failure": "Page 1 PNG is 1457×2056; expected 1456×2056."
+    },
+    {
+      "name": "asset-timeout preserves both old outputs",
+      "ok": true,
+      "ms": 15465,
+      "failure": "Asset readiness timed out after 15000ms: 1 images pending, 0 requests pending, fonts loading=false"
+    },
+    {
+      "name": "optional missing image candidate followed by valid image succeeds",
+      "ok": true,
+      "ms": 772
+    },
+    {
+      "name": "second output installation failure rolls back both originals",
+      "ok": true,
+      "ms": 1043
+    }
+  ]
+}

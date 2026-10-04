@@ -1,0 +1,326 @@
+{
+  "article": "00_表紙",
+  "articleDir": "202604/00_表紙",
+  "sourceHtml": "202604/00_表紙/fixed_layout.html",
+  "mode": "check-only",
+  "ok": true,
+  "width": 1456,
+  "height": 2056,
+  "safetyPx": 28,
+  "fallback": false,
+  "readiness": {
+    "status": "ready",
+    "images": 0,
+    "fonts": [],
+    "settleMs": 300
+  },
+  "layoutSafety": {
+    "version": "1.0.0",
+    "scope": "rendered-element-boxes-and-nonblank-text-fragments",
+    "pageCount": 1,
+    "safetyPx": 28,
+    "tolerancePx": 0.5,
+    "ok": true,
+    "issues": [
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "div.masthead:nth-of-type(1)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.main:nth-of-type(1)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.main:nth-of-type(1) > h1",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "text-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.main:nth-of-type(1) > h1 > br:nth-of-type(1)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "text-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.main:nth-of-type(1) > h1 > br:nth-of-type(2)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "text-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "div.girl:nth-of-type(3)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow",
+            "::before",
+            "::after"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(1)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(2)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(3)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(4)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow"
+          ]
+        }
+      },
+      {
+        "level": "warning",
+        "type": "unmeasured-paint",
+        "pageIndex": 1,
+        "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(5)",
+        "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+        "data": {
+          "features": [
+            "box-shadow"
+          ]
+        }
+      }
+    ],
+    "pages": [
+      {
+        "pageIndex": 1,
+        "width": 1456,
+        "height": 2056,
+        "clearance": {
+          "top": 72,
+          "right": 60.23046875,
+          "bottom": 66.23046875,
+          "left": 72
+        },
+        "measuredBoxes": 16,
+        "textFragments": 13,
+        "ok": true,
+        "issues": [
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "div.masthead:nth-of-type(1)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.main:nth-of-type(1)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.main:nth-of-type(1) > h1",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "text-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.main:nth-of-type(1) > h1 > br:nth-of-type(1)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "text-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.main:nth-of-type(1) > h1 > br:nth-of-type(2)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "text-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "div.girl:nth-of-type(3)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow",
+                "::before",
+                "::after"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(1)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(2)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(3)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(4)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow"
+              ]
+            }
+          },
+          {
+            "level": "warning",
+            "type": "unmeasured-paint",
+            "pageIndex": 1,
+            "selector": "section.callouts:nth-of-type(2) > div.callout:nth-of-type(5)",
+            "message": "装飾等の描画範囲は幾何検査の保証対象外です。",
+            "data": {
+              "features": [
+                "box-shadow"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "limitations": [
+      "合格は、現在描画されている要素箱と非空白テキスト行箱の幾何に限ります。",
+      "疑似要素、影、フィルター、輪郭線、clip-path、mask、contain:paint/strict/content、従来のCSS clip、角丸の切抜き、回転・傾斜を含む切抜き、画像やcanvas内部の描画は完全には計測しません。",
+      "要素どうしの重なり、本文の欠落や原稿との同期、画像の意図したトリミング、読みやすさは判定しません。",
+      "後続のJavaScript、未開始の資産読込、別のブラウザやフォントへの変更後まで保証する検査ではありません。"
+    ]
+  },
+  "environment": {
+    "browser": "133.0.6943.0",
+    "platform": "linux",
+    "deviceScaleFactor": 1
+  },
+  "pages": [],
+  "errors": []
+}
