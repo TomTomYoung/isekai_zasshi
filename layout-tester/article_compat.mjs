@@ -67,14 +67,14 @@ export function parseArticleForTester(markdown){
     }else if(figureStarts.length>1){
       for(const at of figureStarts.slice(1)){
         const n=String(++syntheticSeq).padStart(3,'0');splitFigureSections++;
-        insertions.push({at,kind:'split-heading',lines:[`## LAYOUT_TESTER_IMAGE_SPLIT_${n}`]});
+        insertions.push({at,kind:'split-heading',lines:[`## LAYOUT TESTER IMAGE SPLIT ${n}`]});
       }
     }
   }
   for(const insertion of insertions.sort((a,b)=>b.at-a.at))lines.splice(insertion.at,0,...insertion.lines);
   const staged=parseArticle(lines.join('\n'));
   const syntheticFigure=/^\.\/__layout_tester_missing_\d+\.png$/;
-  const syntheticHeading=/^LAYOUT_TESTER_IMAGE_SPLIT_\d+$/;
+  const syntheticHeading=/^LAYOUT TESTER IMAGE SPLIT \d+$/;
   const groups=[];
   for(const stagedGroup of staged.groups){
     const kept=stagedGroup.filter(block=>!(
