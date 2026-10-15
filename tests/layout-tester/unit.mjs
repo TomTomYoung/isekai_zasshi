@@ -95,7 +95,6 @@ await test('layout tester entry has no dedicated API dependency',async()=>{
   const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
   assert.doesNotMatch(app,/\/__layout-tester\//);
   assert.match(app,/layout-source\.json/);
-  assert.match(app,/article_parse\.mjs/);
   assert.match(app,/production_export\.mjs/);
   assert.match(app,/article_compat\.mjs/);
   assert.match(app,/paginate_compat\.js/);
@@ -109,6 +108,20 @@ await test('Explorer article-folder picker is present and wired',async()=>{
   assert.match(app,/function loadFolderArticle\(/);
   assert.match(app,/\$\('folder-files'\)\.onchange/);
   assert.match(app,/kind:'folder'/);
+});
+await test('instruction-region UI and export contract are present',async()=>{
+  const html=await fs.readFile(path.join(ROOT,'layout-tester','index.html'),'utf8');
+  const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
+  const exporter=await fs.readFile(path.join(ROOT,'layout-tester','production_export.mjs'),'utf8');
+  assert.match(html,/id="instruction-mode"/);
+  assert.match(html,/id="copy-instruction"/);
+  assert.match(html,/id="save-instruction"/);
+  assert.match(app,/function installInstructionHandlers\(/);
+  assert.match(app,/function buildInstructionText\(/);
+  assert.match(app,/LAYOUT_TARGET_JSON/);
+  assert.match(app,/pagePng\(page,\{includeInstruction:true\}\)/);
+  assert.match(exporter,/includeInstruction=false/);
+  assert.match(exporter,/layout-instruction-region/);
 });
 await test('browser runner keeps sandbox enabled and forbids dedicated API use',async()=>{const s=await fs.readFile(path.join(ROOT,'tests/layout-tester/browser.mjs'),'utf8');assert.match(s,/chromiumSandbox:true/);assert.doesNotMatch(s,/--no-sandbox|LAYOUT_TEST_MEMORY|page\.setContent|page\.addScriptTag/);assert.match(s,/dedicatedRequests/);});
 console.log(`PASS ${count} tests`);

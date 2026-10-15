@@ -1,5 +1,18 @@
 # 異世界雑誌：再開用ハンドオフ
 
+## 2026-10-15 組版テスター：ChatGPT指示範囲
+
+紙面上の任意矩形を「ここ」と指定する機能を追加。上部の「指示範囲」を有効化してiframe内をドラッグする。
+
+選択位置はページ座標x/y/W/Hで保持し、重なるsource/figure、直前直後ブロック、記事・正本MD・ページ情報と一緒に `LAYOUT_TARGET_JSON` としてコピーできる。
+
+`ChatGPT用にコピー` は対応ブラウザならtext/plain + 赤枠PNGをClipboardItemへ載せ、失敗時はテキストだけへfallback。`指示PNG保存` もある。
+
+通常のpage PNG/ZIPでは指示overlayを削除する。指示対象の赤枠は製品出力へ入らない。
+
+---
+
+
 ## 2026-10-15 組版テスター：paginate文字列パッチ撤廃
 
 実画面で `paginate.js互換処理を適用できません` が発生。原因は `article_compat.mjs` が本番paginate.jsのソース断片を完全一致で探してreplaceしていたこと。

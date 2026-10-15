@@ -23,6 +23,7 @@
 - 本番 `layout-source.json` とbrowser exportを使う構造
 - ブラウザ試験がsandbox無効化やメモリ注入へ逃げない
 - `paginate_compat.js` が実ファイルとして存在し、文字列置換runtime adapterが存在しない
+- instruction-region UI、座標メタデータ、通常PNGからの赤枠除外
 
 ## ブラウザ試験
 
@@ -60,7 +61,10 @@
 13. フォルダー入力状態の現在DOMからブラウザ内PNGをダウンロード。
 14. PNGが1456×2056。
 15. PNG出力後も専用endpoint requestが0件。
-16. 未処理browser errorが0件。
+16. 任意矩形を `setInstructionRegion()` で指定すると、記事・ページ・x/y/W/H・周辺ブロックを含む `LAYOUT_TARGET_JSON` が生成される。
+17. 指示PNGが1456×2056で出力される。
+18. 通常PNGには指示赤枠を含めない。
+19. 未処理browser errorが0件。
 
 ## 実行コマンド
 

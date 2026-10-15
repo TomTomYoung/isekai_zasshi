@@ -1,6 +1,6 @@
 import {parseArticleForTester} from './article_compat.mjs';
 import {TESTER_DEFAULTS,validateTesterSettings,cssForTesterSettings} from './production_settings.mjs';
-import {exportProductionPages} from './production_export.mjs';
+import {exportProductionPages,pagePng} from './production_export.mjs';
 
 const $=id=>document.getElementById(id);
 const SIDES=['top','right','bottom','left'];
@@ -12,6 +12,7 @@ transport.hidden=true;transport.title='資産読取';transport.setAttribute('ari
 document.body.append(transport);
 const read=transport.contentWindow.fetch.bind(transport.contentWindow);
 let source=null,settings=structuredClone(TESTER_DEFAULTS),articleData=null,pages=[],currentPage=1,selected=null,busy=false,dirty=true,ready=false,pendingJson=false,generation=0;
+let instructionMode=false,instruction=null,instructionDrag=null;
 const frame=$('preview-frame');
 
 function status(text,state='ok'){$('status').textContent=text;$('status').dataset.state=state;}
@@ -211,8 +212,13 @@ function buttons(){
   $('save-config').disabled=!source||busy||pendingJson;
   $('prev').disabled=!ready||busy||currentPage<=1;
   $('next').disabled=!ready||busy||currentPage>=pages.length;
+  $('instruction-mode').disabled=!ready||busy;
+  if(!instruction){
+    $('copy-instruction').disabled=$('save-instruction').disabled=$('clear-instruction').disabled=true;
+  }
 }
 function invalidate(message='MDまたは設定が未反映です。「このMDで本番組版」を押してください。'){
+  clearInstruction({keepMode:true});
   generation++;dirty=true;ready=false;status(message,'busy');$('diagnostic-title').textContent='本番組版検査：未確認';buttons();
 }
 function syncJson(){$('json-editor').value=JSON.stringify(clean(settings),null,2);pendingJson=false;}
@@ -287,6 +293,239 @@ function updateSelection(){
   if(image)text+=`\n\n画像枠 ${image.frame.width.toFixed(1)} × ${image.frame.height.toFixed(1)}\n元画像 ${image.source.width} × ${image.source.height}\n可視範囲 ${image.visible.width.toFixed(1)} × ${image.visible.height.toFixed(1)}\n配置 ${image.fit}`;
   $('selection-name').textContent=`${selected} / ${block?.type||node.tagName} / ${blockLabel(block)}`;$('metrics').textContent=text;
 }
+
+function clamp(value,min,max){return Math.max(min,Math.min(max,value));}
+function round1(value){return Math.round(value*10)/10;}
+function removeInstructionOverlay(){
+  frame.contentDocument?.querySelectorAll('.layout-instruction-region').forEach(node=>node.remove());
+}
+function applyInstructionMode(){
+  const doc=frame.contentDocument;if(!doc)return;
+  doc.querySelectorAll('.fixed-page').forEach(page=>page.style.cursor=instructionMode?'crosshair':'');
+  $('instruction-mode').setAttribute('aria-pressed',String(instructionMode));
+}
+function setInstructionMode(active){
+  instructionMode=Boolean(active);
+  applyInstructionMode();
+  if(instructionMode&&ready)status('指示範囲モード：紙面上をドラッグしてください。','ok');
+}
+function normalizeRegion(pageIndex,rect){
+  const page=pages[pageIndex-1];if(!page)throw new Error('指示対象ページがありません');
+  const width=page.getBoundingClientRect().width||1456,height=page.getBoundingClientRect().height||2056;
+  let x=clamp(Number(rect.x)||0,0,width),y=clamp(Number(rect.y)||0,0,height);
+  let w=clamp(Number(rect.w)||0,0,width-x),h=clamp(Number(rect.h)||0,0,height-y);
+  return{page:pageIndex,rect:{x:round1(x),y:round1(y),w:round1(w),h:round1(h)}};
+}
+function renderInstructionOverlay(){
+  removeInstructionOverlay();
+  if(!instruction)return;
+  const page=pages[instruction.page-1];if(!page)return;
+  const {x,y,w,h}=instruction.rect;
+  const box=page.ownerDocument.createElement('div');
+  box.className='layout-instruction-region';
+  Object.assign(box.style,{
+    position:'absolute',left:x+'px',top:y+'px',width:w+'px',height:h+'px',
+    border:'5px solid #d52b1e',background:'rgba(213,43,30,.08)',
+    zIndex:'9999',pointerEvents:'none',boxSizing:'border-box'
+  });
+  const label=page.ownerDocument.createElement('div');
+  label.textContent=`指示範囲 p${String(instruction.page).padStart(2,'0')}`;
+  Object.assign(label.style,{
+    position:'absolute',left:'-5px',top:'-34px',padding:'4px 8px',
+    background:'#d52b1e',color:'#fff',font:'22px/26px sans-serif',
+    whiteSpace:'nowrap'
+  });
+  box.append(label);page.append(box);
+}
+function blockSnippet(block){
+  if(!block)return'';
+  const raw=block.type==='table'?block.header.join(' / '):block.type==='figure'?(block.caption||block.alt||block.src):(block.text||'');
+  return String(raw).replace(/\s+/g,' ').trim().slice(0,100);
+}
+function instructionNodeDescriptor(node,pageRect){
+  const r=node.getBoundingClientRect();
+  let id=node.dataset.source||node.dataset.figure||'';
+  let type='structure',label='';
+  if(id){
+    const block=articleData?.blocks.find(b=>b.id===id);
+    type=block?.type||(node.dataset.figure?'figure':'block');
+    label=blockSnippet(block);
+  }else if(node.classList.contains('running-head')){id='running-head';type='running-head';label='柱';}
+  else if(node.classList.contains('folio')){id='folio';type='folio';label='ノンブル';}
+  else return null;
+  return{
+    id,type,label,
+    start:node.dataset.start??null,end:node.dataset.end??null,
+    rect:{x:round1(r.left-pageRect.left),y:round1(r.top-pageRect.top),w:round1(r.width),h:round1(r.height)}
+  };
+}
+function overlapsRect(a,b){
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+function instructionContext(target=instruction){
+  if(!target)return null;
+  const page=pages[target.page-1];if(!page)return null;
+  const pr=page.getBoundingClientRect();
+  const nodes=[...page.querySelectorAll('.running-head,[data-figure],[data-source],.folio')]
+    .map(node=>instructionNodeDescriptor(node,pr)).filter(Boolean);
+  const rect=target.rect;
+  const overlaps=nodes.filter(item=>overlapsRect(rect,item.rect));
+  const top=rect.y,bottom=rect.y+rect.h;
+  const above=nodes.filter(item=>item.rect.y+item.rect.h<=top+0.1)
+    .sort((a,b)=>(b.rect.y+b.rect.h)-(a.rect.y+a.rect.h))[0]||null;
+  const below=nodes.filter(item=>item.rect.y>=bottom-0.1)
+    .sort((a,b)=>a.rect.y-b.rect.y)[0]||null;
+  return{
+    kind:overlaps.length?'content':'blank',overlaps,above,below,
+    textOnly:page.dataset.textOnly==='true',
+    figure:page.querySelector('.scene')?.dataset.figure||null
+  };
+}
+function compactInstructionNode(node){
+  if(!node)return null;
+  return{id:node.id,type:node.type,label:node.label,start:node.start,end:node.end,rect:node.rect};
+}
+function instructionPayload(){
+  if(!instruction||!source)return null;
+  const context=instructionContext();
+  return{
+    version:1,
+    article:source.article,
+    source:source.source,
+    input:source.kind,
+    page:instruction.page,
+    pageCount:pages.length,
+    pageSize:{w:1456,h:2056},
+    rect:instruction.rect,
+    kind:context.kind,
+    textOnlyPage:context.textOnly,
+    figure:context.figure,
+    overlaps:context.overlaps.map(compactInstructionNode),
+    above:compactInstructionNode(context.above),
+    below:compactInstructionNode(context.below),
+    note:$('instruction-note').value.trim()||null
+  };
+}
+function instructionNodeLine(node){
+  if(!node)return'なし';
+  const range=node.start!==null?` range=${node.start}-${node.end}`:'';
+  return `${node.id} / ${node.type}${range}${node.label?' / '+node.label:''}`;
+}
+function buildInstructionText(){
+  const payload=instructionPayload();if(!payload)throw new Error('指示範囲がありません');
+  const rect=payload.rect,context=instructionContext();
+  return [
+    '【組版テスター指示対象】',
+    `記事: ${payload.article}`,
+    `正本MD: ${payload.source}`,
+    `ページ: ${payload.page} / ${payload.pageCount}`,
+    `範囲: x=${rect.x}, y=${rect.y}, w=${rect.w}, h=${rect.h} px（1456×2056基準）`,
+    `判定: ${payload.kind==='blank'?'空白':'要素上'}${payload.textOnlyPage?' / テキストのみページ':''}`,
+    `重なる要素: ${context.overlaps.length?context.overlaps.map(instructionNodeLine).join(' | '):'なし'}`,
+    `直前: ${instructionNodeLine(context.above)}`,
+    `直後: ${instructionNodeLine(context.below)}`,
+    `指示: ${payload.note||'この範囲を対象にしてください。'}`,
+    'LAYOUT_TARGET_JSON: '+JSON.stringify(payload)
+  ].join('\n');
+}
+function updateInstructionPanel(){
+  if(!instruction){
+    $('instruction-name').textContent='「指示範囲」を押して紙面上をドラッグ';
+    $('instruction-metrics').textContent='空白部分を含め、紙面上の任意の矩形を指定できます。';
+    $('copy-instruction').disabled=$('save-instruction').disabled=$('clear-instruction').disabled=true;
+    return;
+  }
+  const context=instructionContext(),r=instruction.rect;
+  $('instruction-name').textContent=`p${instruction.page} / ${context.kind==='blank'?'空白':'要素上'}`;
+  $('instruction-metrics').textContent=
+    `x ${r.x} / y ${r.y}\nW ${r.w} × H ${r.h} px\n重なり ${context.overlaps.length}件\n直前 ${context.above?.id||'なし'}\n直後 ${context.below?.id||'なし'}`;
+  $('copy-instruction').disabled=$('save-instruction').disabled=$('clear-instruction').disabled=false;
+}
+function setInstructionRegion(pageIndex,rect,{jump=true}={}){
+  instruction=normalizeRegion(pageIndex,rect);
+  if(jump){currentPage=instruction.page;updatePreview();}
+  renderInstructionOverlay();updateInstructionPanel();buttons();
+  return instruction;
+}
+function clearInstruction({keepMode=true}={}){
+  instruction=null;instructionDrag=null;removeInstructionOverlay();updateInstructionPanel();
+  if(!keepMode)setInstructionMode(false);
+  buttons();
+}
+function pointOnPage(event,page){
+  const r=page.getBoundingClientRect();
+  return{x:clamp(event.clientX-r.left,0,r.width),y:clamp(event.clientY-r.top,0,r.height)};
+}
+function dragRect(start,end){
+  return{x:Math.min(start.x,end.x),y:Math.min(start.y,end.y),w:Math.abs(end.x-start.x),h:Math.abs(end.y-start.y)};
+}
+function installInstructionHandlers(doc){
+  doc.addEventListener('pointerdown',event=>{
+    if(!instructionMode||event.button!==0)return;
+    const page=event.target.closest?.('.fixed-page');if(!page)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const pageIndex=pages.indexOf(page)+1,start=pointOnPage(event,page);
+    instructionDrag={page:pageIndex,start,last:start,pointerId:event.pointerId};
+    try{doc.documentElement.setPointerCapture(event.pointerId);}catch{}
+    setInstructionRegion(pageIndex,{x:start.x,y:start.y,w:1,h:1},{jump:false});
+  },true);
+  doc.addEventListener('pointermove',event=>{
+    if(!instructionMode||!instructionDrag||event.pointerId!==instructionDrag.pointerId)return;
+    const page=pages[instructionDrag.page-1];if(!page)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const end=pointOnPage(event,page);instructionDrag.last=end;
+    setInstructionRegion(instructionDrag.page,dragRect(instructionDrag.start,end),{jump:false});
+  },true);
+  doc.addEventListener('pointerup',event=>{
+    if(!instructionMode||!instructionDrag||event.pointerId!==instructionDrag.pointerId)return;
+    const page=pages[instructionDrag.page-1];if(!page)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    let rect=dragRect(instructionDrag.start,pointOnPage(event,page));
+    if(rect.w<8&&rect.h<8){
+      const cx=instructionDrag.start.x,cy=instructionDrag.start.y;
+      rect={x:clamp(cx-80,0,1456),y:clamp(cy-50,0,2056),w:160,h:100};
+      rect.w=Math.min(rect.w,1456-rect.x);rect.h=Math.min(rect.h,2056-rect.y);
+    }
+    const pageIndex=instructionDrag.page;instructionDrag=null;
+    setInstructionRegion(pageIndex,rect,{jump:true});
+    status('指示範囲を指定しました。「ChatGPT用にコピー」で位置情報を渡せます。','ok');
+  },true);
+  doc.addEventListener('click',event=>{
+    if(instructionMode&&event.target.closest?.('.fixed-page')){event.preventDefault();event.stopImmediatePropagation();}
+  },true);
+}
+async function copyText(text){
+  if(navigator.clipboard?.writeText){
+    try{await navigator.clipboard.writeText(text);return;}catch{}
+  }
+  const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';
+  document.body.append(area);area.select();
+  const ok=document.execCommand('copy');area.remove();
+  if(!ok)throw new Error('クリップボードへコピーできません');
+}
+async function copyInstruction(){
+  if(!instruction)return;
+  const text=buildInstructionText(),page=pages[instruction.page-1];
+  try{
+    const png=await pagePng(page,{includeInstruction:true});
+    if(navigator.clipboard?.write&&globalThis.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/plain':new Blob([text],{type:'text/plain'}),
+        'image/png':png
+      })]);
+      status('ChatGPT用の位置情報と赤枠PNGをクリップボードへコピーしました。','ok');
+      return;
+    }
+  }catch{}
+  await copyText(text);
+  status('ChatGPT用の位置情報をコピーしました。画像が必要なら「指示PNG保存」を使えます。','ok');
+}
+async function saveInstructionPng(){
+  if(!instruction)return;
+  const blob=await pagePng(pages[instruction.page-1],{includeInstruction:true});
+  download(blob,`${fileStem()}-p${String(instruction.page).padStart(3,'0')}-instruction.png`);
+  status('赤枠つき指示PNGを保存しました。','ok');
+}
 function updatePreview(){
   if(!ready||!pages.length){$('page-number').textContent='—';buttons();return;}
   currentPage=Math.max(1,Math.min(currentPage,pages.length));
@@ -295,7 +534,7 @@ function updatePreview(){
   $('frame-holder').style.width=`${1456*zoom}px`;$('frame-holder').style.height=`${2056*zoom}px`;
   requestAnimationFrame(()=>frame.contentWindow.scrollTo(0,pages[currentPage-1].offsetTop));
   $('page-number').textContent=`${String(currentPage).padStart(2,'0')} / ${String(pages.length).padStart(2,'0')}`;
-  $('paper-size').textContent='紙面 1456 × 2056 px / 本番DOM';updateSelectionOutline();buttons();
+  $('paper-size').textContent='紙面 1456 × 2056 px / 本番DOM';updateSelectionOutline();renderInstructionOverlay();applyInstructionMode();buttons();
 }
 function showDiagnostics(report,error){
   const host=$('diagnostics');host.replaceChildren();
@@ -323,6 +562,7 @@ async function setFrameHtml(html,token){
   return waitComposition(token);
 }
 function clearPreview(error){
+  clearInstruction({keepMode:false});
   ready=false;pages=[];articleData=null;selected=null;
   frame.removeAttribute('src');frame.srcdoc='<!doctype html><html><body style="margin:0;background:#fff"></body></html>';
   $('block-list').replaceChildren();$('block-count').textContent='0件';$('page-number').textContent='—';$('render-source').textContent='—';
@@ -330,6 +570,7 @@ function clearPreview(error){
 }
 async function compose(){
   if(!source||busy)return;if(pendingJson){status('設定JSONが未適用です。JSONを適用してください。','error');return;}
+  if(instruction)clearInstruction({keepMode:true});
   const token=++generation;busy=true;ready=false;buttons();status('本番parser・CSS・埋込フォント・paginate.jsでブラウザ内組版しています…','busy');
   try{
     const candidate=await candidateHtml($('markdown').value,clean(settings));settings=candidate.settings;syncSettingsUI();
@@ -339,7 +580,8 @@ async function compose(){
     const report=frame.contentWindow.auditArticleComposition();if(!report.ok)throw new Error(report.errors.join('\n'));
     ready=true;dirty=false;currentPage=Math.min(currentPage,pages.length)||1;
     if(!articleData.blocks.some(b=>b.id===selected))selected=articleData.blocks[0]?.id||null;buildBlockList();
-    doc.addEventListener('click',event=>{const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
+    doc.addEventListener('click',event=>{if(instructionMode)return;const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
+    installInstructionHandlers(doc);applyInstructionMode();updateInstructionPanel();
     showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + '+(source.fontMode==='article'?'記事ArticleSubset':'共通フォントfallback')+' + paginate_compat.js';
     status(`${source.kind==='folder'?'エクスプローラ: ':''}${source.source} · ${pages.length}ページ · 本番組版OK${source.fontMode==='article'?'':' · 記事フォントなし→共通fallback'}`,'ok');updatePreview();updateSelection();
   }catch(error){
@@ -384,6 +626,10 @@ $('folder-files').onchange=async e=>{const files=[...e.target.files];try{if(file
 $('markdown').addEventListener('input',()=>invalidate());
 $('md-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>1_200_000)throw new Error('原稿は120万文字以下にしてください');$('markdown').value=await file.text();invalidate(`${file.name} を一時差替えしました。本番組版してください。`);}catch(error){status(error.message,'error');}finally{$('md-file').value='';}};
 $('zoom').oninput=updatePreview;$('guides').onchange=()=>{updateSelectionOutline();updateSelection();};
+$('instruction-mode').onclick=()=>setInstructionMode(!instructionMode);
+$('clear-instruction').onclick=()=>clearInstruction({keepMode:true});
+$('copy-instruction').onclick=async()=>{try{await copyInstruction();}catch(error){status(error.message,'error');}};
+$('save-instruction').onclick=async()=>{try{await saveInstructionPng();}catch(error){status(error.message,'error');}};
 $('prev').onclick=()=>{currentPage--;updatePreview();updateSelection();};$('next').onclick=()=>{currentPage++;updatePreview();updateSelection();};
 $('settings-form').addEventListener('change',async()=>{try{for(const input of $('settings-form').querySelectorAll('[data-key]'))setPath(settings,input.dataset.key,readNumber(input));settings=validateTesterSettings(clean(settings));syncJson();invalidate('本番CSS一時設定を変更しました。再組版しています…');await compose();}catch(error){status(error.message,'error');}});
 $('block-form').addEventListener('change',async()=>{
@@ -404,6 +650,8 @@ $('png').onclick=()=>exportOutput(false);$('zip').onclick=()=>exportOutput(true)
 window.layoutTester={
   get ready(){return ready;},get dirty(){return dirty;},get source(){return source;},get settings(){return settings;},
   get articleData(){return articleData;},get pages(){return pages;},get currentPage(){return currentPage;},
-  compose,loadSource,loadFolder,selectBlock
+  get instruction(){return instruction;},
+  compose,loadSource,loadFolder,selectBlock,setInstructionRegion,clearInstruction,
+  instructionText:buildInstructionText
 };
 syncSettingsUI();loadSource();

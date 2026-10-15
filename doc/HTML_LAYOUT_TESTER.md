@@ -202,7 +202,41 @@ data-figure="bNNN"
 
 独自の `.sheet` / `.flow` / `.block` ページネータを現行入口では使わない。
 
-## 10. 計測
+## 10. ChatGPT指示範囲
+
+紙面上の任意矩形を、組版修正指示の対象として指定できること。
+
+対象は本文・画像等のDOM要素に限定しない。空白領域も選択できる。
+
+指示矩形はページ内CSS pxで保持する。
+
+保持項目：
+
+- 記事パス
+- 正本MD名
+- 入力種別
+- ページ番号 / 総ページ数
+- 紙面サイズ1456×2056
+- x / y / W / H
+- 空白または要素上
+- 範囲に重なる `data-source` / `data-figure`
+- 直前のブロック
+- 直後のブロック
+- text-only pageか
+- 当該pageのfigure id
+- 任意指示文
+
+コピー文字列末尾へ `LAYOUT_TARGET_JSON` を付け、別会話でも対象位置を復元できる情報量を持たせる。
+
+選択矩形は赤枠オーバーレイとしてpageに置く。ただしabsolute配置とし、組版計測へ影響させない。
+
+通常PNG/ZIPでは `.layout-instruction-region` を必ず除去する。
+
+指示PNGだけは赤枠を残して1456×2056で出力できる。
+
+対応ブラウザでは `ClipboardItem` に `text/plain` と `image/png` を載せる。失敗時は位置情報テキストのコピーへフォールバックする。
+
+## 11. 計測
 
 選択ブロックについて次を表示する。
 
@@ -225,7 +259,7 @@ figureでは追加で、
 
 画面表示倍率はiframeの外側へ適用し、iframe内部の1456×2056座標を変えない。
 
-## 11. 一時設定
+## 12. 一時設定
 
 version 1では次を候補CSSとして適用できる。
 
@@ -251,7 +285,7 @@ padding.top/right/bottom/left
 
 設定変更後は、旧DOMへCSSだけ後付けせず、候補HTMLを再構築して `paginate_compat.js` を最初から実行する。
 
-## 12. 組版検査
+## 13. 組版検査
 
 候補生成後に `auditArticleComposition()` を実行する。
 
@@ -270,7 +304,7 @@ padding.top/right/bottom/left
 
 audit失敗時はPNG/ZIP出力を許可しない。
 
-## 13. PNG / ZIP
+## 14. PNG / ZIP
 
 PNG生成にも専用サーバーやPlaywright起動を要求しない。
 
@@ -298,7 +332,7 @@ Canvas
 
 旧独自rendererをPNG入力にしてはならない。
 
-## 14. 保護範囲
+## 15. 保護範囲
 
 テスターから次を上書きしない。
 
@@ -312,7 +346,7 @@ Canvas
 
 テスター内の編集・設定変更はメモリ上だけに適用する。
 
-## 15. 専用API方式の廃止
+## 16. 専用API方式の廃止
 
 PR #13では、
 
@@ -336,7 +370,7 @@ Cannot GET /__layout-tester/source
 
 `tools/layout_tester_server.mjs` は必要なら自動試験で使う読取専用の静的サーバーに限定する。
 
-## 16. 初期実記事
+## 17. 初期実記事
 
 ```text
 202604/04_聖職者花見乱痴気騒ぎ
@@ -352,7 +386,7 @@ Cannot GET /__layout-tester/source
 1456 × 2056 px / page
 ```
 
-## 17. 合格条件
+## 18. 合格条件
 
 最低条件：
 

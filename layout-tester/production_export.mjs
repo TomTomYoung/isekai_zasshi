@@ -23,10 +23,11 @@ async function blobDataUrl(url){
     reader.readAsDataURL(blob);
   });
 }
-async function selfContainedClone(sheet){
+async function selfContainedClone(sheet,{includeInstruction=false}={}){
   const doc=sheet.ownerDocument,clone=sheet.cloneNode(true);
   clone.classList.remove('layout-tester-selected');
   clone.querySelectorAll('.layout-tester-selected').forEach(n=>n.classList.remove('layout-tester-selected'));
+  if(!includeInstruction)clone.querySelectorAll('.layout-instruction-region').forEach(n=>n.remove());
   clone.querySelectorAll('a').forEach(n=>n.removeAttribute('href'));
   const originals=[...sheet.querySelectorAll('img')],images=[...clone.querySelectorAll('img')];
   for(let i=0;i<images.length;i++){
@@ -37,10 +38,10 @@ async function selfContainedClone(sheet){
   const styles=[...doc.querySelectorAll('style')].map(n=>n.textContent).join('\n');
   return{clone,styles};
 }
-export async function pagePng(sheet){
+export async function pagePng(sheet,{includeInstruction=false}={}){
   if(!sheet?.matches?.('.fixed-page'))throw new Error('出力対象の本番ページがありません');
   await sheet.ownerDocument.fonts.ready;
-  const {clone,styles}=await selfContainedClone(sheet);
+  const {clone,styles}=await selfContainedClone(sheet,{includeInstruction});
   Object.assign(clone.style,{margin:'0',boxShadow:'none',transform:'none'});
   const wrapper=document.createElement('div');
   wrapper.setAttribute('xmlns','http://www.w3.org/1999/xhtml');

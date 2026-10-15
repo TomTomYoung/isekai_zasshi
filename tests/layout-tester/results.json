@@ -62,6 +62,19 @@
           "textOnlySections": 0
         }
       }
+    },
+    "instructionRegion": {
+      "status": "implemented; browser runtime not executed in current tool environment",
+      "ui": "instruction-mode drag + right-panel metadata",
+      "payload": "article/source/page/1456x2056 rect/overlap/above/below/note/LAYOUT_TARGET_JSON",
+      "clipboard": "text + annotated PNG when ClipboardItem works; text fallback otherwise",
+      "normalExport": "instruction overlay removed unless includeInstruction=true",
+      "checks": {
+        "appSyntax": true,
+        "exporterSyntax": true,
+        "unitSyntax": true,
+        "browserSyntax": true
+      }
     }
   },
   "historical": {
