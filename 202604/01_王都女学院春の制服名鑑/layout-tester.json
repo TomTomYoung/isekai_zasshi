@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "body": {
+    "fontSize": 27,
+    "lineHeight": 39
+  },
+  "image": {
+    "landscapeHeight": 860,
+    "portraitHeight": 1030
+  },
+  "magazine": {
+    "paperColor": "#fffaf2",
+    "accentColor": "#9a2f36",
+    "textureStrength": 7,
+    "titleSize": 50,
+    "subtitleSize": 28,
+    "paragraphGap": 10,
+    "introSize": 30,
+    "introLineHeight": 42,
+    "introRuleWidth": 4,
+    "dropCapSize": 0,
+    "captionSize": 18,
+    "captionRuleWidth": 1,
+    "cards": {
+      "enabled": true,
+      "heading": "三校の春制服、ここを見る",
+      "one": {
+        "title": "王都桜花学園",
+        "text": "桜色と白。清楚さと実務性、聖教会との結びつきが見える。"
+      },
+      "two": {
+        "title": "金獅子女学院",
+        "text": "紺・白・金。仕立てと装飾に、家格・財力・後援力が表れる。"
+      },
+      "three": {
+        "title": "薔薇十字女学院",
+        "text": "白・深紅・黒。静かな意匠の中に、規律と魔力制御を仕込む。"
+      }
+    }
+  },
+  "blocks": {}
+}
