@@ -71,6 +71,8 @@ async function optionalStaticFont(article){
     staticJson(`${fallbackArticle}/fonts/font.json`),
     staticFetch(`${fallbackArticle}/fonts/article.woff`,{binary:true})
   ]);
+  const fallbackHash=await sha256(fallbackBlob);
+  if(fallbackHash!==null&&fallbackHash!==fallbackInfo.sha256)throw new Error('共通fallbackフォントのハッシュが font.json と一致しません');
   return{fontInfo:fallbackInfo,fontBlob:fallbackBlob,fontMode:'shared-fallback'};
 }
 function normalizeArticleInput(input){
