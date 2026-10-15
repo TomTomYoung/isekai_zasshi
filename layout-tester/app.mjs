@@ -124,6 +124,13 @@ async function staticJson(relative){
   const text=await staticFetch(relative);
   try{return JSON.parse(text);}catch{throw new Error(`JSONを読めません: ${relative}`);}
 }
+async function optionalStaticJson(relative){
+  const response=await read(repoUrl(relative),{cache:'no-store'});
+  if(response.status===404)return null;
+  if(!response.ok)throw new Error(`読込失敗 ${response.status}: ${relative}`);
+  const text=await response.text();
+  try{return JSON.parse(text);}catch{throw new Error(`JSONを読めません: ${relative}`);}
+}
 async function blobDataUrl(blob){
   return await new Promise((resolve,reject)=>{
     const reader=new FileReader();
@@ -174,14 +181,15 @@ async function loadStaticArticle(input){
   const config=await staticJson(`${article}/layout-source.json`);
   if(config?.version!==1||config?.template!=='illustrated-article-v1'||typeof config.source!=='string'||!config.source||/[\\/]/.test(config.source)||config.source.startsWith('.'))throw new Error('layout-source.json が本番Markdown記事の形式ではありません');
   if(expectedSource&&expectedSource!==config.source)throw new Error(`指定MDは正本ではありません。正本: ${config.source}`);
-  const [markdown,templateCss,runtime,font]=await Promise.all([
+  const [markdown,templateCss,runtime,font,testerSettings]=await Promise.all([
     staticFetch(`${article}/${config.source}`),
     staticFetch('tools/article-layout/template.css'),
     staticFetch('layout-tester/paginate_compat.js'),
-    optionalStaticFont(article)
+    optionalStaticFont(article),
+    optionalStaticJson(`${article}/layout-tester.json`)
   ]);
   return{
-    kind:'repo',article,source:config.source,template:config.template,markdown,templateCss,runtime,
+    kind:'repo',article,source:config.source,template:config.template,markdown,templateCss,runtime,testerSettings,
     fontInfo:font.fontInfo,fontMode:font.fontMode,fontDataUrl:await blobDataUrl(font.fontBlob),
     articleBase:repoUrl(article+'/')
   };
@@ -234,8 +242,15 @@ async function loadFolderArticle(fileList){
     const fallback=await optionalStaticFont('202604/04_聖職者花見乱痴気騒ぎ');
     fontInfo=fallback.fontInfo;fontBlob=fallback.fontBlob;fontMode='shared-fallback';
   }
+  let testerSettings=null;
+  const testerSettingsFile=files.get('layout-tester.json');
+  if(testerSettingsFile){
+    if(testerSettingsFile.size>1_000_000)throw new Error('layout-tester.json が大きすぎます');
+    try{testerSettings=JSON.parse(await testerSettingsFile.text());}
+    catch{throw new Error('layout-tester.json をJSONとして読めません');}
+  }
   return{
-    kind:'folder',article:folderName,folderName,source:config.source,template:config.template,markdown,
+    kind:'folder',article:folderName,folderName,source:config.source,template:config.template,markdown,testerSettings,
     templateCss,runtime,fontInfo,fontMode,fontDataUrl:await blobDataUrl(fontBlob),files,assetUrls:new Map()
   };
 }
@@ -276,7 +291,7 @@ async function candidateHtml(markdown,rawSettings){
     rendered={blocks,groups:parsed.groups.map(group=>group.map(block=>byId.get(block.id)))};
   }
   const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo,fontMode:source.fontMode,normalizedLegacyFigure:adapted.normalizedLegacyFigure,normalizedInlineMarkup:adapted.normalizedInlineMarkup,normalizedListMarkup:adapted.normalizedListMarkup,normalizedQuoteGaps:adapted.normalizedQuoteGaps,normalizedDividers:adapted.normalizedDividers,textOnlySections:adapted.textOnlySections,splitFigureSections:adapted.splitFigureSections,syntheticSubtitle:adapted.syntheticSubtitle};
-  const data=safeJson({...rendered,manifest});
+  const data=safeJson({...rendered,manifest,testerSettings:validated});
   const runtime=source.runtime.replace(/<\/script/gi,'<\\/script');
   const overrides=cssForTesterSettings(validated);
   const baseHref=source.kind==='repo'?source.articleBase.href:document.baseURI;
@@ -307,7 +322,13 @@ function invalidate(message='MDまたは設定が未反映です。「このMD�
   generation++;dirty=true;ready=false;status(message,'busy');$('diagnostic-title').textContent='本番組版検査：未確認';buttons();
 }
 function syncJson(){$('json-editor').value=JSON.stringify(clean(settings),null,2);pendingJson=false;}
-function syncGlobalForm(){for(const input of $('settings-form').querySelectorAll('[data-key]'))input.value=getPath(settings,input.dataset.key)??'';}
+function syncGlobalForm(){
+  for(const input of $('settings-form').querySelectorAll('[data-key]')){
+    const value=getPath(settings,input.dataset.key);
+    if(input.type==='checkbox')input.checked=Boolean(value);
+    else input.value=value??'';
+  }
+}
 function syncBlockForm(){
   const entry=selected?settings.blocks?.[selected]||{}:{};
   for(const input of $('block-form').querySelectorAll('[data-key]'))input.value=getPath(entry,input.dataset.key)??'';
@@ -317,6 +338,11 @@ function syncSettingsUI(){syncGlobalForm();syncBlockForm();syncJson();}
 function readNumber(input){
   if(input.value==='')return undefined;
   const v=Number(input.value);if(!Number.isFinite(v))throw new Error(`${input.dataset.key}: 数値が必要です`);return v;
+}
+function readFormValue(input){
+  if(input.type==='checkbox')return input.checked;
+  if(input.type==='number')return readNumber(input);
+  return input.value===''?undefined:input.value;
 }
 function blockLabel(block){
   if(!block)return'';
@@ -725,7 +751,7 @@ async function loadSource(){
   if(busy)return;const token=++generation;busy=true;buttons();status('layout-source.json と正本MDを直接読込中です…','busy');
   try{
     const loaded=await loadStaticArticle($('source-path').value.trim());if(token!==generation)return;
-    releaseSourceAssets(source);source=loaded;settings=structuredClone(TESTER_DEFAULTS);
+    releaseSourceAssets(source);source=loaded;settings=loaded.testerSettings?validateTesterSettings(loaded.testerSettings):structuredClone(TESTER_DEFAULTS);
     $('markdown').value=loaded.markdown;$('source-name').textContent=loaded.source;$('source-article').textContent=loaded.article;$('source-path').value=loaded.article;
     selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
   }catch(error){
@@ -736,7 +762,7 @@ async function loadFolder(fileList){
   if(busy)return;const token=++generation;busy=true;buttons();status('記事フォルダーの layout-source.json・正本MD・画像・フォントを読込中です…','busy');
   try{
     const loaded=await loadFolderArticle(fileList);if(token!==generation)return;
-    releaseSourceAssets(source);source=loaded;settings=structuredClone(TESTER_DEFAULTS);
+    releaseSourceAssets(source);source=loaded;settings=loaded.testerSettings?validateTesterSettings(loaded.testerSettings):structuredClone(TESTER_DEFAULTS);
     $('markdown').value=loaded.markdown;$('source-name').textContent=loaded.source;$('source-article').textContent='エクスプローラ: '+loaded.folderName;
     selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
   }catch(error){
@@ -765,7 +791,7 @@ $('clear-instruction').onclick=()=>clearInstruction({keepMode:true});
 $('copy-instruction').onclick=async()=>{try{await copyInstruction();}catch(error){status(error.message,'error');}};
 $('save-instruction').onclick=async()=>{try{await saveInstructionPng();}catch(error){status(error.message,'error');}};
 $('prev').onclick=()=>{currentPage--;updatePreview();updateSelection();};$('next').onclick=()=>{currentPage++;updatePreview();updateSelection();};
-$('settings-form').addEventListener('change',async()=>{try{for(const input of $('settings-form').querySelectorAll('[data-key]'))setPath(settings,input.dataset.key,readNumber(input));settings=validateTesterSettings(clean(settings));syncJson();invalidate('本番CSS一時設定を変更しました。再組版しています…');await compose();}catch(error){status(error.message,'error');}});
+$('settings-form').addEventListener('change',async()=>{try{for(const input of $('settings-form').querySelectorAll('[data-key]'))setPath(settings,input.dataset.key,readFormValue(input));settings=validateTesterSettings(clean(settings));syncJson();invalidate('本番CSS一時設定を変更しました。再組版しています…');await compose();}catch(error){status(error.message,'error');}});
 $('block-form').addEventListener('change',async()=>{
   if(!selected)return;
   try{
