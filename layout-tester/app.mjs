@@ -212,8 +212,13 @@ function buttons(){
   $('save-config').disabled=!source||busy||pendingJson;
   $('prev').disabled=!ready||busy||currentPage<=1;
   $('next').disabled=!ready||busy||currentPage>=pages.length;
+  $('instruction-mode').disabled=!ready||busy;
+  if(!instruction){
+    $('copy-instruction').disabled=$('save-instruction').disabled=$('clear-instruction').disabled=true;
+  }
 }
 function invalidate(message='MDまたは設定が未反映です。「このMDで本番組版」を押してください。'){
+  clearInstruction({keepMode:true});
   generation++;dirty=true;ready=false;status(message,'busy');$('diagnostic-title').textContent='本番組版検査：未確認';buttons();
 }
 function syncJson(){$('json-editor').value=JSON.stringify(clean(settings),null,2);pendingJson=false;}
@@ -527,7 +532,7 @@ function updatePreview(){
   $('frame-holder').style.width=`${1456*zoom}px`;$('frame-holder').style.height=`${2056*zoom}px`;
   requestAnimationFrame(()=>frame.contentWindow.scrollTo(0,pages[currentPage-1].offsetTop));
   $('page-number').textContent=`${String(currentPage).padStart(2,'0')} / ${String(pages.length).padStart(2,'0')}`;
-  $('paper-size').textContent='紙面 1456 × 2056 px / 本番DOM';updateSelectionOutline();buttons();
+  $('paper-size').textContent='紙面 1456 × 2056 px / 本番DOM';updateSelectionOutline();renderInstructionOverlay();applyInstructionMode();buttons();
 }
 function showDiagnostics(report,error){
   const host=$('diagnostics');host.replaceChildren();
@@ -555,6 +560,7 @@ async function setFrameHtml(html,token){
   return waitComposition(token);
 }
 function clearPreview(error){
+  clearInstruction({keepMode:false});
   ready=false;pages=[];articleData=null;selected=null;
   frame.removeAttribute('src');frame.srcdoc='<!doctype html><html><body style="margin:0;background:#fff"></body></html>';
   $('block-list').replaceChildren();$('block-count').textContent='0件';$('page-number').textContent='—';$('render-source').textContent='—';
@@ -562,6 +568,7 @@ function clearPreview(error){
 }
 async function compose(){
   if(!source||busy)return;if(pendingJson){status('設定JSONが未適用です。JSONを適用してください。','error');return;}
+  if(instruction)clearInstruction({keepMode:true});
   const token=++generation;busy=true;ready=false;buttons();status('本番parser・CSS・埋込フォント・paginate.jsでブラウザ内組版しています…','busy');
   try{
     const candidate=await candidateHtml($('markdown').value,clean(settings));settings=candidate.settings;syncSettingsUI();
@@ -571,7 +578,8 @@ async function compose(){
     const report=frame.contentWindow.auditArticleComposition();if(!report.ok)throw new Error(report.errors.join('\n'));
     ready=true;dirty=false;currentPage=Math.min(currentPage,pages.length)||1;
     if(!articleData.blocks.some(b=>b.id===selected))selected=articleData.blocks[0]?.id||null;buildBlockList();
-    doc.addEventListener('click',event=>{const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
+    doc.addEventListener('click',event=>{if(instructionMode)return;const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
+    installInstructionHandlers(doc);applyInstructionMode();updateInstructionPanel();
     showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + '+(source.fontMode==='article'?'記事ArticleSubset':'共通フォントfallback')+' + paginate_compat.js';
     status(`${source.kind==='folder'?'エクスプローラ: ':''}${source.source} · ${pages.length}ページ · 本番組版OK${source.fontMode==='article'?'':' · 記事フォントなし→共通fallback'}`,'ok');updatePreview();updateSelection();
   }catch(error){
@@ -616,6 +624,10 @@ $('folder-files').onchange=async e=>{const files=[...e.target.files];try{if(file
 $('markdown').addEventListener('input',()=>invalidate());
 $('md-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>1_200_000)throw new Error('原稿は120万文字以下にしてください');$('markdown').value=await file.text();invalidate(`${file.name} を一時差替えしました。本番組版してください。`);}catch(error){status(error.message,'error');}finally{$('md-file').value='';}};
 $('zoom').oninput=updatePreview;$('guides').onchange=()=>{updateSelectionOutline();updateSelection();};
+$('instruction-mode').onclick=()=>setInstructionMode(!instructionMode);
+$('clear-instruction').onclick=()=>clearInstruction({keepMode:true});
+$('copy-instruction').onclick=async()=>{try{await copyInstruction();}catch(error){status(error.message,'error');}};
+$('save-instruction').onclick=async()=>{try{await saveInstructionPng();}catch(error){status(error.message,'error');}};
 $('prev').onclick=()=>{currentPage--;updatePreview();updateSelection();};$('next').onclick=()=>{currentPage++;updatePreview();updateSelection();};
 $('settings-form').addEventListener('change',async()=>{try{for(const input of $('settings-form').querySelectorAll('[data-key]'))setPath(settings,input.dataset.key,readNumber(input));settings=validateTesterSettings(clean(settings));syncJson();invalidate('本番CSS一時設定を変更しました。再組版しています…');await compose();}catch(error){status(error.message,'error');}});
 $('block-form').addEventListener('change',async()=>{
@@ -636,6 +648,8 @@ $('png').onclick=()=>exportOutput(false);$('zip').onclick=()=>exportOutput(true)
 window.layoutTester={
   get ready(){return ready;},get dirty(){return dirty;},get source(){return source;},get settings(){return settings;},
   get articleData(){return articleData;},get pages(){return pages;},get currentPage(){return currentPage;},
-  compose,loadSource,loadFolder,selectBlock
+  get instruction(){return instruction;},
+  compose,loadSource,loadFolder,selectBlock,setInstructionRegion,clearInstruction,
+  instructionText:buildInstructionText
 };
 syncSettingsUI();loadSource();
