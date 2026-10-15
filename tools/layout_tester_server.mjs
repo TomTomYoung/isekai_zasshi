@@ -49,7 +49,7 @@ export function validateTesterSettings(raw){
   if(value.blocks!==undefined){
     object(value.blocks,'blocks');if(Object.keys(value.blocks).length>500)throw new Error('blocksは500件以下にしてください');
     for(const [id,entry] of Object.entries(value.blocks)){
-      if(!/^b\\d{3,6}$/.test(id))throw new Error(`blocks.${id}: 本番ブロックID(b001等)を指定してください`);
+      if(!/^b\d{3,6}$/.test(id))throw new Error(`blocks.${id}: 本番ブロックID(b001等)を指定してください`);
       object(entry,`blocks.${id}`);allowedKeys(entry,['width','fontSize','lineHeight','imageHeight','margin','padding'],`blocks.${id}`);
       const next={};
       for(const [key,min,max] of [['width',80,1328],['fontSize',8,120],['lineHeight',10,180],['imageHeight',120,1800]]){
@@ -91,9 +91,9 @@ function cssForSettings(settings){
 async function resolveArticle(realRoot,input){
   if(typeof input!=='string'||!input.trim())throw new Error('記事ディレクトリまたはMDパスを指定してください');
   let relative=input.trim().replace(/\\/g,'/');
-  if(relative.startsWith('/')||relative.includes('\\0')||relative.includes(':')||relative.split('/').some(x=>!x||x==='.'||x==='..'||x.startsWith('.')))throw new Error('リポジトリ内の相対パスを指定してください');
+  if(relative.startsWith('/')||relative.includes('\0')||relative.includes(':')||relative.split('/').some(x=>!x||x==='.'||x==='..'||x.startsWith('.')))throw new Error('リポジトリ内の相対パスを指定してください');
   let expectedSource=null;
-  if(/\\.md$/i.test(relative)){expectedSource=path.posix.basename(relative);relative=path.posix.dirname(relative);}
+  if(/\.md$/i.test(relative)){expectedSource=path.posix.basename(relative);relative=path.posix.dirname(relative);}
   if(!/^20\\d{4}\\/[^/]+$/.test(relative))throw new Error('記事は YYYYMM/記事フォルダー の形で指定してください');
   const articleDir=path.resolve(realRoot,...relative.split('/'));
   if(!within(realRoot,articleDir))throw new Error('記事パスがリポジトリ外です');
@@ -128,8 +128,8 @@ export async function composeCandidate(realRoot,{article,markdown,settings}={}){
   const payload=jsonText({...parsed,manifest});
   let html=baseline.html
     .replace(/<meta name="article-render-sha256" content="[^"]+">/,'')
-    .replace(/<title>[\\s\\S]*?<\\/title>/,`<title>${escapeHtml(parsed.blocks[0].text)}</title>`)
-    .replace(/<script type="application\\/json" id="article-source">[\\s\\S]*?<\\/script>/,`<script type="application/json" id="article-source">${payload}</script>`);
+    .replace(/<title>[\s\S]*?<\/title>/,`<title>${escapeHtml(parsed.blocks[0].text)}</title>`)
+    .replace(/<script type="application\/json" id="article-source">[\s\S]*?<\/script>/,`<script type="application/json" id="article-source">${payload}</script>`);
   const validated=validateTesterSettings(settings??TESTER_DEFAULTS);
   const base=`/${encodePath(resolved.article)}/`;
   html=html.replace('</head>',`<base href="${htmlAttr(base)}"><meta name="layout-tester-candidate" content="1"><style id="layout-tester-overrides">${cssForSettings(validated)}</style></head>`);
@@ -177,12 +177,12 @@ export async function startServer({port=4173,root=ROOT}={}){
   const server=http.createServer(async(req,res)=>{
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Cross-Origin-Resource-Policy','same-origin');
     try{
-      const host=req.headers.host||'';if(!/^(localhost|127\\.0\\.0\\.1)(:\\d+)?$/.test(host)){send(res,403,'text/plain; charset=utf-8','Loopback only');return;}
+      const host=req.headers.host||'';if(!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)){send(res,403,'text/plain; charset=utf-8','Loopback only');return;}
       const origin=req.headers.origin;if(req.headers['sec-fetch-site']==='cross-site'||(origin&&origin!==`http://${host}`)){send(res,403,'text/plain; charset=utf-8','Same origin only');return;}
       const requestUrl=new URL(req.url||'/',`http://${host}`),pathname=decodeURIComponent(requestUrl.pathname);
       if(pathname.startsWith('/__layout-tester/')){
         if(realRoot!==productionRoot){send(res,404,'text/plain; charset=utf-8','Not available');return;}
-        const tokenMatch=pathname.match(/^\\/__layout-tester\\/candidate\\/([0-9a-f-]+)$/);
+        const tokenMatch=pathname.match(/^\/__layout-tester\/candidate\/([0-9a-f-]+)$/);
         if(tokenMatch&&req.method==='GET'){
           const html=candidates.get(tokenMatch[1]);if(!html){send(res,404,'text/plain; charset=utf-8','Candidate expired');return;}
           send(res,200,'text/html; charset=utf-8',html);return;
@@ -212,8 +212,8 @@ export async function startServer({port=4173,root=ROOT}={}){
       }
       if(!['GET','HEAD'].includes(req.method)){send(res,405,'text/plain; charset=utf-8','Read only');return;}
       const raw=pathname;
-      if(raw.includes('\\\\')||raw.includes('\\0')||raw.split('/').some(x=>x.startsWith('.'))){send(res,403,'text/plain; charset=utf-8','Forbidden');return;}
-      let relative=raw.replace(/^\\//,'');if(!relative||relative==='layout-tester/'||relative==='layout-tester')relative='layout-tester/index.html';
+      if(raw.includes('\\')||raw.includes('\0')||raw.split('/').some(x=>x.startsWith('.'))){send(res,403,'text/plain; charset=utf-8','Forbidden');return;}
+      let relative=raw.replace(/^\//,'');if(!relative||relative==='layout-tester/'||relative==='layout-tester')relative='layout-tester/index.html';
       const target=path.resolve(realRoot,relative),ext=path.extname(target).toLowerCase();
       if(!within(realRoot,target)||!MIME[ext]){send(res,403,'text/plain; charset=utf-8','Forbidden');return;}
       const real=await fs.realpath(target);if(!within(realRoot,real)){send(res,403,'text/plain; charset=utf-8','Forbidden');return;}
