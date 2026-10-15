@@ -69,6 +69,22 @@ await test('runtime adapter removes mandatory-image assumptions for text-only se
   assert.match(adapted,/!page\.querySelector\('img'\)/);
   assert.match(adapted,/scene\?\.dataset\.figure/);
 });
+await test('all 202604 layout-source articles pass the tester compatibility parser',async()=>{
+  const issueDir=path.join(ROOT,'202604');
+  const dirs=(await fs.readdir(issueDir,{withFileTypes:true})).filter(entry=>entry.isDirectory()&&/^\d\d_/.test(entry.name));
+  let checked=0;
+  for(const dir of dirs){
+    const configPath=path.join(issueDir,dir.name,'layout-source.json');
+    let config;
+    try{config=JSON.parse(await fs.readFile(configPath,'utf8'));}catch(error){if(error.code==='ENOENT')continue;throw error;}
+    const markdown=await fs.readFile(path.join(issueDir,dir.name,config.source),'utf8');
+    const adapted=parseArticleForTester(markdown);
+    assert.ok(adapted.parsed.blocks.length>0,dir.name);
+    assert.ok(adapted.parsed.groups.length>0,dir.name);
+    checked++;
+  }
+  assert.equal(checked,24);
+});
 await test('layout tester entry has no dedicated API dependency',async()=>{
   const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
   assert.doesNotMatch(app,/\/__layout-tester\//);
