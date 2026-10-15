@@ -153,7 +153,7 @@ async function renderCandidate(html,url,pageSpec){
   const {chromium}=await import('playwright');
   let browser,page;
   try{
-    browser=await chromium.launch({headless:true});
+    browser=await chromium.launch({headless:true,chromiumSandbox:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
     page=await browser.newPage({viewport:{width:1456,height:2056},deviceScaleFactor:1});
     await page.goto(url,{waitUntil:'domcontentloaded',timeout:15000});
     await page.waitForFunction(()=>window.__articleComposition?.status==='ready'||window.__articleComposition?.status==='failed',{}, {timeout:20000});
