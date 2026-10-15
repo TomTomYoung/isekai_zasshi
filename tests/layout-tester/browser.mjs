@@ -96,6 +96,28 @@ try{
     await page.waitForFunction(()=>window.layoutTester.currentPage===1);
   });
 
+  await test('preview splitter expands manuscript area when dragged down',async()=>{
+    const before=await page.evaluate(()=>({
+      diagnostic:document.querySelector('.diagnostic-box').getBoundingClientRect().height,
+      canvas:document.querySelector('#canvas').getBoundingClientRect().height
+    }));
+    const splitter=page.locator('#preview-splitter');
+    const box=await splitter.boundingBox();assert.ok(box);
+    await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
+    await page.mouse.down();
+    await page.mouse.move(box.x+box.width/2,box.y+box.height/2+90,{steps:5});
+    await page.mouse.up();
+    const after=await page.evaluate(()=>({
+      diagnostic:document.querySelector('.diagnostic-box').getBoundingClientRect().height,
+      canvas:document.querySelector('#canvas').getBoundingClientRect().height,
+      stored:localStorage.getItem('isekai-zasshi.layout-tester.diagnostic-height')
+    }));
+    assert.ok(after.diagnostic<before.diagnostic-40);
+    assert.ok(after.canvas>before.canvas+40);
+    assert.ok(Number(after.stored)>0);
+    await splitter.dblclick();
+  });
+
   await test('no dedicated API endpoint is requested',()=>assert.deepEqual(dedicatedRequests,[]));
 
   await test('Explorer folder without font.json loads with shared fallback and legacy figures',async()=>{
