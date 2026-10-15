@@ -22,6 +22,7 @@
 - `layout-tester/app.mjs` に `/__layout-tester/` 依存がない
 - 本番 `layout-source.json` とbrowser exportを使う構造
 - ブラウザ試験がsandbox無効化やメモリ注入へ逃げない
+- `paginate_compat.js` が実ファイルとして存在し、文字列置換runtime adapterが存在しない
 
 ## ブラウザ試験
 
@@ -51,11 +52,11 @@
 5. 45 blocks / 5 figures / 5 groups。
 6. 本番ArticleSubset使用。
 7. フォルダー入力のscene-imageがすべてローカルblob URLから正常ロードされる。
-8. 本番paginate.jsで6ページ。
+8. `paginate_compat.js` で6ページ。
 9. audit成功。
 10. `.fixed-page` が1456×2056。
 11. 本番blockをクリックして実寸を取得。
-12. 一時CSS変更後に本番paginateで再組版。
+12. 一時CSS変更後に `paginate_compat.js` で再組版。
 13. フォルダー入力状態の現在DOMからブラウザ内PNGをダウンロード。
 14. PNGが1456×2056。
 15. PNG出力後も専用endpoint requestが0件。
