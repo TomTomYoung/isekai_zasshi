@@ -108,6 +108,27 @@ try{
     assert.deepEqual(v,{w:1456,h:2056});
   });
 
+  await test('arbitrary paper region produces ChatGPT target metadata',async()=>{
+    await page.evaluate(()=>window.layoutTester.setInstructionRegion(1,{x:120,y:1500,w:900,h:260}));
+    await page.locator('#instruction-note').fill('この範囲の空白を詰めたい');
+    const text=await page.evaluate(()=>window.layoutTester.instructionText());
+    assert.match(text,/【組版テスター指示対象】/);
+    assert.match(text,/ページ: 1 \/ /);
+    assert.match(text,/x=120, y=1500, w=900, h=260/);
+    assert.match(text,/LAYOUT_TARGET_JSON:/);
+    assert.match(text,/この範囲の空白を詰めたい/);
+    assert.equal(await page.locator('#copy-instruction').isDisabled(),false);
+    assert.equal(await page.locator('#save-instruction').isDisabled(),false);
+  });
+
+  await test('annotated instruction PNG keeps page size',async()=>{
+    const pending=page.waitForEvent('download',{timeout:45000});
+    await page.locator('#save-instruction').click();
+    const d=await pending;assert.equal(await d.failure(),null);
+    const file=path.join(out,'instruction-page.png');await d.saveAs(file);
+    const png=await fs.readFile(file);assert.deepEqual(dimensions(png),[1456,2056]);assert.ok(png.length>10000);
+  });
+
   await test('production source block selection exposes actual box metrics',async()=>{
     await page.locator('#block-list button').first().click();
     const text=await page.locator('#metrics').innerText();
