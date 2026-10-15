@@ -176,7 +176,7 @@ async function loadSource(){
     const path=$('source-path').value.trim(),response=await api('/__layout-tester/source?article='+encodeURIComponent(path));
     source=await response.json();settings=structuredClone(source.settings||DEFAULTS);
     $('markdown').value=source.markdown;$('source-name').textContent=source.source;$('source-article').textContent=source.article;$('source-path').value=source.article;
-    selected=null;currentPage=1;syncSettingsUI();dirty=true;await compose();
+    selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
   }catch(error){source=null;ready=false;dirty=true;status(error.message,'error');showDiagnostics(null,error.message);}
   finally{busy=false;buttons();}
 }
