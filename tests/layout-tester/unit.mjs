@@ -136,5 +136,19 @@ await test('layout tester uses single scroll containers instead of nested block/
   assert.match(app,/canvas\.addEventListener\('scroll'/);
   assert.doesNotMatch(app,/frame\.contentWindow\.scrollTo\(0,pages\[currentPage-1\]\.offsetTop\)/);
 });
+await test('preview diagnostics boundary is a draggable persisted splitter',async()=>{
+  const html=await fs.readFile(path.join(ROOT,'layout-tester','index.html'),'utf8');
+  const css=await fs.readFile(path.join(ROOT,'layout-tester','ui.css'),'utf8');
+  const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
+  assert.match(html,/id="preview-splitter"[^>]*role="separator"[^>]*aria-orientation="horizontal"/);
+  assert.match(css,/\.preview-splitter\{[^}]*cursor:row-resize/);
+  assert.match(app,/function initPreviewSplitter\(/);
+  assert.match(app,/function setDiagnosticHeight\(/);
+  assert.match(app,/function resetPreviewSplitter\(/);
+  assert.match(app,/PREVIEW_SPLITTER_STORAGE/);
+  assert.match(app,/localStorage\.setItem\(PREVIEW_SPLITTER_STORAGE/);
+  assert.match(app,/previewSplitter\.addEventListener\('pointermove'/);
+  assert.match(app,/previewSplitter\.addEventListener\('dblclick'/);
+});
 await test('browser runner keeps sandbox enabled and forbids dedicated API use',async()=>{const s=await fs.readFile(path.join(ROOT,'tests/layout-tester/browser.mjs'),'utf8');assert.match(s,/chromiumSandbox:true/);assert.doesNotMatch(s,/--no-sandbox|LAYOUT_TEST_MEMORY|page\.setContent|page\.addScriptTag/);assert.match(s,/dedicatedRequests/);});
 console.log(`PASS ${count} tests`);
