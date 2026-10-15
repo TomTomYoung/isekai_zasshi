@@ -105,6 +105,9 @@ await test('stable compatibility paginator handles text-only sections without so
   assert.match(runtime,/page\.dataset\.textOnly = 'true'/);
   assert.match(runtime,/function magazineQuickStrip\(/);
   assert.match(runtime,/source\.testerSettings\?\.magazine\?\.cards/);
+  assert.match(runtime,/reserveQuickStrip/);
+  assert.match(runtime,/placeQuickStrip/);
+  assert.doesNotMatch(runtime,/magazineStripSkipped/);
   assert.doesNotMatch(compat,/adaptRuntimeForTextSections/);
   assert.doesNotMatch(app,/adaptRuntimeForTextSections/);
   assert.match(app,/layout-tester\/paginate_compat\.js/);
