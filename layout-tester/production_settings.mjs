@@ -15,6 +15,7 @@ export const TESTER_DEFAULTS={
     dropCapSize:0,
     captionSize:22,
     captionRuleWidth:0,
+    packFirstPage:false,
     cards:{
       enabled:false,
       heading:'',
@@ -83,7 +84,7 @@ export function validateTesterSettings(raw){
   }
   if(value.magazine!==undefined){
     object(value.magazine,'magazine');
-    allowedKeys(value.magazine,['paperColor','accentColor','textureStrength','titleSize','subtitleSize','paragraphGap','introSize','introLineHeight','introRuleWidth','dropCapSize','captionSize','captionRuleWidth','cards'],'magazine');
+    allowedKeys(value.magazine,['paperColor','accentColor','textureStrength','titleSize','subtitleSize','paragraphGap','introSize','introLineHeight','introRuleWidth','dropCapSize','captionSize','captionRuleWidth','packFirstPage','cards'],'magazine');
     const numeric=[
       ['textureStrength',0,40],
       ['titleSize',20,100],
@@ -103,6 +104,10 @@ export function validateTesterSettings(raw){
     for(const key of ['paperColor','accentColor'])if(value.magazine[key]!==undefined){
       color(value.magazine[key],`magazine.${key}`);
       out.magazine[key]=value.magazine[key];
+    }
+    if(value.magazine.packFirstPage!==undefined){
+      boolean(value.magazine.packFirstPage,'magazine.packFirstPage');
+      out.magazine.packFirstPage=value.magazine.packFirstPage;
     }
     if(value.magazine.cards!==undefined){
       object(value.magazine.cards,'magazine.cards');
