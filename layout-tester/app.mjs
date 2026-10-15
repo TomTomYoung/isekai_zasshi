@@ -288,6 +288,237 @@ function updateSelection(){
   if(image)text+=`\n\n画像枠 ${image.frame.width.toFixed(1)} × ${image.frame.height.toFixed(1)}\n元画像 ${image.source.width} × ${image.source.height}\n可視範囲 ${image.visible.width.toFixed(1)} × ${image.visible.height.toFixed(1)}\n配置 ${image.fit}`;
   $('selection-name').textContent=`${selected} / ${block?.type||node.tagName} / ${blockLabel(block)}`;$('metrics').textContent=text;
 }
+
+function clamp(value,min,max){return Math.max(min,Math.min(max,value));}
+function round1(value){return Math.round(value*10)/10;}
+function removeInstructionOverlay(){
+  frame.contentDocument?.querySelectorAll('.layout-instruction-region').forEach(node=>node.remove());
+}
+function applyInstructionMode(){
+  const doc=frame.contentDocument;if(!doc)return;
+  doc.querySelectorAll('.fixed-page').forEach(page=>page.style.cursor=instructionMode?'crosshair':'');
+  $('instruction-mode').setAttribute('aria-pressed',String(instructionMode));
+}
+function setInstructionMode(active){
+  instructionMode=Boolean(active);
+  applyInstructionMode();
+  if(instructionMode&&ready)status('指示範囲モード：紙面上をドラッグしてください。','ok');
+}
+function normalizeRegion(pageIndex,rect){
+  const page=pages[pageIndex-1];if(!page)throw new Error('指示対象ページがありません');
+  const width=page.getBoundingClientRect().width||1456,height=page.getBoundingClientRect().height||2056;
+  let x=clamp(Number(rect.x)||0,0,width),y=clamp(Number(rect.y)||0,0,height);
+  let w=clamp(Number(rect.w)||0,0,width-x),h=clamp(Number(rect.h)||0,0,height-y);
+  return{page:pageIndex,rect:{x:round1(x),y:round1(y),w:round1(w),h:round1(h)}};
+}
+function renderInstructionOverlay(){
+  removeInstructionOverlay();
+  if(!instruction)return;
+  const page=pages[instruction.page-1];if(!page)return;
+  const {x,y,w,h}=instruction.rect;
+  const box=page.ownerDocument.createElement('div');
+  box.className='layout-instruction-region';
+  Object.assign(box.style,{
+    position:'absolute',left:x+'px',top:y+'px',width:w+'px',height:h+'px',
+    border:'5px solid #d52b1e',background:'rgba(213,43,30,.08)',
+    zIndex:'9999',pointerEvents:'none',boxSizing:'border-box'
+  });
+  const label=page.ownerDocument.createElement('div');
+  label.textContent=`指示範囲 p${String(instruction.page).padStart(2,'0')}`;
+  Object.assign(label.style,{
+    position:'absolute',left:'-5px',top:'-34px',padding:'4px 8px',
+    background:'#d52b1e',color:'#fff',font:'22px/26px sans-serif',
+    whiteSpace:'nowrap'
+  });
+  box.append(label);page.append(box);
+}
+function blockSnippet(block){
+  if(!block)return'';
+  const raw=block.type==='table'?block.header.join(' / '):block.type==='figure'?(block.caption||block.alt||block.src):(block.text||'');
+  return String(raw).replace(/\s+/g,' ').trim().slice(0,100);
+}
+function instructionNodeDescriptor(node,pageRect){
+  const r=node.getBoundingClientRect();
+  let id=node.dataset.source||node.dataset.figure||'';
+  let type='structure',label='';
+  if(id){
+    const block=articleData?.blocks.find(b=>b.id===id);
+    type=block?.type||(node.dataset.figure?'figure':'block');
+    label=blockSnippet(block);
+  }else if(node.classList.contains('running-head')){id='running-head';type='running-head';label='柱';}
+  else if(node.classList.contains('folio')){id='folio';type='folio';label='ノンブル';}
+  else return null;
+  return{
+    id,type,label,
+    start:node.dataset.start??null,end:node.dataset.end??null,
+    rect:{x:round1(r.left-pageRect.left),y:round1(r.top-pageRect.top),w:round1(r.width),h:round1(r.height)}
+  };
+}
+function overlapsRect(a,b){
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+function instructionContext(target=instruction){
+  if(!target)return null;
+  const page=pages[target.page-1];if(!page)return null;
+  const pr=page.getBoundingClientRect();
+  const nodes=[...page.querySelectorAll('.running-head,[data-figure],[data-source],.folio')]
+    .map(node=>instructionNodeDescriptor(node,pr)).filter(Boolean);
+  const rect=target.rect;
+  const overlaps=nodes.filter(item=>overlapsRect(rect,item.rect));
+  const top=rect.y,bottom=rect.y+rect.h;
+  const above=nodes.filter(item=>item.rect.y+item.rect.h<=top+0.1)
+    .sort((a,b)=>(b.rect.y+b.rect.h)-(a.rect.y+a.rect.h))[0]||null;
+  const below=nodes.filter(item=>item.rect.y>=bottom-0.1)
+    .sort((a,b)=>a.rect.y-b.rect.y)[0]||null;
+  return{
+    kind:overlaps.length?'content':'blank',overlaps,above,below,
+    textOnly:page.dataset.textOnly==='true',
+    figure:page.querySelector('.scene')?.dataset.figure||null
+  };
+}
+function compactInstructionNode(node){
+  if(!node)return null;
+  return{id:node.id,type:node.type,label:node.label,start:node.start,end:node.end,rect:node.rect};
+}
+function instructionPayload(){
+  if(!instruction||!source)return null;
+  const context=instructionContext();
+  return{
+    version:1,
+    article:source.article,
+    source:source.source,
+    input:source.kind,
+    page:instruction.page,
+    pageCount:pages.length,
+    pageSize:{w:1456,h:2056},
+    rect:instruction.rect,
+    kind:context.kind,
+    textOnlyPage:context.textOnly,
+    figure:context.figure,
+    overlaps:context.overlaps.map(compactInstructionNode),
+    above:compactInstructionNode(context.above),
+    below:compactInstructionNode(context.below),
+    note:$('instruction-note').value.trim()||null
+  };
+}
+function instructionNodeLine(node){
+  if(!node)return'なし';
+  const range=node.start!==null?` range=${node.start}-${node.end}`:'';
+  return `${node.id} / ${node.type}${range}${node.label?' / '+node.label:''}`;
+}
+function buildInstructionText(){
+  const payload=instructionPayload();if(!payload)throw new Error('指示範囲がありません');
+  const rect=payload.rect,context=instructionContext();
+  return [
+    '【組版テスター指示対象】',
+    `記事: ${payload.article}`,
+    `正本MD: ${payload.source}`,
+    `ページ: ${payload.page} / ${payload.pageCount}`,
+    `範囲: x=${rect.x}, y=${rect.y}, w=${rect.w}, h=${rect.h} px（1456×2056基準）`,
+    `判定: ${payload.kind==='blank'?'空白':'要素上'}${payload.textOnlyPage?' / テキストのみページ':''}`,
+    `重なる要素: ${context.overlaps.length?context.overlaps.map(instructionNodeLine).join(' | '):'なし'}`,
+    `直前: ${instructionNodeLine(context.above)}`,
+    `直後: ${instructionNodeLine(context.below)}`,
+    `指示: ${payload.note||'この範囲を対象にしてください。'}`,
+    'LAYOUT_TARGET_JSON: '+JSON.stringify(payload)
+  ].join('\n');
+}
+function updateInstructionPanel(){
+  if(!instruction){
+    $('instruction-name').textContent='「指示範囲」を押して紙面上をドラッグ';
+    $('instruction-metrics').textContent='空白部分を含め、紙面上の任意の矩形を指定できます。';
+    $('copy-instruction').disabled=$('save-instruction').disabled=$('clear-instruction').disabled=true;
+    return;
+  }
+  const context=instructionContext(),r=instruction.rect;
+  $('instruction-name').textContent=`p${instruction.page} / ${context.kind==='blank'?'空白':'要素上'}`;
+  $('instruction-metrics').textContent=
+    `x ${r.x} / y ${r.y}\nW ${r.w} × H ${r.h} px\n重なり ${context.overlaps.length}件\n直前 ${context.above?.id||'なし'}\n直後 ${context.below?.id||'なし'}`;
+  $('copy-instruction').disabled=$('save-instruction').disabled=$('clear-instruction').disabled=false;
+}
+function setInstructionRegion(pageIndex,rect,{jump=true}={}){
+  instruction=normalizeRegion(pageIndex,rect);
+  if(jump){currentPage=instruction.page;updatePreview();}
+  renderInstructionOverlay();updateInstructionPanel();buttons();
+  return instruction;
+}
+function clearInstruction({keepMode=true}={}){
+  instruction=null;instructionDrag=null;removeInstructionOverlay();updateInstructionPanel();
+  if(!keepMode)setInstructionMode(false);
+  buttons();
+}
+function pointOnPage(event,page){
+  const r=page.getBoundingClientRect();
+  return{x:clamp(event.clientX-r.left,0,r.width),y:clamp(event.clientY-r.top,0,r.height)};
+}
+function dragRect(start,end){
+  return{x:Math.min(start.x,end.x),y:Math.min(start.y,end.y),w:Math.abs(end.x-start.x),h:Math.abs(end.y-start.y)};
+}
+function installInstructionHandlers(doc){
+  doc.addEventListener('pointerdown',event=>{
+    if(!instructionMode||event.button!==0)return;
+    const page=event.target.closest?.('.fixed-page');if(!page)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const pageIndex=pages.indexOf(page)+1,start=pointOnPage(event,page);
+    instructionDrag={page:pageIndex,start,last:start,pointerId:event.pointerId};
+    try{doc.documentElement.setPointerCapture(event.pointerId);}catch{}
+    setInstructionRegion(pageIndex,{x:start.x,y:start.y,w:1,h:1},{jump:false});
+  },true);
+  doc.addEventListener('pointermove',event=>{
+    if(!instructionMode||!instructionDrag||event.pointerId!==instructionDrag.pointerId)return;
+    const page=pages[instructionDrag.page-1];if(!page)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const end=pointOnPage(event,page);instructionDrag.last=end;
+    setInstructionRegion(instructionDrag.page,dragRect(instructionDrag.start,end),{jump:false});
+  },true);
+  doc.addEventListener('pointerup',event=>{
+    if(!instructionMode||!instructionDrag||event.pointerId!==instructionDrag.pointerId)return;
+    const page=pages[instructionDrag.page-1];if(!page)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    let rect=dragRect(instructionDrag.start,pointOnPage(event,page));
+    if(rect.w<8&&rect.h<8){
+      const cx=instructionDrag.start.x,cy=instructionDrag.start.y;
+      rect={x:clamp(cx-80,0,1456),y:clamp(cy-50,0,2056),w:160,h:100};
+      rect.w=Math.min(rect.w,1456-rect.x);rect.h=Math.min(rect.h,2056-rect.y);
+    }
+    const pageIndex=instructionDrag.page;instructionDrag=null;
+    setInstructionRegion(pageIndex,rect,{jump:true});
+    status('指示範囲を指定しました。「ChatGPT用にコピー」で位置情報を渡せます。','ok');
+  },true);
+  doc.addEventListener('click',event=>{
+    if(instructionMode&&event.target.closest?.('.fixed-page')){event.preventDefault();event.stopImmediatePropagation();}
+  },true);
+}
+async function copyText(text){
+  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return;}
+  const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';
+  document.body.append(area);area.select();
+  if(!document.execCommand('copy'))throw new Error('クリップボードへコピーできません');
+  area.remove();
+}
+async function copyInstruction(){
+  if(!instruction)return;
+  const text=buildInstructionText(),page=pages[instruction.page-1];
+  try{
+    const png=await pagePng(page,{includeInstruction:true});
+    if(navigator.clipboard?.write&&globalThis.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/plain':new Blob([text],{type:'text/plain'}),
+        'image/png':png
+      })]);
+      status('ChatGPT用の位置情報と赤枠PNGをクリップボードへコピーしました。','ok');
+      return;
+    }
+  }catch{}
+  await copyText(text);
+  status('ChatGPT用の位置情報をコピーしました。画像が必要なら「指示PNG保存」を使えます。','ok');
+}
+async function saveInstructionPng(){
+  if(!instruction)return;
+  const blob=await pagePng(pages[instruction.page-1],{includeInstruction:true});
+  download(blob,`${fileStem()}-p${String(instruction.page).padStart(3,'0')}-instruction.png`);
+  status('赤枠つき指示PNGを保存しました。','ok');
+}
 function updatePreview(){
   if(!ready||!pages.length){$('page-number').textContent='—';buttons();return;}
   currentPage=Math.max(1,Math.min(currentPage,pages.length));
