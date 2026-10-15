@@ -43,7 +43,8 @@ try{
 }finally{await new Promise(r=>server.close(r));await fs.rm(tmp,{recursive:true,force:true});}
 await test('production tester settings are bounded',()=>{assert.equal(validateTesterSettings(TESTER_DEFAULTS).body.fontSize,28);assert.throws(()=>validateTesterSettings({version:1,body:{fontSize:999}}),/fontSize/);assert.throws(()=>validateTesterSettings({version:1,blocks:{x:{width:100}}}),/本番ブロックID/);});
 const articleMd=await fs.readFile(path.join(ROOT,'202604','04_聖職者花見乱痴気騒ぎ','聖職者花見乱痴気騒ぎ.md'),'utf8');
-await test('browser parser matches the production parser on the real 04 article',()=>{
+await test('browser parser is the same function body and result as production',()=>{
+  assert.equal(parseArticle.toString(),parseProductionArticle.toString());
   const parsed=parseArticle(articleMd),production=parseProductionArticle(articleMd);
   assert.deepEqual(parsed,production);
   assert.equal(parsed.blocks.length,45);
