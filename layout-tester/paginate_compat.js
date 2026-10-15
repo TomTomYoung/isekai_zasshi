@@ -108,7 +108,26 @@
     return ok;
   }
 
-  function paginate(group, image) {
+  function magazineQuickStrip() {
+    const config = source.testerSettings?.magazine?.cards;
+    if (!config?.enabled) return null;
+    const entries = [config.one, config.two, config.three]
+      .filter(card => card && (card.title || card.text));
+    if (!entries.length) return null;
+    const strip = el('section', 'magazine-quick-strip');
+    if (config.heading) strip.append(el('h3', '', config.heading));
+    const cards = el('div', 'magazine-quick-cards');
+    for (const entry of entries) {
+      const card = el('div', 'magazine-quick-card');
+      if (entry.title) card.append(el('strong', '', entry.title));
+      if (entry.text) card.append(el('span', '', entry.text));
+      cards.append(card);
+    }
+    strip.append(cards);
+    return strip;
+  }
+
+  function paginate(group, image, groupIndex) {
     const figure = group.find(b => b.type === 'figure') || null;
     const leadBlocks = group[0]?.type === 'h1' && group[1]?.type === 'h2' ? group.slice(0, 2) : [];
     const blocks = group.filter(b => b.type !== 'figure' && !leadBlocks.includes(b));
@@ -165,6 +184,17 @@
 
     if (headings.length) {
       throw new Error(`Section ends in orphan heading ${headings[0].id}.`);
+    }
+
+    if (groupIndex === 0) {
+      const strip = magazineQuickStrip();
+      if (strip) {
+        context.body.append(strip);
+        if (!fits(context.page)) {
+          strip.remove();
+          context.page.dataset.magazineStripSkipped = 'true';
+        }
+      }
     }
   }
 
@@ -310,7 +340,7 @@
       return image;
     }));
 
-    source.groups.forEach((group, index) => paginate(group, images[index]));
+    source.groups.forEach((group, index) => paginate(group, images[index], index));
     await Promise.all([...document.images].map(image => image.decode()));
 
     const report = audit();
