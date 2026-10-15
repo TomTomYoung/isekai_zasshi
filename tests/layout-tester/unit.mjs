@@ -5,7 +5,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {fileURLToPath} from 'node:url';
 import {parseMarkdown, inline, inlineText, mergeSettings, validateSettings, assetPath, makeZip, crc32} from '../../layout-tester/core.mjs';
-import {startServer} from '../../tools/layout_tester_server.mjs';
+import {startServer,validateTesterSettings,TESTER_DEFAULTS} from '../../tools/layout_tester_server.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const defaults=JSON.parse(await fs.readFile(path.join(ROOT,'layout-tester/defaults.json'),'utf8'));
 let count=0;async function test(name,run){await run();console.log(`ok ${++count} - ${name}`);}
@@ -38,5 +38,14 @@ try{
   await test('HTTP allows its own origin and blocks cross-origin embedding',async()=>{const r=await request('/layout-tester/',{headers:{Origin:`http://127.0.0.1:${port}`,'Sec-Fetch-Site':'same-origin'}});assert.equal(r.status,200);assert.equal(r.headers['cross-origin-resource-policy'],'same-origin');});
   await test('HTTP rejects a symlink outside root',async()=>{const outside=path.join(os.tmpdir(),`isekai-outside-${process.pid}.md`);await fs.writeFile(outside,'secret');try{await fs.symlink(outside,path.join(tmp,'escape.md'));assert.equal((await request('/escape.md')).status,403);}finally{await fs.rm(outside,{force:true});}});
 }finally{await new Promise(r=>server.close(r));await fs.rm(tmp,{recursive:true,force:true});}
+await test('production tester settings are bounded',()=>{assert.equal(validateTesterSettings(TESTER_DEFAULTS).body.fontSize,28);assert.throws(()=>validateTesterSettings({version:1,body:{fontSize:999}}),/fontSize/);assert.throws(()=>validateTesterSettings({version:1,blocks:{x:{width:100}}}),/本番ブロックID/);});
+const prod=await startServer({port:0,root:ROOT}),prodPort=prod.address().port;
+const prodRequest=(url,{method='GET',body,headers={}}={})=>new Promise((resolve,reject)=>{const data=body===undefined?null:Buffer.from(JSON.stringify(body));const req=http.request({hostname:'127.0.0.1',port:prodPort,path:url,method,headers:{...headers,...(data?{'Content-Type':'application/json','Content-Length':data.length}:{})}},res=>{const chunks=[];res.on('data',c=>chunks.push(c));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));});req.on('error',reject);if(data)req.write(data);req.end();});
+try{
+  let loaded;
+  await test('production source endpoint reads canonical 202604 article',async()=>{const r=await prodRequest('/__layout-tester/source?article='+encodeURIComponent('202604/04_聖職者花見乱痴気騒ぎ'));assert.equal(r.status,200);loaded=JSON.parse(r.body.toString('utf8'));assert.equal(loaded.source,'聖職者花見乱痴気騒ぎ.md');assert.match(loaded.markdown,/^# /m);assert.equal(loaded.settings.body.fontSize,28);});
+  await test('production compose uses article_source template and tester CSS only as overlay',async()=>{const r=await prodRequest('/__layout-tester/compose',{method:'POST',body:{article:loaded.article,markdown:loaded.markdown,settings:{version:1,body:{fontSize:27,lineHeight:42},image:{landscapeHeight:885,portraitHeight:1030},blocks:{}}}});assert.equal(r.status,200);const html=r.body.toString('utf8');assert.match(html,/name="article-source-contract" content="1"/);assert.match(html,/font-family:ArticleSubset/);assert.match(html,/id="layout-tester-overrides"/);assert.match(html,/\.article-body\{font-size:27px;line-height:42px\}/);assert.match(html,/window\.__articleComposition/);assert.doesNotMatch(html,/article-render-sha256/);});
+  await test('production endpoints reject noncanonical paths and static writes stay read-only',async()=>{assert.equal((await prodRequest('/__layout-tester/source?article='+encodeURIComponent('../outside'))).status,400);assert.equal((await prodRequest('/layout-tester/index.html',{method:'POST',body:{}})).status,405);});
+}finally{await new Promise(r=>prod.close(r));}
 await test('browser runner keeps sandbox enabled and uses HTTP only',async()=>{const s=await fs.readFile(path.join(ROOT,'tests/layout-tester/browser.mjs'),'utf8');assert.match(s,/chromiumSandbox:true/);assert.doesNotMatch(s,/--no-sandbox|LAYOUT_TEST_MEMORY|page\.setContent|page\.addScriptTag/);});
 console.log(`PASS ${count} tests`);
