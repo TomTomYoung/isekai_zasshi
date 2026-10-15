@@ -1,5 +1,30 @@
 # 組版テスター 作業状況
 
+## 2026-10-15 専用API撤廃版
+
+実機画面で `Cannot GET /__layout-tester/source` が確認された。原因は、PR #13版が `tools/layout_tester_server.mjs` の動的endpointを起動済みであることを利用条件にしていたため。
+
+修正版では、画面から `/__layout-tester/*` 呼出しを削除した。正本・CSS・runtime・フォントを静的GETし、組版とPNG生成をブラウザ内で行う。
+
+追加・変更した主なファイル：
+
+```text
+tools/article_parse.mjs
+layout-tester/production_settings.mjs
+layout-tester/production_export.mjs
+layout-tester/app.mjs
+tools/layout_tester_server.mjs
+```
+
+`article_source.mjs` を共有module化する案も途中で試したが、同ファイル自体が既存 `fixed_layout.html` の依存ハッシュ契約に含まれるため、本番HTMLを一斉にstale扱いにする問題があると判明した。この変更は撤回し、masterと同じ `article_source.mjs` に戻した。
+
+ブラウザparserは本番関数本体のコピーとし、テストで関数 `toString()` の完全一致を要求する。これにより本番契約を壊さず、ブラウザで同じ文法を使う。
+
+変更後の主要mjs/testファイルはV8構文確認済み。現在の作業環境ではGitHubリポジトリをcloneしてChromium実行できないため、静的HTTPブラウザ試験の実行結果はまだ未計上。旧PR #13以前の成功件数を現行版の成功件数へ流用しない。
+
+---
+
+
 記録日：2026-10-15。仕様は [HTML_LAYOUT_TESTER.md](HTML_LAYOUT_TESTER.md)。
 
 ## 2026-10-15 本番組版経路への作り直し
