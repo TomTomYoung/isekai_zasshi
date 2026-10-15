@@ -52,9 +52,12 @@ async function sha256(blob){
   return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 async function optionalStaticFont(article){
-  const infoResponse=await read(repoUrl(`${article}/fonts/font.json`),{cache:'no-store'});
-  const fontResponse=await read(repoUrl(`${article}/fonts/article.woff`),{cache:'no-store'});
-  if(infoResponse.ok&&fontResponse.ok){
+  const request=async relative=>{try{return await read(repoUrl(relative),{cache:'no-store'});}catch{return null;}};
+  const [infoResponse,fontResponse]=await Promise.all([
+    request(`${article}/fonts/font.json`),
+    request(`${article}/fonts/article.woff`)
+  ]);
+  if(infoResponse?.ok&&fontResponse?.ok){
     let fontInfo;
     try{fontInfo=JSON.parse(await infoResponse.text());}catch{throw new Error('fonts/font.json をJSONとして読めません');}
     if(!Array.isArray(fontInfo.codepoints)||typeof fontInfo.sha256!=='string')throw new Error('fonts/font.json が不正です');
@@ -62,7 +65,7 @@ async function optionalStaticFont(article){
     if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォントのハッシュが font.json と一致しません');
     return{fontInfo,fontBlob,fontMode:'article'};
   }
-  if(infoResponse.ok!==fontResponse.ok)throw new Error('fonts/font.json と fonts/article.woff は両方置くか、両方省略してください');
+  if(Boolean(infoResponse?.ok)!==Boolean(fontResponse?.ok))throw new Error('fonts/font.json と fonts/article.woff は両方置くか、両方省略してください');
   const fallbackArticle='202604/04_聖職者花見乱痴気騒ぎ';
   const [fallbackInfo,fallbackBlob]=await Promise.all([
     staticJson(`${fallbackArticle}/fonts/font.json`),
