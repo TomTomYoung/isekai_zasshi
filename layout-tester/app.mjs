@@ -250,7 +250,7 @@ async function compose(){
     status(`${source.source} · ${pages.length}ページ · 本番組版OK`,'ok');updatePreview();updateSelection();
   }catch(error){
     if(token===generation){dirty=false;clearPreview(error.message);status(error.message,'error');}
-  }finally{if(token===generation){busy=false;buttons();}}
+  }finally{busy=false;buttons();}
 }
 async function loadSource(){
   if(busy)return;const token=++generation;busy=true;buttons();status('layout-source.json と正本MDを直接読込中です…','busy');
@@ -261,7 +261,7 @@ async function loadSource(){
     selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
   }catch(error){
     if(token===generation){source=null;dirty=true;clearPreview(error.message);status(error.message,'error');}
-  }finally{if(token===generation){busy=false;buttons();}}
+  }finally{busy=false;buttons();}
 }
 async function exportOutput(all){
   if(!source||!ready||dirty||busy)return;busy=true;buttons();
