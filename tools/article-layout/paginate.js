@@ -45,7 +45,7 @@
   // letterboxing is excluded from the image area; no cover cropping is used.
   function fits(page) {
     const m = metrics(page);
-    return m.bottom <= 1936 && (!page.querySelector('img') || m.imageArea > m.textArea);
+    return m.bottom <= 1936 && m.imageArea > m.textArea;
   }
   let pageNumber = 0;
   function newPage(figure, image, repeated, leadBlocks = []) {
@@ -54,21 +54,16 @@
     head.append(el('span', '', '異世界丸見え実話'), el('span', '', '2026 / 04　現地取材'));
     const lead = leadBlocks.length ? el('div', 'article-lead') : null;
     if (lead) lead.append(...leadBlocks.map(block => render(block)));
+    const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));
+    scene.dataset.figure = figure.id;
+    scene.dataset.repeated = String(repeated);
+    const img = image.cloneNode(); img.className = 'scene-image';
+    scene.append(img, el('figcaption', '', figure.caption));
     const body = el('div', 'article-body');
     const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));
     page.append(head);
     if (lead) page.append(lead);
-    if (figure && image) {
-      const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));
-      scene.dataset.figure = figure.id;
-      scene.dataset.repeated = String(repeated);
-      const img = image.cloneNode(); img.className = 'scene-image';
-      scene.append(img, el('figcaption', '', figure.caption));
-      page.append(scene);
-    } else {
-      page.dataset.textOnly = 'true';
-    }
-    page.append(body, folio); root.append(page);
+    page.append(scene, body, folio); root.append(page);
     return { page, body };
   }
   function candidate(context, headings, block, start, end) {
@@ -83,7 +78,7 @@
     const leadBlocks = group[0]?.type === 'h1' && group[1]?.type === 'h2' ? group.slice(0, 2) : [];
     const blocks = group.filter(b => b.type !== 'figure' && !leadBlocks.includes(b));
     let context = newPage(figure, image, false, leadBlocks), headings = [];
-    const nextPage = () => { context = newPage(null, null, false); };
+    const nextPage = () => { context = newPage(figure, image, true); };
     for (const block of blocks) {
       if (/^h[123]$/.test(block.type)) { headings.push(block); continue; }
       const length = block.type === 'table' ? block.rows.length : [...block.text].length;
@@ -125,7 +120,7 @@
     for (const block of source.blocks) {
       if (block.type === 'figure') {
         const figures = [...root.querySelectorAll('[data-figure]')].filter(n => n.dataset.figure === block.id);
-        if (figures.length !== 1 || figures[0].dataset.repeated !== 'false') errors.push(`${block.id}: figure missing or duplicated`);
+        if (!figures.length || figures[0].dataset.repeated !== 'false' || figures.slice(1).some(n => n.dataset.repeated !== 'true')) errors.push(`${block.id}: figure missing or repeat identity invalid`);
         for (const figure of figures) {
           const image = figure.querySelector('img');
           if (new URL(image.src).pathname !== new URL(block.src, document.baseURI).pathname || image.alt !== block.alt || figure.querySelector('figcaption').textContent !== block.caption) errors.push(`${block.id}: selected image/caption mismatch`);
@@ -154,8 +149,7 @@
       }
       const m = metrics(page);
       if (!fits(page)) errors.push(`page ${index + 1}: image/text area or body budget failed`);
-      const scene = page.querySelector('.scene');
-      return { page: index + 1, ...m, figure: scene?.dataset.figure || null, repeated: false, textOnly: !scene };
+      return { page: index + 1, ...m, figure: page.querySelector('.scene').dataset.figure, repeated: page.querySelector('.scene').dataset.repeated === 'true' };
     });
     return { ok: errors.length === 0, sourceBlocks: source.blocks.length, selectedImages: source.manifest.selectedImages.length, pages: reports, errors };
   }
