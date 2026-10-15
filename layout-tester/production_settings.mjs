@@ -16,6 +16,8 @@ export const TESTER_DEFAULTS={
     captionSize:22,
     captionRuleWidth:0,
     packFirstPage:false,
+    autoFitFirstPage:false,
+    firstPageMinImageHeight:620,
     cards:{
       enabled:false,
       heading:'',
@@ -84,7 +86,7 @@ export function validateTesterSettings(raw){
   }
   if(value.magazine!==undefined){
     object(value.magazine,'magazine');
-    allowedKeys(value.magazine,['paperColor','accentColor','textureStrength','titleSize','subtitleSize','paragraphGap','introSize','introLineHeight','introRuleWidth','dropCapSize','captionSize','captionRuleWidth','packFirstPage','cards'],'magazine');
+    allowedKeys(value.magazine,['paperColor','accentColor','textureStrength','titleSize','subtitleSize','paragraphGap','introSize','introLineHeight','introRuleWidth','dropCapSize','captionSize','captionRuleWidth','packFirstPage','autoFitFirstPage','firstPageMinImageHeight','cards'],'magazine');
     const numeric=[
       ['textureStrength',0,40],
       ['titleSize',20,100],
@@ -95,7 +97,8 @@ export function validateTesterSettings(raw){
       ['introRuleWidth',0,16],
       ['dropCapSize',0,120],
       ['captionSize',8,60],
-      ['captionRuleWidth',0,8]
+      ['captionRuleWidth',0,8],
+      ['firstPageMinImageHeight',120,1600]
     ];
     for(const [key,min,max] of numeric)if(value.magazine[key]!==undefined){
       number(value.magazine[key],min,max,`magazine.${key}`);
@@ -108,6 +111,10 @@ export function validateTesterSettings(raw){
     if(value.magazine.packFirstPage!==undefined){
       boolean(value.magazine.packFirstPage,'magazine.packFirstPage');
       out.magazine.packFirstPage=value.magazine.packFirstPage;
+    }
+    if(value.magazine.autoFitFirstPage!==undefined){
+      boolean(value.magazine.autoFitFirstPage,'magazine.autoFitFirstPage');
+      out.magazine.autoFitFirstPage=value.magazine.autoFitFirstPage;
     }
     if(value.magazine.cards!==undefined){
       object(value.magazine.cards,'magazine.cards');
