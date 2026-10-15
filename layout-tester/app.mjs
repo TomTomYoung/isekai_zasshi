@@ -26,7 +26,7 @@ async function api(url,options){
 function buttons(){
   const allowed=source&&ready&&!busy&&!dirty;
   $('png').disabled=$('zip').disabled=!allowed;
-  $('save-config').disabled=!source||busy;
+  $('save-config').disabled=!source||busy||pendingJson;
   $('prev').disabled=!ready||busy||currentPage<=1;
   $('next').disabled=!ready||busy||currentPage>=pages.length;
 }
@@ -167,7 +167,10 @@ async function compose(){
     showDiagnostics(report);$('render-source').textContent='parseArticle + template.css + ArticleSubset + paginate.js';
     status(`${source.source} · ${pages.length}ページ · 本番組版OK`,'ok');updatePreview();updateSelection();
   }catch(error){
-    ready=false;dirty=false;pages=[];articleData=null;showDiagnostics(null,error.message);status(error.message,'error');
+    ready=false;dirty=false;pages=[];articleData=null;selected=null;
+    frame.removeAttribute('src');frame.srcdoc='<!doctype html><html><body style="margin:0;background:#fff"></body></html>';
+    $('block-list').replaceChildren();$('block-count').textContent='0件';$('page-number').textContent='—';$('render-source').textContent='—';
+    showDiagnostics(null,error.message);status(error.message,'error');updateSelection();
   }finally{busy=false;buttons();}
 }
 async function loadSource(){
@@ -177,8 +180,12 @@ async function loadSource(){
     source=await response.json();settings=structuredClone(source.settings||DEFAULTS);
     $('markdown').value=source.markdown;$('source-name').textContent=source.source;$('source-article').textContent=source.article;$('source-path').value=source.article;
     selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
-  }catch(error){source=null;ready=false;dirty=true;status(error.message,'error');showDiagnostics(null,error.message);}
-  finally{busy=false;buttons();}
+  }catch(error){
+    source=null;ready=false;dirty=true;pages=[];articleData=null;selected=null;
+    frame.removeAttribute('src');frame.srcdoc='<!doctype html><html><body style="margin:0;background:#fff"></body></html>';
+    $('block-list').replaceChildren();$('block-count').textContent='0件';$('page-number').textContent='—';$('render-source').textContent='—';
+    status(error.message,'error');showDiagnostics(null,error.message);updateSelection();
+  } finally{busy=false;buttons();}
 }
 async function exportOutput(all){
   if(!source||!ready||dirty||busy)return;busy=true;buttons();status(all?'本番DOMから全ページPNGを生成しています…':'本番DOMからPNGを生成しています…','busy');
