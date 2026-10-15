@@ -61,7 +61,33 @@ tools/article-layout/paginate.js
 
 日本語パスについて、CodeSwing等による `window.fetch` 差替えの影響を避けるため、同一originの空iframeから得たブラウザ本来のfetchを使用する。
 
-## 4. Markdown parser
+## 4. エクスプローラ記事フォルダー入力
+
+利用者は記事パス入力だけでなく、「記事フォルダーをエクスプローラで選択」も利用できる。
+
+フォルダー入力は `<input type="file" webkitdirectory multiple>` を使う。
+
+選択結果から `layout-source.json` をちょうど1つ見つけ、そのファイルがある階層を記事フォルダーのルートとする。複数見つかった場合は、号フォルダー等を選んだものとして停止し、記事フォルダー単位の選択を要求する。
+
+次を選択フォルダーから読む。
+
+```text
+layout-source.json
+layout-source.json.source が指す正本MD
+fonts/font.json
+fonts/article.woff
+figureで指定された採用画像
+```
+
+正本MD・フォント・画像をリポジトリ側の同名ファイルへ勝手に差し替えない。
+
+一方、組版器である `template.css` と `paginate.js` はリポジトリ上の本番ファイルを共用する。
+
+選択フォルダー内の画像はblob URLへ変換し、候補article-sourceのfigure srcにも同じblob URLを入れることで、本番 `auditArticleComposition()` の画像identity検査を維持する。
+
+フォルダー入力を解除・別記事へ切り替えたときは、生成したblob URLをrevokeする。
+
+## 5. Markdown parser
 
 Node本番の `tools/article_source.mjs` は既存 `fixed_layout.html` の依存ハッシュ契約に含まれるため、テスター都合で変更しない。
 
@@ -81,7 +107,7 @@ parseArticle.toString()
 
 ブラウザ側だけ記法を追加・削除してはならない。
 
-## 5. 本番候補HTML
+## 6. 本番候補HTML
 
 候補HTMLはブラウザ内でメモリ生成する。
 
@@ -105,7 +131,7 @@ parseArticle.toString()
 
 画像はMarkdownで指定された記事内相対パスを、`base` により記事フォルダーへ解決する。
 
-## 6. 本番組版
+## 7. 本番組版
 
 本番 `paginate.js` をそのまま実行する。
 
@@ -125,7 +151,7 @@ data-figure="bNNN"
 
 独自の `.sheet` / `.flow` / `.block` ページネータを現行入口では使わない。
 
-## 7. 計測
+## 8. 計測
 
 選択ブロックについて次を表示する。
 
@@ -148,7 +174,7 @@ figureでは追加で、
 
 画面表示倍率はiframeの外側へ適用し、iframe内部の1456×2056座標を変えない。
 
-## 8. 一時設定
+## 9. 一時設定
 
 version 1では次を候補CSSとして適用できる。
 
@@ -174,7 +200,7 @@ padding.top/right/bottom/left
 
 設定変更後は、旧DOMへCSSだけ後付けせず、候補HTMLを再構築して本番 `paginate.js` を最初から実行する。
 
-## 9. 組版検査
+## 10. 組版検査
 
 候補生成後に `auditArticleComposition()` を実行する。
 
@@ -193,7 +219,7 @@ padding.top/right/bottom/left
 
 audit失敗時はPNG/ZIP出力を許可しない。
 
-## 10. PNG / ZIP
+## 11. PNG / ZIP
 
 PNG生成にも専用サーバーやPlaywright起動を要求しない。
 
@@ -221,7 +247,7 @@ Canvas
 
 旧独自rendererをPNG入力にしてはならない。
 
-## 11. 保護範囲
+## 12. 保護範囲
 
 テスターから次を上書きしない。
 
@@ -235,7 +261,7 @@ Canvas
 
 テスター内の編集・設定変更はメモリ上だけに適用する。
 
-## 12. 専用API方式の廃止
+## 13. 専用API方式の廃止
 
 PR #13では、
 
@@ -259,7 +285,7 @@ Cannot GET /__layout-tester/source
 
 `tools/layout_tester_server.mjs` は必要なら自動試験で使う読取専用の静的サーバーに限定する。
 
-## 13. 初期実記事
+## 14. 初期実記事
 
 ```text
 202604/04_聖職者花見乱痴気騒ぎ
@@ -275,7 +301,7 @@ Cannot GET /__layout-tester/source
 1456 × 2056 px / page
 ```
 
-## 14. 合格条件
+## 15. 合格条件
 
 最低条件：
 
@@ -283,15 +309,16 @@ Cannot GET /__layout-tester/source
 2. `/__layout-tester/*` へ1件もHTTP requestを出さない。
 3. `layout-source.json` を直接読める。
 4. 正本Markdownを日本語パスのまま直接読める。
-5. ブラウザparserと本番parserの関数本体が一致する。
-6. 04記事が45 blocks / 5 figures / 5 groupsになる。
-7. ArticleSubsetがロードされる。
-8. 本番paginate.jsで6ページになる。
-9. `auditArticleComposition()` が成功する。
-10. 本番DOMの実寸を取得できる。
-11. 一時設定後に本番paginateを再実行する。
-12. 現在ページのPNGが1456×2056になる。
-13. PNG出力後も `/__layout-tester/*` requestが0件である。
-14. 正本・既存HTML・既存PNGを変更しない。
+5. エクスプローラから実記事04フォルダーを選び、正本MD・5採用画像・記事フォントをFileから解決できる。
+6. ブラウザparserと本番parserの関数本体が一致する.
+7. 04記事が45 blocks / 5 figures / 5 groupsになる。
+8. ArticleSubsetがロードされる。
+9. 本番paginate.jsで6ページになる。
+10. `auditArticleComposition()` が成功する。
+11. 本番DOMの実寸を取得できる。
+12. 一時設定後に本番paginateを再実行する。
+13. エクスプローラ入力の状態でも現在ページのPNGが1456×2056になる。
+14. PNG出力後も `/__layout-tester/*` requestが0件である。
+15. 正本・既存HTML・既存PNGを変更しない。
 
 利用者へ追加のサーバー起動手順を要求した時点で、この仕様を満たしていない。
