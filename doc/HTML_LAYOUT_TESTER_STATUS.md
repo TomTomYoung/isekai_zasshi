@@ -2,6 +2,18 @@
 
 記録日：2026-10-15。仕様は [HTML_LAYOUT_TESTER.md](HTML_LAYOUT_TESTER.md)。
 
+## 2026-10-15 実装反映の更新
+
+本変更で `layout-tester/`、`tools/layout_tester_server.mjs`、`tests/layout-tester/` とnpmスクリプトを追加しました。起動はリポジトリ直下で `npm run layout:tester`、入口は `http://127.0.0.1:4173/layout-tester/` です。操作は [layout-tester/README.md](../layout-tester/README.md) を参照してください。以下の「仕様と記録のみ」は初回PR #11時点の履歴で、現在の配置状態ではありません。
+
+前回の書込拒否には詳細な理由が返っていないため、原因を特定したとはしていません。コードを点検し、テストのサンドボックス無効化指定とメモリ注入経路を削除しました。ブラウザ試験はサンドボックスを有効にしたHTTP経路だけとし、拒否された場合は停止します。アプリのファイル取得は同一origin・認証情報なし・リダイレクトなしに限定し、サーバーはcross-site要求と異なるOriginを拒否します。この修正版は通常のGitHub書込が成功しました。
+
+今回のロジック・実HTTP・テスト起動条件55件と7つのmjsの構文確認は成功しました。ブラウザはサンドボックス有効で起動しましたが、HTTP遷移が `ERR_BLOCKED_BY_ADMINISTRATOR` となり今回の画面試験は未完了です。初回のブラウザ22件の結果と混ぜません。検証範囲と初回記録は [tests/layout-tester/README.md](../tests/layout-tester/README.md)、機械可読結果は [results.json](../tests/layout-tester/results.json) にあります。
+
+202603・202604、原稿、画像、既存固定HTML・PNG、記事承認状態、既存ビルド実装は変更しません。package.jsonは既存内容を保持して起動・試験の2項目を追加し、依存ライブラリとpackage-lock.jsonは変更していません。Windows実機・既存テスト群の再実行、既存記事ビルドへの統合は未完了です。
+
+## 初回記録（PR #11時点・以下は履歴）
+
 ## リポジトリへの反映状況
 
 この時点でリポジトリへ反映したのは仕様書と本記録です。実装ファイルのGitHub書込は接続ツールの安全性確認でブロックされました。別経路で回避していません。したがって、この記録を実装コードの配置完了として扱わないでください。

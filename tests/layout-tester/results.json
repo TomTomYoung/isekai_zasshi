@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-15",
+  "node": "v22.16.0",
+  "current": {
+    "unitPassed": 55,
+    "syntaxCheck": "7 mjs files passed",
+    "browser": {
+      "chromiumSandbox": true,
+      "mode": "HTTP",
+      "status": "blocked-before-tests",
+      "error": "page.goto: net::ERR_BLOCKED_BY_ADMINISTRATOR on loopback HTTP",
+      "passed": 0
+    },
+    "originalSuites": "not rerun",
+    "windows": "not verified"
+  },
+  "initialVersion": {
+    "mode": "in-memory module-body harness",
+    "browser": "144.0.7559.96",
+    "node": "v22.16.0",
+    "tests": [
+      "sample: two pages and no diagnostics",
+      "image frame versus aspect-preserving visible image",
+      "PNG actual download and 1x dimensions",
+      "guides and zoom do not change exported pixels",
+      "PNG versus clean DOM screenshot",
+      "all-page ZIP actual download",
+      "2x export scale independent of screen zoom",
+      "settings JSON actual download and import roundtrip",
+      "block width, asymmetric margin and padding",
+      "cover clips without distorting the image",
+      "oversized atomic image disables PNG",
+      "long styled paragraph splits with no Unicode loss",
+      "two-column pagination uses both columns",
+      "heading is kept with a following text line",
+      "stale block override is visible",
+      "missing image blocks output without reusing old success",
+      "unsupported HTML is rejected and never executed",
+      "invalid JSON cannot be accepted by pressing compose",
+      "rapid edits keep only the latest composition",
+      "folder input resolves identical basenames by exact relative path",
+      "blank numeric setting stays invalid instead of becoming zero",
+      "no unhandled browser errors"
+    ],
+    "passed": 22,
+    "unitPassed": 52,
+    "pixelComparison": {
+      "changed": 42,
+      "total": 2993536,
+      "mean": 3.073288579125155e-05
+    },
+    "date": "2026-10-15"
+  }
+}

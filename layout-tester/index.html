@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>組版テスター | 異世界雑誌</title><link rel="stylesheet" href="ui.css"></head>
+<body>
+<header class="app-header"><div><span class="eyebrow">ISEKAI ZASSHI / TYPE LAB 01</span><h1>組版テスター</h1></div><div class="header-note">Markdown → 紙面を実測 → PNG<br><small>原稿ファイルは上書きしません</small></div><div class="exports"><button id="save-config">設定JSONを保存</button><button id="png" class="primary" disabled>このページをPNG</button><button id="zip" disabled>全ページZIP</button></div></header>
+<div id="status" role="status" aria-live="polite">起動中。HTTPサーバーが必要です：リポジトリ直下で npm run layout:tester</div>
+<main class="workspace">
+<aside class="sidebar source-panel">
+<h2><span>01</span> 原稿・素材</h2>
+<div class="file-actions"><label class="file-button">MDを開く<input id="md-file" type="file" accept=".md,.markdown,text/markdown"></label><label class="file-button">画像を追加<input id="image-files" type="file" accept="image/png,image/jpeg,image/webp" multiple></label></div>
+<label class="file-button folder">記事フォルダーを開く<input id="folder-files" type="file" webkitdirectory multiple></label>
+<select id="folder-md" aria-label="フォルダー内の原稿" hidden></select>
+<details><summary>リポジトリ内の原稿を読む</summary><label>リポジトリ相対パス<input id="source-path" type="text" placeholder="202604/記事フォルダー/原稿.md"></label><button id="load-path">この原稿を読む</button></details>
+<div class="source-meta"><span id="source-name">試用原稿</span><button id="demo" class="subtle">サンプルへ</button></div>
+<textarea id="markdown" spellcheck="false" aria-label="Markdown原稿"></textarea>
+<button id="compose" class="wide primary">この原稿で組版</button>
+<p class="hint">画像は原稿と同じフォルダーを基準に解決します。入れ子の画像はフォルダーごと選択してください。</p>
+<h2><span>02</span> ブロック <small id="block-count"></small></h2><div id="block-list" class="block-list" aria-label="原稿ブロック一覧"></div>
+</aside>
+<section class="preview-panel" aria-label="紙面プレビュー">
+<div class="preview-toolbar"><button id="prev" aria-label="前ページ">←</button><strong id="page-number">—</strong><button id="next" aria-label="次ページ">→</button><label class="zoom-label">表示 <input id="zoom" type="range" min="20" max="100" step="5" value="35"><output id="zoom-value">35%</output></label><label class="check"><input id="guides" type="checkbox" checked>寸法ガイド</label></div>
+<div class="legend"><span>金：紙面余白・margin</span><span>緑：paddingの内側</span><span>青：ブロック</span><span>紫：画像の可視範囲</span></div>
+<div id="canvas" class="canvas"><div id="pages"></div></div>
+<div class="preview-footer"><span id="paper-size">—</span><span>寸法はズーム前のCSS px</span></div>
+<details class="diagnostic-box" open><summary id="diagnostic-title">検査結果</summary><div id="diagnostics"></div></details>
+</section>
+<aside class="sidebar settings-panel">
+<section class="inspector"><h2><span>03</span> 選択対象</h2><div id="selection-name">紙面上の文章・画像を選択</div><pre id="metrics">選択するとW/H、位置、余白を表示します。</pre><details><summary>このブロックの個別調整</summary><form id="block-form" class="settings-form"></form><button id="reset-block" disabled>このブロックの個別設定を解除</button></details></section>
+<h2><span>04</span> 組版設定</h2>
+<label class="file-button">設定JSONを読み込む<input id="config-file" type="file" accept=".json,application/json"></label>
+<details open><summary>紙面・文字・画像</summary><form id="settings-form" class="settings-form"></form></details>
+<details><summary>設定JSONを直接編集</summary><textarea id="json-editor" spellcheck="false" aria-label="設定JSON"></textarea><button id="apply-json">JSONを適用</button></details>
+
+<p class="hint">OSフォントを使用します。別の端末では改行やページ数が変わる場合があります。画像は縦横比を保ちます。</p>
+</aside>
+</main>
+<script type="module" src="app.mjs"></script>
+</body></html>

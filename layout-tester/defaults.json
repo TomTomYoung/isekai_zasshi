@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "page": {"width": 1456, "height": 2056, "padding": {"top": 64, "right": 64, "bottom": 64, "left": 64}, "columns": 1, "columnGap": 40, "background": "#ffffff"},
+  "body": {"fontFamily": "\"Noto Sans CJK JP\", \"Yu Gothic\", \"Hiragino Kaku Gothic ProN\", sans-serif", "fontSize": 28, "lineHeight": 42, "paragraphGap": 18, "color": "#20242b"},
+  "heading": {"scale": 1.6, "lineHeight": 1.5, "gap": 22},
+  "image": {"height": 600, "fit": "contain", "captionSize": 22, "captionGap": 12},
+  "export": {"scale": 1},
+  "blocks": {}
+}
