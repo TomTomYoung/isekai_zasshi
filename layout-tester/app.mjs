@@ -4,7 +4,7 @@ import {exportProductionPages} from './production_export.mjs';
 
 const $=id=>document.getElementById(id);
 const SIDES=['top','right','bottom','left'];
-const REPO_ROOT=new URL('../',import.meta.url);
+const REPO_ROOT=new URL('../',document.baseURI);
 // CodeSwing等がwindow.fetchを差し替えて日本語パスを変形する場合でも、
 // 同一originの空iframeから取得したブラウザ本来のfetchを使う。
 const transport=document.createElement('iframe');
