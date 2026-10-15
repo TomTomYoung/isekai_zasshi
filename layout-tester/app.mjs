@@ -51,6 +51,38 @@ async function sha256(blob){
   const digest=await crypto.subtle.digest('SHA-256',await blob.arrayBuffer());
   return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
+async function optionalStaticFont(article){
+  const infoResponse=await read(repoUrl(`${article}/fonts/font.json`),{cache:'no-store'});
+  const fontResponse=await read(repoUrl(`${article}/fonts/article.woff`),{cache:'no-store'});
+  if(infoResponse.ok&&fontResponse.ok){
+    let fontInfo;
+    try{fontInfo=JSON.parse(await infoResponse.text());}catch{throw new Error('fonts/font.json をJSONとして読めません');}
+    if(!Array.isArray(fontInfo.codepoints)||typeof fontInfo.sha256!=='string')throw new Error('fonts/font.json が不正です');
+    const fontBlob=await fontResponse.blob(),actualHash=await sha256(fontBlob);
+    if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォントのハッシュが font.json と一致しません');
+    return{fontInfo,fontBlob,fontMode:'article'};
+  }
+  if(infoResponse.ok!==fontResponse.ok)throw new Error('fonts/font.json と fonts/article.woff は両方置くか、両方省略してください');
+  const fallbackArticle='202604/04_聖職者花見乱痴気騒ぎ';
+  const [fallbackInfo,fallbackBlob]=await Promise.all([
+    staticJson(`${fallbackArticle}/fonts/font.json`),
+    staticFetch(`${fallbackArticle}/fonts/article.woff`,{binary:true})
+  ]);
+  return{fontInfo:fallbackInfo,fontBlob:fallbackBlob,fontMode:'shared-fallback'};
+}
+function normalizeArticleMarkdown(markdown){
+  let changed=false;
+  const normalized=markdown.replace(/<figure(?:\s+[^>]*)?>\s*\n\s*<img\s+([^>]*?)\/?\s*>\s*\n\s*<figcaption>([^<>]*)<\/figcaption>\s*\n\s*<\/figure>/g,(whole,attrs,caption)=>{
+    const src=attrs.match(/(?:^|\s)src="([^"<>]+)"/),alt=attrs.match(/(?:^|\s)alt="([^"<>]*)"/);
+    if(!src||!alt)return whole;
+    let value=src[1];
+    if(/^[A-Za-z0-9_.-]+\.(?:png|jpg|jpeg|webp)$/i.test(value))value='./'+value;
+    if(!/^\.\/[A-Za-z0-9_.-]+\.(?:png|jpg|jpeg|webp)$/i.test(value))return whole;
+    changed=true;
+    return `<figure>\n<img src="${value}" alt="${alt[1]}">\n<figcaption>${caption}</figcaption>\n</figure>`;
+  });
+  return{markdown:normalized,changed};
+}
 function normalizeArticleInput(input){
   let relative=String(input||'').trim().replace(/\\/g,'/');
   if(!relative||relative.startsWith('/')||relative.includes(':')||relative.includes('?')||relative.includes('#')||relative.split('/').some(x=>!x||x==='.'||x==='..'||x.startsWith('.')))throw new Error('リポジトリ内の記事パスを指定してください');
@@ -64,19 +96,15 @@ async function loadStaticArticle(input){
   const config=await staticJson(`${article}/layout-source.json`);
   if(config?.version!==1||config?.template!=='illustrated-article-v1'||typeof config.source!=='string'||!config.source||/[\\/]/.test(config.source)||config.source.startsWith('.'))throw new Error('layout-source.json が本番Markdown記事の形式ではありません');
   if(expectedSource&&expectedSource!==config.source)throw new Error(`指定MDは正本ではありません。正本: ${config.source}`);
-  const [markdown,templateCss,runtime,fontInfo,fontBlob]=await Promise.all([
+  const [markdown,templateCss,runtime,font]=await Promise.all([
     staticFetch(`${article}/${config.source}`),
     staticFetch('tools/article-layout/template.css'),
     staticFetch('tools/article-layout/paginate.js'),
-    staticJson(`${article}/fonts/font.json`),
-    staticFetch(`${article}/fonts/article.woff`,{binary:true})
+    optionalStaticFont(article)
   ]);
-  if(!Array.isArray(fontInfo.codepoints)||typeof fontInfo.sha256!=='string')throw new Error('fonts/font.json が不正です');
-  const actualHash=await sha256(fontBlob);
-  if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォントのハッシュが font.json と一致しません');
   return{
-    kind:'repo',article,source:config.source,template:config.template,markdown,templateCss,runtime,fontInfo,
-    fontDataUrl:await blobDataUrl(fontBlob),
+    kind:'repo',article,source:config.source,template:config.template,markdown,templateCss,runtime,
+    fontInfo:font.fontInfo,fontMode:font.fontMode,fontDataUrl:await blobDataUrl(font.fontBlob),
     articleBase:repoUrl(article+'/')
   };
 }
@@ -109,22 +137,28 @@ async function loadFolderArticle(fileList){
   try{config=JSON.parse(await localText(files,'layout-source.json',1_000_000));}
   catch(error){if(error instanceof SyntaxError)throw new Error('layout-source.json をJSONとして読めません');throw error;}
   if(config?.version!==1||config?.template!=='illustrated-article-v1'||typeof config.source!=='string'||!config.source||/[\\/]/.test(config.source)||config.source.startsWith('.'))throw new Error('layout-source.json が本番Markdown記事の形式ではありません');
-  const [markdown,templateCss,runtime,fontInfoText,fontBlob]=await Promise.all([
+  const [markdown,templateCss,runtime]=await Promise.all([
     localText(files,config.source,1_200_000,'正本MD '+config.source),
     staticFetch('tools/article-layout/template.css'),
-    staticFetch('tools/article-layout/paginate.js'),
-    localText(files,'fonts/font.json',1_000_000,'fonts/font.json'),
-    Promise.resolve(files.get('fonts/article.woff'))
+    staticFetch('tools/article-layout/paginate.js')
   ]);
-  if(!fontBlob)throw new Error('記事フォルダーに fonts/article.woff がありません');
-  let fontInfo;
-  try{fontInfo=JSON.parse(fontInfoText);}catch{throw new Error('fonts/font.json をJSONとして読めません');}
-  if(!Array.isArray(fontInfo.codepoints)||typeof fontInfo.sha256!=='string')throw new Error('fonts/font.json が不正です');
-  const actualHash=await sha256(fontBlob);
-  if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォルダーの article.woff と font.json のハッシュが一致しません');
+  const localInfoFile=files.get('fonts/font.json'),localFontBlob=files.get('fonts/article.woff');
+  let fontInfo,fontBlob,fontMode;
+  if(localInfoFile&&localFontBlob){
+    try{fontInfo=JSON.parse(await localInfoFile.text());}catch{throw new Error('fonts/font.json をJSONとして読めません');}
+    if(!Array.isArray(fontInfo.codepoints)||typeof fontInfo.sha256!=='string')throw new Error('fonts/font.json が不正です');
+    fontBlob=localFontBlob;fontMode='article';
+    const actualHash=await sha256(fontBlob);
+    if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォルダーの article.woff と font.json のハッシュが一致しません');
+  }else if(localInfoFile||localFontBlob){
+    throw new Error('fonts/font.json と fonts/article.woff は両方置くか、両方省略してください');
+  }else{
+    const fallback=await optionalStaticFont('202604/04_聖職者花見乱痴気騒ぎ');
+    fontInfo=fallback.fontInfo;fontBlob=fallback.fontBlob;fontMode='shared-fallback';
+  }
   return{
     kind:'folder',article:folderName,folderName,source:config.source,template:config.template,markdown,
-    templateCss,runtime,fontInfo,fontDataUrl:await blobDataUrl(fontBlob),files,assetUrls:new Map()
+    templateCss,runtime,fontInfo,fontMode,fontDataUrl:await blobDataUrl(fontBlob),files,assetUrls:new Map()
   };
 }
 function releaseSourceAssets(value){
@@ -142,17 +176,20 @@ function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&am
 function safeJson(value){return JSON.stringify(value).replace(/</g,'\\u003c');}
 function validateSourceForFont(markdown,parsed){
   if(markdown.length>1_200_000)throw new Error('原稿は120万文字以下にしてください');
-  const coverage=new Set(source.fontInfo.codepoints);
-  const sample=markdown+'異世界丸見え実話現地取材202604月号続0123456789 /';
-  const missing=[...new Set([...sample].map(c=>c.codePointAt(0)))].filter(c=>c>32&&!coverage.has(c));
-  if(missing.length)throw new Error(`埋込フォント未収録文字: ${missing.map(c=>`U+${c.toString(16).toUpperCase()}`).join(', ')}`);
+  if(source.fontMode==='article'){
+    const coverage=new Set(source.fontInfo.codepoints);
+    const sample=markdown+'異世界丸見え実話現地取材202604月号続0123456789 /';
+    const missing=[...new Set([...sample].map(c=>c.codePointAt(0)))].filter(c=>c>32&&!coverage.has(c));
+    if(missing.length)throw new Error(`埋込フォント未収録文字: ${missing.map(c=>`U+${c.toString(16).toUpperCase()}`).join(', ')}`);
+  }
   for(const block of parsed.blocks.filter(b=>b.type==='figure')){
     if(!/^\.\/[A-Za-z0-9_.-]+\.(?:png|jpg|jpeg|webp)$/i.test(block.src))throw new Error(`本番画像パス形式ではありません: ${block.src}`);
     if(source.kind==='folder'&&!source.files.has(block.src.replace(/^\.\//,'')))throw new Error(`記事フォルダーに採用画像がありません: ${block.src}`);
   }
 }
 async function candidateHtml(markdown,rawSettings){
-  const parsed=parseArticle(markdown),validated=validateTesterSettings(rawSettings);
+  const normalized=normalizeArticleMarkdown(markdown);
+  const parsed=parseArticle(normalized.markdown),validated=validateTesterSettings(rawSettings);
   validateSourceForFont(markdown,parsed);
   const selectedImages=[...new Set(parsed.blocks.filter(b=>b.type==='figure').map(b=>b.src))];
   let rendered=parsed;
@@ -161,7 +198,7 @@ async function candidateHtml(markdown,rawSettings){
     const byId=new Map(blocks.map(block=>[block.id,block]));
     rendered={blocks,groups:parsed.groups.map(group=>group.map(block=>byId.get(block.id)))};
   }
-  const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo};
+  const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo,fontMode:source.fontMode,normalizedLegacyFigure:normalized.changed};
   const data=safeJson({...rendered,manifest});
   const runtime=source.runtime.replace(/<\/script/gi,'<\\/script');
   const overrides=cssForTesterSettings(validated);
@@ -312,8 +349,8 @@ async function compose(){
     ready=true;dirty=false;currentPage=Math.min(currentPage,pages.length)||1;
     if(!articleData.blocks.some(b=>b.id===selected))selected=articleData.blocks[0]?.id||null;buildBlockList();
     doc.addEventListener('click',event=>{const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
-    showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + ArticleSubset + paginate.js';
-    status(`${source.kind==='folder'?'エクスプローラ: ':''}${source.source} · ${pages.length}ページ · 本番組版OK`,'ok');updatePreview();updateSelection();
+    showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + '+(source.fontMode==='article'?'記事ArticleSubset':'共通フォントfallback')+' + paginate.js';
+    status(`${source.kind==='folder'?'エクスプローラ: ':''}${source.source} · ${pages.length}ページ · 本番組版OK${source.fontMode==='article'?'':' · 記事フォントなし→共通fallback'}`,'ok');updatePreview();updateSelection();
   }catch(error){
     if(token===generation){dirty=false;clearPreview(error.message);status(error.message,'error');}
   }finally{busy=false;buttons();}
