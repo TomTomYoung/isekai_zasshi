@@ -83,6 +83,70 @@ function normalizeArticleMarkdown(markdown){
   });
   return{markdown:normalized,changed};
 }
+function parseArticleForTester(markdown){
+  const normalized=normalizeArticleMarkdown(markdown);
+  const lines=normalized.markdown.replace(/\r\n?/g,'\n').split('\n');
+  const h2=[];for(let i=0;i<lines.length;i++)if(/^##\s+/.test(lines[i].trim()))h2.push(i);
+  const starts=[0,...h2.slice(1)],insertions=[];
+  for(let i=0;i<starts.length;i++){
+    const start=starts[i],end=i+1<starts.length?starts[i+1]:lines.length;
+    let figures=0;
+    for(let j=start;j<end;j++)if(lines[j].trim()==='<figure>')figures++;
+    if(figures===0){
+      const n=String(i+1).padStart(3,'0');
+      insertions.push({at:end,lines:[
+        '<figure>',
+        `<img src="./__layout_tester_missing_${n}.png" alt="">`,
+        '<figcaption>layout tester text-only section</figcaption>',
+        '</figure>'
+      ]});
+    }
+  }
+  for(const insertion of insertions.sort((a,b)=>b.at-a.at))lines.splice(insertion.at,0,...insertion.lines);
+  const staged=parseArticle(lines.join('\n'));
+  const kept=staged.blocks.filter(block=>!(block.type==='figure'&&/^\.\/__layout_tester_missing_\d+\.png$/.test(block.src)));
+  const blocks=kept.map((block,index)=>({...block,id:`b${String(index+1).padStart(3,'0')}`}));
+  const groups=[];
+  for(const [index,block] of blocks.entries()){
+    if(!groups.length||(block.type==='h2'&&index>1))groups.push([]);
+    groups.at(-1).push(block);
+  }
+  return{parsed:{blocks,groups},normalizedLegacyFigure:normalized.changed,textOnlySections:insertions.length};
+}
+function adaptRuntimeForTextSections(runtime){
+  const replacements=[
+    [
+      "    const image = page.querySelector('img'), box = image.getBoundingClientRect();\n    const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);\n    const imageArea = image.naturalWidth * image.naturalHeight * scale * scale;",
+      "    const image = page.querySelector('img');\n    let imageArea = 0;\n    if (image) {\n      const box = image.getBoundingClientRect();\n      const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);\n      imageArea = image.naturalWidth * image.naturalHeight * scale * scale;\n    }"
+    ],
+    [
+      "    return m.bottom <= 1936 && m.imageArea > m.textArea;",
+      "    return m.bottom <= 1936 && (!page.querySelector('img') || m.imageArea > m.textArea);"
+    ],
+    [
+      "    const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));\n    scene.dataset.figure = figure.id;\n    scene.dataset.repeated = String(repeated);\n    const img = image.cloneNode(); img.className = 'scene-image';\n    scene.append(img, el('figcaption', '', figure.caption));\n    const body = el('div', 'article-body');\n    const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));\n    page.append(head, scene, body, folio); root.append(page);",
+      "    const body = el('div', 'article-body');\n    const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));\n    if (figure && image) {\n      const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));\n      scene.dataset.figure = figure.id;\n      scene.dataset.repeated = String(repeated);\n      const img = image.cloneNode(); img.className = 'scene-image';\n      scene.append(img, el('figcaption', '', figure.caption));\n      page.append(head, scene, body, folio);\n    } else page.append(head, body, folio);\n    root.append(page);"
+    ],
+    [
+      "      const ordered = [page.querySelector('.running-head'), page.querySelector('.scene'), ...children, page.querySelector('.folio')];",
+      "      const ordered = [page.querySelector('.running-head'), page.querySelector('.scene'), ...children, page.querySelector('.folio')].filter(Boolean);"
+    ],
+    [
+      "      return { page: index + 1, ...m, figure: page.querySelector('.scene').dataset.figure, repeated: page.querySelector('.scene').dataset.repeated === 'true' };",
+      "      const scene = page.querySelector('.scene');\n      return { page: index + 1, ...m, figure: scene?.dataset.figure || null, repeated: scene?.dataset.repeated === 'true' };"
+    ],
+    [
+      "      const figure = group.find(b => b.type === 'figure');\n      const image = new Image(); image.src = figure.src; image.alt = figure.alt;\n      await image.decode(); return image;",
+      "      const figure = group.find(b => b.type === 'figure');\n      if (!figure) return null;\n      const image = new Image(); image.src = figure.src; image.alt = figure.alt;\n      await image.decode(); return image;"
+    ]
+  ];
+  let out=runtime;
+  for(const [from,to] of replacements){
+    if(!out.includes(from))throw new Error('paginate.js互換処理を適用できません。runtime更新に合わせてテスターを更新してください');
+    out=out.replace(from,to);
+  }
+  return out;
+}
 function normalizeArticleInput(input){
   let relative=String(input||'').trim().replace(/\\/g,'/');
   if(!relative||relative.startsWith('/')||relative.includes(':')||relative.includes('?')||relative.includes('#')||relative.split('/').some(x=>!x||x==='.'||x==='..'||x.startsWith('.')))throw new Error('リポジトリ内の記事パスを指定してください');
@@ -188,8 +252,7 @@ function validateSourceForFont(markdown,parsed){
   }
 }
 async function candidateHtml(markdown,rawSettings){
-  const normalized=normalizeArticleMarkdown(markdown);
-  const parsed=parseArticle(normalized.markdown),validated=validateTesterSettings(rawSettings);
+  const adapted=parseArticleForTester(markdown),parsed=adapted.parsed,validated=validateTesterSettings(rawSettings);
   validateSourceForFont(markdown,parsed);
   const selectedImages=[...new Set(parsed.blocks.filter(b=>b.type==='figure').map(b=>b.src))];
   let rendered=parsed;
@@ -198,9 +261,9 @@ async function candidateHtml(markdown,rawSettings){
     const byId=new Map(blocks.map(block=>[block.id,block]));
     rendered={blocks,groups:parsed.groups.map(group=>group.map(block=>byId.get(block.id)))};
   }
-  const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo,fontMode:source.fontMode,normalizedLegacyFigure:normalized.changed};
+  const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo,fontMode:source.fontMode,normalizedLegacyFigure:adapted.normalizedLegacyFigure,textOnlySections:adapted.textOnlySections};
   const data=safeJson({...rendered,manifest});
-  const runtime=source.runtime.replace(/<\/script/gi,'<\\/script');
+  const runtime=adaptRuntimeForTextSections(source.runtime).replace(/<\/script/gi,'<\\/script');
   const overrides=cssForTesterSettings(validated);
   const baseHref=source.kind==='repo'?source.articleBase.href:document.baseURI;
   return{
@@ -349,7 +412,7 @@ async function compose(){
     ready=true;dirty=false;currentPage=Math.min(currentPage,pages.length)||1;
     if(!articleData.blocks.some(b=>b.id===selected))selected=articleData.blocks[0]?.id||null;buildBlockList();
     doc.addEventListener('click',event=>{const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
-    showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + '+(source.fontMode==='article'?'記事ArticleSubset':'共通フォントfallback')+' + paginate.js';
+    showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + '+(source.fontMode==='article'?'記事ArticleSubset':'共通フォントfallback')+' + paginate.js互換';
     status(`${source.kind==='folder'?'エクスプローラ: ':''}${source.source} · ${pages.length}ページ · 本番組版OK${source.fontMode==='article'?'':' · 記事フォントなし→共通fallback'}`,'ok');updatePreview();updateSelection();
   }catch(error){
     if(token===generation){dirty=false;clearPreview(error.message);status(error.message,'error');}
