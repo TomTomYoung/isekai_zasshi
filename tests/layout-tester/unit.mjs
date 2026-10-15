@@ -44,9 +44,11 @@ try{
 }finally{await new Promise(r=>server.close(r));await fs.rm(tmp,{recursive:true,force:true});}
 await test('production tester settings are bounded',()=>{assert.equal(validateTesterSettings(TESTER_DEFAULTS).body.fontSize,28);assert.throws(()=>validateTesterSettings({version:1,body:{fontSize:999}}),/fontSize/);assert.throws(()=>validateTesterSettings({version:1,blocks:{x:{width:100}}}),/本番ブロックID/);});
 await test('magazine presets merge onto neutral defaults',()=>{
-  const merged=mergeTesterSettings({version:1,magazine:{textureStrength:5,packFirstPage:true,cards:{enabled:true,one:{title:'甲'}}}});
+  const merged=mergeTesterSettings({version:1,magazine:{textureStrength:5,packFirstPage:true,autoFitFirstPage:true,firstPageMinImageHeight:700,cards:{enabled:true,one:{title:'甲'}}}});
   assert.equal(merged.magazine.paperColor,TESTER_DEFAULTS.magazine.paperColor);
   assert.equal(merged.magazine.packFirstPage,true);
+  assert.equal(merged.magazine.autoFitFirstPage,true);
+  assert.equal(merged.magazine.firstPageMinImageHeight,700);
   assert.equal(merged.magazine.cards.one.title,'甲');
   assert.equal(merged.magazine.cards.two.title,'');
 });
@@ -110,6 +112,9 @@ await test('stable compatibility paginator handles text-only sections without so
   assert.match(runtime,/placeQuickStrip/);
   assert.match(runtime,/packFirstPage/);
   assert.match(runtime,/packedFirstPage/);
+  assert.match(runtime,/function tryAutoFitFirstPage\(/);
+  assert.match(runtime,/autoFitShrink/);
+  assert.match(runtime,/firstPageMinImageHeight/);
   assert.doesNotMatch(runtime,/magazineStripSkipped/);
   assert.doesNotMatch(compat,/adaptRuntimeForTextSections/);
   assert.doesNotMatch(app,/adaptRuntimeForTextSections/);
@@ -156,6 +161,8 @@ await test('uniform catalog ships an automatic magazine preset',async()=>{
   const checked=validateTesterSettings(preset);
   assert.equal(checked.magazine.cards.enabled,true);
   assert.equal(checked.magazine.packFirstPage,true);
+  assert.equal(checked.magazine.autoFitFirstPage,true);
+  assert.equal(checked.magazine.firstPageMinImageHeight,700);
   assert.equal(checked.magazine.cards.one.title,'王都桜花学園');
 });
 await test('instruction-region UI and export contract are present',async()=>{
