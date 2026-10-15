@@ -1,5 +1,5 @@
 import {parseArticleForTester} from './article_compat.mjs';
-import {TESTER_DEFAULTS,validateTesterSettings,cssForTesterSettings} from './production_settings.mjs';
+import {TESTER_DEFAULTS,validateTesterSettings,mergeTesterSettings,cssForTesterSettings} from './production_settings.mjs';
 import {exportProductionPages,pagePng} from './production_export.mjs';
 
 const $=id=>document.getElementById(id);
@@ -751,7 +751,7 @@ async function loadSource(){
   if(busy)return;const token=++generation;busy=true;buttons();status('layout-source.json と正本MDを直接読込中です…','busy');
   try{
     const loaded=await loadStaticArticle($('source-path').value.trim());if(token!==generation)return;
-    releaseSourceAssets(source);source=loaded;settings=loaded.testerSettings?validateTesterSettings(loaded.testerSettings):structuredClone(TESTER_DEFAULTS);
+    releaseSourceAssets(source);source=loaded;settings=loaded.testerSettings?mergeTesterSettings(loaded.testerSettings):structuredClone(TESTER_DEFAULTS);
     $('markdown').value=loaded.markdown;$('source-name').textContent=loaded.source;$('source-article').textContent=loaded.article;$('source-path').value=loaded.article;
     selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
   }catch(error){
@@ -762,7 +762,7 @@ async function loadFolder(fileList){
   if(busy)return;const token=++generation;busy=true;buttons();status('記事フォルダーの layout-source.json・正本MD・画像・フォントを読込中です…','busy');
   try{
     const loaded=await loadFolderArticle(fileList);if(token!==generation)return;
-    releaseSourceAssets(source);source=loaded;settings=loaded.testerSettings?validateTesterSettings(loaded.testerSettings):structuredClone(TESTER_DEFAULTS);
+    releaseSourceAssets(source);source=loaded;settings=loaded.testerSettings?mergeTesterSettings(loaded.testerSettings):structuredClone(TESTER_DEFAULTS);
     $('markdown').value=loaded.markdown;$('source-name').textContent=loaded.source;$('source-article').textContent='エクスプローラ: '+loaded.folderName;
     selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
   }catch(error){
@@ -802,8 +802,8 @@ $('block-form').addEventListener('change',async()=>{
 });
 $('reset-block').onclick=async()=>{if(!selected)return;delete settings.blocks[selected];syncSettingsUI();invalidate('ブロック一時設定を解除しました。再組版しています…');await compose();};
 $('json-editor').addEventListener('input',()=>{pendingJson=true;invalidate('設定JSONが未適用です。「JSONを適用して再組版」を押してください。');});
-$('apply-json').onclick=async()=>{try{settings=validateTesterSettings(JSON.parse($('json-editor').value));pendingJson=false;syncSettingsUI();await compose();}catch(error){status(error.message,'error');}};
-$('config-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>1_000_000)throw new Error('設定JSONが大きすぎます');settings=validateTesterSettings(JSON.parse(await file.text()));pendingJson=false;syncSettingsUI();invalidate('設定JSONを読み込みました。再組版しています…');await compose();}catch(error){status(error.message,'error');}finally{$('config-file').value='';}};
+$('apply-json').onclick=async()=>{try{settings=mergeTesterSettings(JSON.parse($('json-editor').value));pendingJson=false;syncSettingsUI();await compose();}catch(error){status(error.message,'error');}};
+$('config-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>1_000_000)throw new Error('設定JSONが大きすぎます');settings=mergeTesterSettings(JSON.parse(await file.text()));pendingJson=false;syncSettingsUI();invalidate('設定JSONを読み込みました。再組版しています…');await compose();}catch(error){status(error.message,'error');}finally{$('config-file').value='';}};
 $('save-config').onclick=()=>download(new Blob([JSON.stringify(clean(settings),null,2)+'\n'],{type:'application/json'}),`${fileStem()}.layout.json`);
 $('png').onclick=()=>exportOutput(false);$('zip').onclick=()=>exportOutput(true);
 
