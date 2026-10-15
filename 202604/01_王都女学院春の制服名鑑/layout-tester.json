@@ -37,7 +37,9 @@
         "text": "白・深紅・黒。静かな意匠の中に、規律と魔力制御を仕込む。"
       }
     },
-    "packFirstPage": true
+    "packFirstPage": true,
+    "autoFitFirstPage": true,
+    "firstPageMinImageHeight": 700
   },
   "blocks": {}
 }
