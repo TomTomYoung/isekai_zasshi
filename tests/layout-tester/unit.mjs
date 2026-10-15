@@ -9,7 +9,7 @@ import {startServer} from '../../tools/layout_tester_server.mjs';
 import {parseArticle} from '../../tools/article_parse.mjs';
 import {parseArticle as parseProductionArticle} from '../../tools/article_source.mjs';
 import {validateTesterSettings,TESTER_DEFAULTS} from '../../layout-tester/production_settings.mjs';
-import {parseArticleForTester,adaptRuntimeForTextSections} from '../../layout-tester/article_compat.mjs';
+import {parseArticleForTester} from '../../layout-tester/article_compat.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const defaults=JSON.parse(await fs.readFile(path.join(ROOT,'layout-tester/defaults.json'),'utf8'));
 let count=0;async function test(name,run){await run();console.log(`ok ${++count} - ${name}`);}
@@ -62,12 +62,18 @@ await test('202604 compatibility adapter accepts legacy figures and text-only se
   assert.equal(adapted.parsed.groups.length,6);
   assert.deepEqual(adapted.parsed.groups.map(g=>g.filter(b=>b.type==='figure').length),[1,1,1,1,0,1]);
 });
-await test('runtime adapter removes mandatory-image assumptions for text-only sections',async()=>{
-  const runtime=await fs.readFile(path.join(ROOT,'tools','article-layout','paginate.js'),'utf8');
-  const adapted=adaptRuntimeForTextSections(runtime);
-  assert.match(adapted,/if \(!figure\) return null/);
-  assert.match(adapted,/!page\.querySelector\('img'\)/);
-  assert.match(adapted,/scene\?\.dataset\.figure/);
+await test('stable compatibility paginator handles text-only sections without source patching',async()=>{
+  const runtime=await fs.readFile(path.join(ROOT,'layout-tester','paginate_compat.js'),'utf8');
+  const compat=await fs.readFile(path.join(ROOT,'layout-tester','article_compat.mjs'),'utf8');
+  const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
+  assert.match(runtime,/if \(!figure\) return null/);
+  assert.match(runtime,/!page\.querySelector\('img'\)/);
+  assert.match(runtime,/scene\?\.dataset\.figure/);
+  assert.match(runtime,/page\.dataset\.textOnly = 'true'/);
+  assert.doesNotMatch(compat,/adaptRuntimeForTextSections/);
+  assert.doesNotMatch(app,/adaptRuntimeForTextSections/);
+  assert.match(app,/layout-tester\/paginate_compat\.js/);
+  assert.doesNotMatch(app,/tools\/article-layout\/paginate\.js/);
 });
 await test('all 202604 layout-source articles pass the tester compatibility parser',async()=>{
   const issueDir=path.join(ROOT,'202604');
@@ -92,6 +98,7 @@ await test('layout tester entry has no dedicated API dependency',async()=>{
   assert.match(app,/article_parse\.mjs/);
   assert.match(app,/production_export\.mjs/);
   assert.match(app,/article_compat\.mjs/);
+  assert.match(app,/paginate_compat\.js/);
   assert.match(app,/shared-fallback/);
 });
 await test('Explorer article-folder picker is present and wired',async()=>{
