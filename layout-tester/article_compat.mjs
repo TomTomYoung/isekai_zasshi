@@ -1,14 +1,17 @@
 import {parseArticle} from '../tools/article_parse.mjs';
 
 function stripInlineMarkup(line){
-  if(/^\s*</.test(line))return line;
   let out=line;
+  out=out.replace(/<br\s*\/?\s*>/gi,'');
+  out=out.replace(/<\/?small\s*>/gi,'');
+  if(/^\s*<(?:figure|img|figcaption|\/figure)\b/.test(out))return out;
   out=out.replace(/\[([^\]\n]+)\]\([^\s)]+\)/g,'$1');
   out=out.replace(/\*\*([^*\n]+)\*\*/g,'$1');
   out=out.replace(/__([^_\n]+)__/g,'$1');
   out=out.replace(/\`([^\`\n]+)\`/g,'$1');
   out=out.replace(/\*([^*\n]+)\*/g,'$1');
   out=out.replace(/_([^_\n]+)_/g,'$1');
+  out=out.replace(/\*\*/g,'');
   return out;
 }
 
