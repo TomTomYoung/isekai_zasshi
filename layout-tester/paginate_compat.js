@@ -46,7 +46,7 @@
       const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);
       imageArea = image.naturalWidth * image.naturalHeight * scale * scale;
     }
-    const textArea = [...page.querySelectorAll('.running-head,.folio,figcaption,.article-body > *')]
+    const textArea = [...page.querySelectorAll('.running-head,.folio,figcaption,.article-lead > *,.article-body > *')]
       .reduce((sum, node) => sum + area(node), 0);
     const body = page.querySelector('.article-body');
     const children = [...body.children];
@@ -68,16 +68,20 @@
 
   let pageNumber = 0;
 
-  function newPage(figure, image, repeated) {
+  function newPage(figure, image, repeated, leadBlocks = []) {
     const page = el('section', 'fixed-page');
     const head = el('header', 'running-head');
     head.append(
       el('span', '', '異世界丸見え実話'),
       el('span', '', '2026 / 04　現地取材')
     );
+    const lead = leadBlocks.length ? el('div', 'article-lead') : null;
+    if (lead) lead.append(...leadBlocks.map(block => render(block)));
     const body = el('div', 'article-body');
     const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));
 
+    const parts = [head];
+    if (lead) parts.push(lead);
     if (figure && image) {
       const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));
       scene.dataset.figure = figure.id;
@@ -85,11 +89,12 @@
       const img = image.cloneNode();
       img.className = 'scene-image';
       scene.append(img, el('figcaption', '', figure.caption));
-      page.append(head, scene, body, folio);
+      parts.push(scene);
     } else {
       page.dataset.textOnly = 'true';
-      page.append(head, body, folio);
     }
+    parts.push(body, folio);
+    page.append(...parts);
 
     root.append(page);
     return { page, body };
@@ -105,8 +110,9 @@
 
   function paginate(group, image) {
     const figure = group.find(b => b.type === 'figure') || null;
-    const blocks = group.filter(b => b.type !== 'figure');
-    let context = newPage(figure, image, false), headings = [];
+    const leadBlocks = group[0]?.type === 'h1' && group[1]?.type === 'h2' ? group.slice(0, 2) : [];
+    const blocks = group.filter(b => b.type !== 'figure' && !leadBlocks.includes(b));
+    let context = newPage(figure, image, false, leadBlocks), headings = [];
     const nextPage = () => { context = newPage(figure, image, true); };
 
     for (const block of blocks) {
@@ -245,6 +251,7 @@
 
       const ordered = [
         page.querySelector('.running-head'),
+        page.querySelector('.article-lead'),
         page.querySelector('.scene'),
         ...children,
         page.querySelector('.folio')
