@@ -2,6 +2,28 @@
 
 記録日：2026-10-15。仕様は [HTML_LAYOUT_TESTER.md](HTML_LAYOUT_TESTER.md)。
 
+## 2026-10-15 本番組版経路への作り直し
+
+初版の独自Markdownパーサー／独自レンダラーを、現行入口の組版経路から外しました。
+
+現在の `layout-tester/index.html` は、`layout-source.json` を持つ実記事を対象に、正本Markdownを `tools/article_source.mjs` の `parseArticle()` へ渡し、本番 `template.css`、記事同梱 `ArticleSubset`、本番 `paginate.js` で候補 `.fixed-page` を生成します。
+
+初期対象は `202604/04_聖職者花見乱痴気騒ぎ` です。画面上のMD編集はメモリ上の候補にだけ適用し、既存Markdown・`fixed_layout.html`・PNGを上書きしません。
+
+本番 `paginate.js` が生成する `data-source` / `data-figure` を使ってW/H、位置、margin、padding、紙面端距離、画像可視領域を測定します。一時設定は候補HTMLへCSSとして注入し、その状態で同じ `paginate.js` を最初から実行します。
+
+PNG/ZIPは独自DOMをSVG化する旧経路ではなく、同じ候補HTMLをサーバー側で再生成し、sandboxを有効にしたChromiumで `.fixed-page` を直接スクリーンショットします。
+
+サーバーにはメモリ処理専用の `/__layout-tester/source`、`compose`、`export` を追加しました。通常ファイル配信は引き続き読取専用です。cross-site、異なるOrigin、リポジトリ外パス、正本でないMD指定を拒否します。
+
+単体試験は、実際の04記事について正本MD読込と本番候補HTML生成を検査するよう追加しました。ブラウザ試験もdemo.md中心の検査から、04記事のsource contract、fixed-page、本番audit、実測、一時CSS再組版、1456×2056 PNGへ差し替えました。
+
+GitHub上の変更後 `app.mjs`、サーバー、単体試験、ブラウザ試験についてV8構文確認を行い、構文エラーがないことを確認しています。この作業環境ではリポジトリをローカルcloneできず、loopback Chromiumの実行結果はまだ取得していません。PRまたは利用者環境で `npm run test:layout-tester` を実行し、実HTTPブラウザ試験を確認する必要があります。
+
+旧 `renderer.mjs` / `export.mjs` は履歴・比較用に残っていますが、現行入口からは参照しません。旧模擬ブラウザ試験の成功件数を現行本番テスターの成功数へ合算しません。
+
+---
+
 ## 2026-10-15 実装反映の更新
 
 本変更で `layout-tester/`、`tools/layout_tester_server.mjs`、`tests/layout-tester/` とnpmスクリプトを追加しました。起動はリポジトリ直下で `npm run layout:tester`、入口は `http://127.0.0.1:4173/layout-tester/` です。操作は [layout-tester/README.md](../layout-tester/README.md) を参照してください。以下の「仕様と記録のみ」は初回PR #11時点の履歴で、現在の配置状態ではありません。
