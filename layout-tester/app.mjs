@@ -495,11 +495,13 @@ function installInstructionHandlers(doc){
   },true);
 }
 async function copyText(text){
-  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return;}
+  if(navigator.clipboard?.writeText){
+    try{await navigator.clipboard.writeText(text);return;}catch{}
+  }
   const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';
   document.body.append(area);area.select();
-  if(!document.execCommand('copy'))throw new Error('クリップボードへコピーできません');
-  area.remove();
+  const ok=document.execCommand('copy');area.remove();
+  if(!ok)throw new Error('クリップボードへコピーできません');
 }
 async function copyInstruction(){
   if(!instruction)return;
