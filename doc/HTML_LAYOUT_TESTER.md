@@ -87,7 +87,52 @@ figureで指定された採用画像
 
 フォルダー入力を解除・別記事へ切り替えたときは、生成したblob URLをrevokeする。
 
-## 5. Markdown parser
+## 5. 記事フォントfallback
+
+記事フォルダーの `fonts/font.json` / `fonts/article.woff` は任意とする。
+
+両方ある場合：
+
+- 記事専用 `article.woff` を `ArticleSubset` として使用
+- SHA-256を `font.json.sha256` と照合
+- Markdown中の文字を `font.json.codepoints` と照合
+
+両方ない場合：
+
+- `202604/04_聖職者花見乱痴気騒ぎ/fonts/article.woff` を共通fallbackとして使用
+- fallback WOFF自体のSHA-256は04の `font.json` と照合
+- 記事固有のcodepoint検査は行わない
+- fallback WOFFにない字形は `ArticleSubset,sans-serif` の後段へ委ねる
+
+片方だけ存在する場合は資産不整合として停止する。
+
+記事をテスターで読むためだけに、各記事へフォントsubsetを複製してはならない。
+
+## 16. 202604互換層
+
+本番 `parseArticle()` 自体は変更せず、その前後でテスター専用の互換処理を行う。
+
+正規化対象：
+
+- 既存figure属性
+- 画像srcの `./` 有無
+- h1直後のh2省略
+- 画像なし節
+- 1節複数画像
+- inlineの太字・強調・code・linkの表示文字化
+- 引用中の空 `>`
+- `<br>`
+- `<small>`
+- 区切り線
+- 単純な箇条書き
+
+画像なし節ではfigureを推測しない。テキストだけのページを生成する。
+
+1節複数画像では画像を削除せず、内部組版グループを分割する。
+
+正規化はメモリ上のみで行い、正本Markdownへ書き戻さない。
+
+## 17. Markdown parser
 
 Node本番の `tools/article_source.mjs` は既存 `fixed_layout.html` の依存ハッシュ契約に含まれるため、テスター都合で変更しない。
 
