@@ -58,5 +58,14 @@ await test('layout tester entry has no dedicated API dependency',async()=>{
   assert.match(app,/article_parse\.mjs/);
   assert.match(app,/production_export\.mjs/);
 });
+await test('Explorer article-folder picker is present and wired',async()=>{
+  const html=await fs.readFile(path.join(ROOT,'layout-tester','index.html'),'utf8');
+  const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
+  assert.match(html,/id="folder-files"[^>]*webkitdirectory/);
+  assert.match(app,/function folderSelection\(/);
+  assert.match(app,/function loadFolderArticle\(/);
+  assert.match(app,/\$\('folder-files'\)\.onchange/);
+  assert.match(app,/kind:'folder'/);
+});
 await test('browser runner keeps sandbox enabled and forbids dedicated API use',async()=>{const s=await fs.readFile(path.join(ROOT,'tests/layout-tester/browser.mjs'),'utf8');assert.match(s,/chromiumSandbox:true/);assert.doesNotMatch(s,/--no-sandbox|LAYOUT_TEST_MEMORY|page\.setContent|page\.addScriptTag/);assert.match(s,/dedicatedRequests/);});
 console.log(`PASS ${count} tests`);
