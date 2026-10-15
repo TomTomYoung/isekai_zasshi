@@ -21,6 +21,23 @@
         "folder-browser candidate must produce 45 blocks / 5 figures / 5 groups / 6 pages",
         "PNG export is exercised from the folder-selected production DOM"
       ]
+    },
+    "fontless202604": {
+      "parserCoverage": "24/24 layout-source articles passed through parseArticleForTester via GitHub source files",
+      "fontPolicy": "article font when present; shared 04 fallback when absent",
+      "verifiedExamples": {
+        "03_王都ギルド登録所大混乱": {
+          "fontFiles": false,
+          "blocks": 49,
+          "figures": 5,
+          "groups": 6,
+          "textOnlySections": 1,
+          "legacyFigureNormalized": true
+        }
+      },
+      "runtimeAdapter": "current paginate.js compatibility replacements applied successfully",
+      "syntax": "app/article_compat/unit/browser syntax checks passed",
+      "browserRuntime": "not executed in current tool environment"
     }
   },
   "historical": {

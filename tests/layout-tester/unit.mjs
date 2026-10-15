@@ -9,6 +9,7 @@ import {startServer} from '../../tools/layout_tester_server.mjs';
 import {parseArticle} from '../../tools/article_parse.mjs';
 import {parseArticle as parseProductionArticle} from '../../tools/article_source.mjs';
 import {validateTesterSettings,TESTER_DEFAULTS} from '../../layout-tester/production_settings.mjs';
+import {parseArticleForTester,adaptRuntimeForTextSections} from '../../layout-tester/article_compat.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const defaults=JSON.parse(await fs.readFile(path.join(ROOT,'layout-tester/defaults.json'),'utf8'));
 let count=0;async function test(name,run){await run();console.log(`ok ${++count} - ${name}`);}
@@ -51,12 +52,47 @@ await test('browser parser is the same function body and result as production',(
   assert.equal(parsed.blocks.filter(b=>b.type==='figure').length,5);
   assert.equal(parsed.groups.length,5);
 });
+const article03Md=await fs.readFile(path.join(ROOT,'202604','03_王都ギルド登録所大混乱','王都ギルド登録所大混乱.md'),'utf8');
+await test('202604 compatibility adapter accepts legacy figures and text-only section',()=>{
+  const adapted=parseArticleForTester(article03Md);
+  assert.equal(adapted.normalizedLegacyFigure,true);
+  assert.equal(adapted.textOnlySections,1);
+  assert.equal(adapted.parsed.blocks.length,49);
+  assert.equal(adapted.parsed.blocks.filter(b=>b.type==='figure').length,5);
+  assert.equal(adapted.parsed.groups.length,6);
+  assert.deepEqual(adapted.parsed.groups.map(g=>g.filter(b=>b.type==='figure').length),[1,1,1,1,0,1]);
+});
+await test('runtime adapter removes mandatory-image assumptions for text-only sections',async()=>{
+  const runtime=await fs.readFile(path.join(ROOT,'tools','article-layout','paginate.js'),'utf8');
+  const adapted=adaptRuntimeForTextSections(runtime);
+  assert.match(adapted,/if \(!figure\) return null/);
+  assert.match(adapted,/!page\.querySelector\('img'\)/);
+  assert.match(adapted,/scene\?\.dataset\.figure/);
+});
+await test('all 202604 layout-source articles pass the tester compatibility parser',async()=>{
+  const issueDir=path.join(ROOT,'202604');
+  const dirs=(await fs.readdir(issueDir,{withFileTypes:true})).filter(entry=>entry.isDirectory()&&/^\d\d_/.test(entry.name));
+  let checked=0;
+  for(const dir of dirs){
+    const configPath=path.join(issueDir,dir.name,'layout-source.json');
+    let config;
+    try{config=JSON.parse(await fs.readFile(configPath,'utf8'));}catch(error){if(error.code==='ENOENT')continue;throw error;}
+    const markdown=await fs.readFile(path.join(issueDir,dir.name,config.source),'utf8');
+    const adapted=parseArticleForTester(markdown);
+    assert.ok(adapted.parsed.blocks.length>0,dir.name);
+    assert.ok(adapted.parsed.groups.length>0,dir.name);
+    checked++;
+  }
+  assert.equal(checked,24);
+});
 await test('layout tester entry has no dedicated API dependency',async()=>{
   const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
   assert.doesNotMatch(app,/\/__layout-tester\//);
   assert.match(app,/layout-source\.json/);
   assert.match(app,/article_parse\.mjs/);
   assert.match(app,/production_export\.mjs/);
+  assert.match(app,/article_compat\.mjs/);
+  assert.match(app,/shared-fallback/);
 });
 await test('Explorer article-folder picker is present and wired',async()=>{
   const html=await fs.readFile(path.join(ROOT,'layout-tester','index.html'),'utf8');

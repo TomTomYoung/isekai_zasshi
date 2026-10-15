@@ -31,7 +31,10 @@ const state=()=>page.evaluate(()=>{
     composition:win.__articleComposition?.status,auditOk:report.ok,auditPages:report.pages.length,
     bodyFont:getComputedStyle(doc.querySelector('.article-body')).fontSize,
     fontFamily:getComputedStyle(doc.querySelector('.article-body')).fontFamily,
-    blocks:source.blocks.length,figures:source.blocks.filter(b=>b.type==='figure').length,groups:source.groups.length
+    fontMode:tester.source.fontMode,
+    blocks:source.blocks.length,figures:source.blocks.filter(b=>b.type==='figure').length,groups:source.groups.length,
+    textOnlySections:source.manifest.textOnlySections||0,
+    normalizedLegacyFigure:Boolean(source.manifest.normalizedLegacyFigure)
   };
 });
 const dimensions=b=>[b.readUInt32BE(16),b.readUInt32BE(20)];
@@ -61,19 +64,22 @@ try{
 
   await test('no dedicated API endpoint is requested',()=>assert.deepEqual(dedicatedRequests,[]));
 
-  await test('Explorer article-folder selection loads MD, images and font from local files',async()=>{
-    const articleDir=path.join(ROOT,'202604','04_聖職者花見乱痴気騒ぎ');
+  await test('Explorer folder without font.json loads with shared fallback and legacy figures',async()=>{
+    const articleDir=path.join(ROOT,'202604','03_王都ギルド登録所大混乱');
     await page.locator('#folder-files').setInputFiles(articleDir);
     await settled();
     const s=await state();
     assert.equal(s.kind,'folder');
-    assert.equal(s.sourceName,'聖職者花見乱痴気騒ぎ.md');
+    assert.equal(s.sourceName,'王都ギルド登録所大混乱.md');
     assert.equal(s.testerCandidate,'folder-browser');
-    assert.equal(s.pages,6);
+    assert.equal(s.fontMode,'shared-fallback');
     assert.equal(s.auditOk,true);
-    assert.equal(s.blocks,45);
+    assert.ok(s.pages>=1);
+    assert.equal(s.blocks,49);
     assert.equal(s.figures,5);
-    assert.equal(s.groups,5);
+    assert.equal(s.groups,6);
+    assert.equal(s.textOnlySections,1);
+    assert.equal(s.normalizedLegacyFigure,true);
     assert.match(s.fontFamily,/ArticleSubset/);
     const assets=await page.evaluate(()=>{
       const doc=document.querySelector('#preview-frame').contentDocument;

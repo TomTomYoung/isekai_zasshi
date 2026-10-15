@@ -87,7 +87,52 @@ figureで指定された採用画像
 
 フォルダー入力を解除・別記事へ切り替えたときは、生成したblob URLをrevokeする。
 
-## 5. Markdown parser
+## 5. 記事フォントfallback
+
+記事フォルダーの `fonts/font.json` / `fonts/article.woff` は任意とする。
+
+両方ある場合：
+
+- 記事専用 `article.woff` を `ArticleSubset` として使用
+- SHA-256を `font.json.sha256` と照合
+- Markdown中の文字を `font.json.codepoints` と照合
+
+両方ない場合：
+
+- `202604/04_聖職者花見乱痴気騒ぎ/fonts/article.woff` を共通fallbackとして使用
+- fallback WOFF自体のSHA-256は04の `font.json` と照合
+- 記事固有のcodepoint検査は行わない
+- fallback WOFFにない字形は `ArticleSubset,sans-serif` の後段へ委ねる
+
+片方だけ存在する場合は資産不整合として停止する。
+
+記事をテスターで読むためだけに、各記事へフォントsubsetを複製してはならない。
+
+## 6. 202604互換層
+
+本番 `parseArticle()` 自体は変更せず、その前後でテスター専用の互換処理を行う。
+
+正規化対象：
+
+- 既存figure属性
+- 画像srcの `./` 有無
+- h1直後のh2省略
+- 画像なし節
+- 1節複数画像
+- inlineの太字・強調・code・linkの表示文字化
+- 引用中の空 `>`
+- `<br>`
+- `<small>`
+- 区切り線
+- 単純な箇条書き
+
+画像なし節ではfigureを推測しない。テキストだけのページを生成する。
+
+1節複数画像では画像を削除せず、内部組版グループを分割する。
+
+正規化はメモリ上のみで行い、正本Markdownへ書き戻さない。
+
+## 7. Markdown parser
 
 Node本番の `tools/article_source.mjs` は既存 `fixed_layout.html` の依存ハッシュ契約に含まれるため、テスター都合で変更しない。
 
@@ -107,7 +152,7 @@ parseArticle.toString()
 
 ブラウザ側だけ記法を追加・削除してはならない。
 
-## 6. 本番候補HTML
+## 8. 本番候補HTML
 
 候補HTMLはブラウザ内でメモリ生成する。
 
@@ -131,7 +176,7 @@ parseArticle.toString()
 
 画像はMarkdownで指定された記事内相対パスを、`base` により記事フォルダーへ解決する。
 
-## 7. 本番組版
+## 9. 本番組版
 
 本番 `paginate.js` をそのまま実行する。
 
@@ -151,7 +196,7 @@ data-figure="bNNN"
 
 独自の `.sheet` / `.flow` / `.block` ページネータを現行入口では使わない。
 
-## 8. 計測
+## 10. 計測
 
 選択ブロックについて次を表示する。
 
@@ -174,7 +219,7 @@ figureでは追加で、
 
 画面表示倍率はiframeの外側へ適用し、iframe内部の1456×2056座標を変えない。
 
-## 9. 一時設定
+## 11. 一時設定
 
 version 1では次を候補CSSとして適用できる。
 
@@ -200,7 +245,7 @@ padding.top/right/bottom/left
 
 設定変更後は、旧DOMへCSSだけ後付けせず、候補HTMLを再構築して本番 `paginate.js` を最初から実行する。
 
-## 10. 組版検査
+## 12. 組版検査
 
 候補生成後に `auditArticleComposition()` を実行する。
 
@@ -219,7 +264,7 @@ padding.top/right/bottom/left
 
 audit失敗時はPNG/ZIP出力を許可しない。
 
-## 11. PNG / ZIP
+## 13. PNG / ZIP
 
 PNG生成にも専用サーバーやPlaywright起動を要求しない。
 
@@ -247,7 +292,7 @@ Canvas
 
 旧独自rendererをPNG入力にしてはならない。
 
-## 12. 保護範囲
+## 14. 保護範囲
 
 テスターから次を上書きしない。
 
@@ -261,7 +306,7 @@ Canvas
 
 テスター内の編集・設定変更はメモリ上だけに適用する。
 
-## 13. 専用API方式の廃止
+## 15. 専用API方式の廃止
 
 PR #13では、
 
@@ -285,7 +330,7 @@ Cannot GET /__layout-tester/source
 
 `tools/layout_tester_server.mjs` は必要なら自動試験で使う読取専用の静的サーバーに限定する。
 
-## 14. 初期実記事
+## 16. 初期実記事
 
 ```text
 202604/04_聖職者花見乱痴気騒ぎ
@@ -301,7 +346,7 @@ Cannot GET /__layout-tester/source
 1456 × 2056 px / page
 ```
 
-## 15. 合格条件
+## 17. 合格条件
 
 最低条件：
 
