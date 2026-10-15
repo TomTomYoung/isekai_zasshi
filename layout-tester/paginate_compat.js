@@ -63,7 +63,8 @@
 
   function fits(page) {
     const m = metrics(page);
-    return m.bottom <= 1936 && (!page.querySelector('img') || m.imageArea > m.textArea);
+    const packedFirstPage = page.dataset.packFirstPage === 'true';
+    return m.bottom <= 1936 && (packedFirstPage || !page.querySelector('img') || m.imageArea > m.textArea);
   }
 
   let pageNumber = 0;
@@ -79,6 +80,9 @@
     if (lead) lead.append(...leadBlocks.map(block => render(block)));
     const body = el('div', 'article-body');
     const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));
+    if (leadBlocks.length && source.testerSettings?.magazine?.packFirstPage) {
+      page.dataset.packFirstPage = 'true';
+    }
 
     const parts = [head];
     if (lead) parts.push(lead);
