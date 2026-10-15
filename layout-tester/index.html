@@ -25,11 +25,12 @@
     <input id="source-path" type="text" value="202604/04_聖職者花見乱痴気騒ぎ">
   </label>
   <button id="load-path" class="wide">リポジトリから読む</button>
+  <label class="file-button folder">記事フォルダーをエクスプローラで選択<input id="folder-files" type="file" webkitdirectory directory multiple></label>
   <label class="file-button folder">手元のMDで一時差替え<input id="md-file" type="file" accept=".md,.markdown,text/markdown"></label>
   <div class="source-meta"><strong id="source-name">—</strong><span id="source-article">—</span></div>
   <textarea id="markdown" spellcheck="false" aria-label="Markdown原稿"></textarea>
   <button id="compose" class="wide primary">このMDで本番組版</button>
-  <p class="hint">ここでの編集はメモリ上だけです。画像・フォント・CSS・ページ分割ロジックはリポジトリ上の本番ファイルを直接使います。専用ローカルサーバーの起動は不要です。</p>
+  <p class="hint">ここでの編集はメモリ上だけです。リポジトリの記事パスでも、エクスプローラで選んだ記事フォルダーでも組版できます。正本MD・画像・記事フォントは選択元を使い、本番CSS・ページ分割ロジックは同じものを使います。専用ローカルサーバーの起動は不要です。</p>
 
   <h2><span>02</span> 本番ブロック <small id="block-count"></small></h2>
   <div id="block-list" class="block-list" aria-label="本番ブロック一覧"></div>
