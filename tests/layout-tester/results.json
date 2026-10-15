@@ -10,7 +10,18 @@
       "browserExport": true
     },
     "syntaxCheck": "app/settings/export/parser/server/unit/browser passed V8 syntax checks",
-    "acceptance": "browser suite records every request and fails on any /__layout-tester/* request"
+    "acceptance": "browser suite records every request and fails on any /__layout-tester/* request",
+    "explorerFolderPicker": {
+      "status": "implemented-not-runtime-executed-in-current-tool-environment",
+      "acceptance": [
+        "webkitdirectory article-folder input present",
+        "layout-source.json selects canonical Markdown",
+        "local article font and adopted images resolved from File objects",
+        "browser test uploads the real 04 article directory",
+        "folder-browser candidate must produce 45 blocks / 5 figures / 5 groups / 6 pages",
+        "PNG export is exercised from the folder-selected production DOM"
+      ]
+    }
   },
   "historical": {
     "date": "2026-10-15",
