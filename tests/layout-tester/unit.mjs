@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {parseMarkdown, inline, inlineText, mergeSettings, validateSettings, assetPath, makeZip, crc32} from '../../layout-tester/core.mjs';
 import {startServer} from '../../tools/layout_tester_server.mjs';
 import {parseArticle} from '../../tools/article_parse.mjs';
+import {parseArticle as parseProductionArticle} from '../../tools/article_source.mjs';
 import {validateTesterSettings,TESTER_DEFAULTS} from '../../layout-tester/production_settings.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const defaults=JSON.parse(await fs.readFile(path.join(ROOT,'layout-tester/defaults.json'),'utf8'));
@@ -42,8 +43,9 @@ try{
 }finally{await new Promise(r=>server.close(r));await fs.rm(tmp,{recursive:true,force:true});}
 await test('production tester settings are bounded',()=>{assert.equal(validateTesterSettings(TESTER_DEFAULTS).body.fontSize,28);assert.throws(()=>validateTesterSettings({version:1,body:{fontSize:999}}),/fontSize/);assert.throws(()=>validateTesterSettings({version:1,blocks:{x:{width:100}}}),/本番ブロックID/);});
 const articleMd=await fs.readFile(path.join(ROOT,'202604','04_聖職者花見乱痴気騒ぎ','聖職者花見乱痴気騒ぎ.md'),'utf8');
-await test('shared production parser reads the real 04 article',()=>{
-  const parsed=parseArticle(articleMd);
+await test('browser parser matches the production parser on the real 04 article',()=>{
+  const parsed=parseArticle(articleMd),production=parseProductionArticle(articleMd);
+  assert.deepEqual(parsed,production);
   assert.equal(parsed.blocks.length,45);
   assert.equal(parsed.blocks.filter(b=>b.type==='figure').length,5);
   assert.equal(parsed.groups.length,5);
