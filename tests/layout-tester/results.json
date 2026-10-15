@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-15",
+  "date": "2026-10-16",
   "current": {
     "architecture": "static browser; no dedicated /__layout-tester endpoints",
     "status": "runtime-not-run-in-current-tool-environment",
@@ -74,6 +74,22 @@
         "exporterSyntax": true,
         "unitSyntax": true,
         "browserSyntax": true
+      }
+    },
+    "previewSplitter": {
+      "status": "implemented; browser runtime not executed in current tool environment",
+      "behavior": "drag down shrinks diagnostics and expands canvas; drag up does reverse",
+      "persistence": "localStorage",
+      "reset": "double click / Home",
+      "keyboard": "ArrowUp / ArrowDown 24px",
+      "bounds": {
+        "diagnosticsMin": 42,
+        "canvasMin": 140
+      },
+      "syntax": {
+        "app": true,
+        "unit": true,
+        "browser": true
       }
     }
   },
