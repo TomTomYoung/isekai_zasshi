@@ -699,7 +699,7 @@ function showDiagnostics(report,error){
   const errors=report?.errors||[];$('diagnostic-title').textContent=`本番組版検査：エラー ${errors.length} / ${report?.pages?.length||0}ページ`;
   if(errors.length)for(const e of errors){const p=document.createElement('p');p.className='error';p.textContent=e;host.append(p);}
   else{const p=document.createElement('p');p.textContent=`auditArticleComposition(): OK。正本ブロック ${report.sourceBlocks}件、採用画像 ${report.selectedImages}点、${report.pages.length}ページ。`;host.append(p);}
-  for(const m of report?.pages||[]){const p=document.createElement('p');p.className='metric';p.textContent=`p${m.page}: image/text=${m.imageToText.toFixed(2)} / body bottom=${m.bottom.toFixed(1)} / figure=${m.figure}${m.repeated?' (再掲)':''}`;host.append(p);}
+  for(const m of report?.pages||[]){const p=document.createElement('p');p.className='metric';p.textContent=`p${m.page}: image/text=${m.imageToText.toFixed(2)} / body bottom=${m.bottom.toFixed(1)} / figure=${m.figure}${m.repeated?' (再掲)':''}${m.autoFitFirstPage?` / 巻頭画像-${m.autoFitShrink.toFixed(1)}px`:''}`;host.append(p);}
 }
 async function waitComposition(token){
   const deadline=Date.now()+22000;
