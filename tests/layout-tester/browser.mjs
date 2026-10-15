@@ -25,7 +25,7 @@ const state=()=>page.evaluate(()=>{
   const report=win.auditArticleComposition();
   const source=JSON.parse(doc.querySelector('#article-source').textContent);
   return{
-    ready:tester.ready,dirty:tester.dirty,article:tester.source.article,sourceName:tester.source.source,pages:tester.pages.length,
+    ready:tester.ready,dirty:tester.dirty,kind:tester.source.kind,article:tester.source.article,sourceName:tester.source.source,pages:tester.pages.length,
     contract:doc.querySelector('meta[name="article-source-contract"]')?.content,
     testerCandidate:doc.querySelector('meta[name="layout-tester-candidate"]')?.content,
     composition:win.__articleComposition?.status,auditOk:report.ok,auditPages:report.pages.length,
@@ -60,6 +60,39 @@ try{
   });
 
   await test('no dedicated API endpoint is requested',()=>assert.deepEqual(dedicatedRequests,[]));
+
+  await test('Explorer article-folder selection loads MD, images and font from local files',async()=>{
+    const articleDir=path.join(ROOT,'202604','04_聖職者花見乱痴気騒ぎ');
+    await page.locator('#folder-files').setInputFiles(articleDir);
+    await settled();
+    const s=await state();
+    assert.equal(s.kind,'folder');
+    assert.equal(s.sourceName,'聖職者花見乱痴気騒ぎ.md');
+    assert.equal(s.testerCandidate,'folder-browser');
+    assert.equal(s.pages,6);
+    assert.equal(s.auditOk,true);
+    assert.equal(s.blocks,45);
+    assert.equal(s.figures,5);
+    assert.equal(s.groups,5);
+    assert.match(s.fontFamily,/ArticleSubset/);
+    const assets=await page.evaluate(()=>{
+      const doc=document.querySelector('#preview-frame').contentDocument;
+      const images=[...doc.querySelectorAll('.scene-image')];
+      const source=JSON.parse(doc.querySelector('#article-source').textContent);
+      return{
+        imageCount:images.length,
+        allLoaded:images.every(img=>img.complete&&img.naturalWidth>0),
+        blobImages:images.every(img=>img.src.startsWith('blob:')),
+        figureSources:source.blocks.filter(b=>b.type==='figure').map(b=>b.src)
+      };
+    });
+    assert.ok(assets.imageCount>=5);
+    assert.equal(assets.allLoaded,true);
+    assert.equal(assets.blobImages,true);
+    assert.ok(assets.figureSources.every(src=>src.startsWith('blob:')));
+  });
+
+  await test('Explorer folder selection still uses no dedicated API',()=>assert.deepEqual(dedicatedRequests,[]));
 
   await test('production fixed-page DOM is 1456x2056',async()=>{
     const v=await page.evaluate(()=>{
