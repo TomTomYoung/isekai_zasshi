@@ -2,6 +2,10 @@ import {makeZip} from './core.mjs';
 
 const PAGE_WIDTH=1456;
 const PAGE_HEIGHT=2056;
+const transport=document.createElement('iframe');
+transport.hidden=true;transport.title='画像読取';transport.setAttribute('aria-hidden','true');
+document.body.append(transport);
+const read=transport.contentWindow.fetch.bind(transport.contentWindow);
 
 function download(blob,name){
   const url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -9,7 +13,7 @@ function download(blob,name){
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 async function blobDataUrl(url){
-  const response=await fetch(url,{cache:'no-store',credentials:'omit'});
+  const response=await read(url,{cache:'no-store'});
   if(!response.ok)throw new Error(`画像読込失敗 ${response.status}: ${url}`);
   const blob=await response.blob();
   return await new Promise((resolve,reject)=>{
