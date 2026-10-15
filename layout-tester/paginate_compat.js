@@ -100,10 +100,13 @@
     return { page, body };
   }
 
-  function candidate(context, headings, block, start, end) {
+  function candidate(context, headings, block, start, end, reserveQuickStrip = false) {
     const nodes = [...headings.map(h => render(h)), render(block, start, end)];
     context.body.append(...nodes);
+    const reserve = reserveQuickStrip ? magazineQuickStrip() : null;
+    if (reserve) context.body.append(reserve);
     const ok = fits(context.page);
+    if (reserve) reserve.remove();
     nodes.forEach(n => n.remove());
     return ok;
   }
@@ -132,7 +135,25 @@
     const leadBlocks = group[0]?.type === 'h1' && group[1]?.type === 'h2' ? group.slice(0, 2) : [];
     const blocks = group.filter(b => b.type !== 'figure' && !leadBlocks.includes(b));
     let context = newPage(figure, image, false, leadBlocks), headings = [];
-    const nextPage = () => { context = newPage(figure, image, true); };
+    const firstContext = context;
+    const keepQuickStrip = groupIndex === 0 && Boolean(magazineQuickStrip());
+    let quickStripPlaced = false;
+    const reserveQuickStrip = () => keepQuickStrip && !quickStripPlaced && context === firstContext;
+    const placeQuickStrip = () => {
+      if (!keepQuickStrip || quickStripPlaced) return;
+      const strip = magazineQuickStrip();
+      if (!strip) return;
+      firstContext.body.append(strip);
+      if (!fits(firstContext.page)) {
+        strip.remove();
+        throw new Error('Magazine quick strip cannot fit on the first page.');
+      }
+      quickStripPlaced = true;
+    };
+    const nextPage = () => {
+      if (context === firstContext) placeQuickStrip();
+      context = newPage(figure, image, true);
+    };
 
     for (const block of blocks) {
       if (/^h[123]$/.test(block.type)) {
@@ -143,16 +164,16 @@
       const length = block.type === 'table' ? block.rows.length : [...block.text].length;
       let start = 0;
       while (start < length) {
-        if (!candidate(context, headings, block, start, length) && context.body.children.length) {
+        if (!candidate(context, headings, block, start, length, reserveQuickStrip()) && context.body.children.length) {
           nextPage();
         }
 
         let end = length;
-        if (!candidate(context, headings, block, start, end)) {
+        if (!candidate(context, headings, block, start, end, reserveQuickStrip())) {
           let low = start, high = length;
           while (low < high) {
             const mid = Math.ceil((low + high) / 2);
-            if (candidate(context, headings, block, start, mid)) low = mid;
+            if (candidate(context, headings, block, start, mid, reserveQuickStrip())) low = mid;
             else high = mid - 1;
           }
           end = low;
@@ -186,16 +207,7 @@
       throw new Error(`Section ends in orphan heading ${headings[0].id}.`);
     }
 
-    if (groupIndex === 0) {
-      const strip = magazineQuickStrip();
-      if (strip) {
-        context.body.append(strip);
-        if (!fits(context.page)) {
-          strip.remove();
-          context.page.dataset.magazineStripSkipped = 'true';
-        }
-      }
-    }
+    placeQuickStrip();
   }
 
   function audit() {
