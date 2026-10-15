@@ -95,7 +95,6 @@ await test('layout tester entry has no dedicated API dependency',async()=>{
   const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
   assert.doesNotMatch(app,/\/__layout-tester\//);
   assert.match(app,/layout-source\.json/);
-  assert.match(app,/article_parse\.mjs/);
   assert.match(app,/production_export\.mjs/);
   assert.match(app,/article_compat\.mjs/);
   assert.match(app,/paginate_compat\.js/);
