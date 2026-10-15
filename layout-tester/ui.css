@@ -49,3 +49,11 @@ textarea,input[type=text],input[type=number]{border:1px solid #bdcad3;border-rad
   .sidebar::-webkit-scrollbar-thumb,.canvas::-webkit-scrollbar-thumb{background:#8a969f;border:3px solid transparent;background-clip:padding-box;border-radius:8px}
   .sidebar::-webkit-scrollbar-track,.canvas::-webkit-scrollbar-track{background:#eef2f4}
 }
+
+.preview-splitter{position:relative;flex:0 0 11px;height:11px;cursor:row-resize;background:#eef2f4;border-top:1px solid #cbd5dc;border-bottom:1px solid #cbd5dc;touch-action:none;user-select:none;z-index:5}
+.preview-splitter span{position:absolute;left:50%;top:50%;width:64px;height:3px;transform:translate(-50%,-50%);border-radius:3px;background:#97a5ae;pointer-events:none}
+.preview-splitter:hover,.preview-splitter:focus-visible{background:#dde7ec;outline:none}
+.preview-splitter:hover span,.preview-splitter:focus-visible span{background:#4f6f7b}
+body.preview-splitter-dragging{cursor:row-resize!important;user-select:none!important}
+body.preview-splitter-dragging *{cursor:row-resize!important}
+@media(max-width:880px){.preview-splitter{display:none}}
