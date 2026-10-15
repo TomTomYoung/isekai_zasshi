@@ -113,38 +113,3 @@ export function parseArticleForTester(markdown){
     syntheticSubtitle
   };
 }
-
-export function adaptRuntimeForTextSections(runtime){
-  const replacements=[
-    [
-      "    const image = page.querySelector('img'), box = image.getBoundingClientRect();\n    const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);\n    const imageArea = image.naturalWidth * image.naturalHeight * scale * scale;",
-      "    const image = page.querySelector('img');\n    let imageArea = 0;\n    if (image) {\n      const box = image.getBoundingClientRect();\n      const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);\n      imageArea = image.naturalWidth * image.naturalHeight * scale * scale;\n    }"
-    ],
-    [
-      "    return m.bottom <= 1936 && m.imageArea > m.textArea;",
-      "    return m.bottom <= 1936 && (!page.querySelector('img') || m.imageArea > m.textArea);"
-    ],
-    [
-      "    const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));\n    scene.dataset.figure = figure.id;\n    scene.dataset.repeated = String(repeated);\n    const img = image.cloneNode(); img.className = 'scene-image';\n    scene.append(img, el('figcaption', '', figure.caption));\n    const body = el('div', 'article-body');\n    const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));\n    page.append(head, scene, body, folio); root.append(page);",
-      "    const body = el('div', 'article-body');\n    const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));\n    if (figure && image) {\n      const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));\n      scene.dataset.figure = figure.id;\n      scene.dataset.repeated = String(repeated);\n      const img = image.cloneNode(); img.className = 'scene-image';\n      scene.append(img, el('figcaption', '', figure.caption));\n      page.append(head, scene, body, folio);\n    } else page.append(head, body, folio);\n    root.append(page);"
-    ],
-    [
-      "      const ordered = [page.querySelector('.running-head'), page.querySelector('.scene'), ...children, page.querySelector('.folio')];",
-      "      const ordered = [page.querySelector('.running-head'), page.querySelector('.scene'), ...children, page.querySelector('.folio')].filter(Boolean);"
-    ],
-    [
-      "      return { page: index + 1, ...m, figure: page.querySelector('.scene').dataset.figure, repeated: page.querySelector('.scene').dataset.repeated === 'true' };",
-      "      const scene = page.querySelector('.scene');\n      return { page: index + 1, ...m, figure: scene?.dataset.figure || null, repeated: scene?.dataset.repeated === 'true' };"
-    ],
-    [
-      "      const figure = group.find(b => b.type === 'figure');\n      const image = new Image(); image.src = figure.src; image.alt = figure.alt;\n      await image.decode(); return image;",
-      "      const figure = group.find(b => b.type === 'figure');\n      if (!figure) return null;\n      const image = new Image(); image.src = figure.src; image.alt = figure.alt;\n      await image.decode(); return image;"
-    ]
-  ];
-  let out=runtime;
-  for(const [from,to] of replacements){
-    if(!out.includes(from))throw new Error('paginate.js互換処理を適用できません。runtime更新に合わせてテスターを更新してください');
-    out=out.replace(from,to);
-  }
-  return out;
-}
