@@ -1,40 +1,59 @@
 # 組版テスターの検証
 
-## 2026-10-15 再確認（この変更の結果）
+## 2026-10-15 本番組版経路への再構築
 
-ロジック・実HTTPサーバー・テスト起動条件の55件と、7つのmjsの構文確認が成功しました。ブラウザ試験はChromium sandboxを有効にして起動できましたが、HTTPへの遷移が `ERR_BLOCKED_BY_ADMINISTRATOR` で拒否されたため、今回のブラウザ試験成功件数は0です。別の経路へ切り替えていません。
+現行 `layout-tester` は、初版の独自Markdownパーサー／独自レンダラーを入口から外し、本番記事の `article_source.mjs`、`template.css`、埋込 `ArticleSubset`、`paginate.js` を使う構成へ変更しました。
 
-テストのサンドボックス無効化指定とメモリ注入経路を削除しました。アプリの取得先を同一originに限定し、認証情報とリダイレクトを使わず、読取サーバーではcross-site要求と異なるOriginを拒否します。
+そのため、以下の旧試験結果を現行版の成功件数へ合算しません。
 
-`results.json` の `current` が今回、`initialVersion` が以下の初回記録です。55件と初回ブラウザ22件を合算して「現行77件合格」とは扱いません。Windows実機・既存記事の従来試験は未確認です。
+- 初版の純粋ロジック52件
+- 初版のメモリ注入ブラウザ22件
+- 後続版のロジック・HTTP 55件
+- 管理環境でHTTP遷移前に停止したブラウザ0件
 
-## 初回の検証記録（修正前）
+旧記録は比較用の履歴です。
 
-実施日：2026-10-15。Node v22.16.0、Linux、Chromium 144.0.7559.96、DPR 1、OSのNoto Sans CJK JPを使用。フォントファイルは同梱していません。
+## 現行の試験対象
 
-## 結果
+### 単体・HTTP
 
-純粋ロジック・HTTPサーバー試験52件と、ブラウザ試験22件、計74件が成功しました。
+`tests/layout-tester/unit.mjs` では従来の安全性検査に加えて、実際の次の記事を使います。
 
-原稿解析と記法拒否、設定の型・値・未知キー、安定ID、既存記事形式のfigure、表の列揃え、画像パス、ZIPのCRC、HTTPの日本語パス・読取専用・パストラバーサル・Host・symlink制限を確認しています。
+```text
+202604/04_聖職者花見乱痴気騒ぎ
+```
 
-ブラウザでは2ページの試用原稿、PNG実ダウンロード、ZIP実ダウンロード、出力倍率、JSON保存・再読込、非対称余白、画像のcontain/cover、長文と装飾・結合文字の保存、2段組み、見出しの孤立防止、欠落画像、未対応HTML、壊れた設定による出力停止、古い非同期結果の破棄、同名画像を含むフォルダー選択、空欄の数値入力を確認しました。未処理のブラウザ例外は0件でした。
+確認項目：
 
-試用原稿のPNGは1456×2056と2912×4112。寸法ガイドの有無・画面ズームを変えても、1倍PNGのSHA-256は一致しました。全ページZIPは連番PNG2枚で、Python zipfileによるCRC確認も通過しました。
+- `/__layout-tester/source` が `layout-source.json` の正本MDを返す
+- 正本以外のパスを拒否する
+- `/__layout-tester/compose` が本番source contractを持つ候補HTMLを返す
+- 候補HTMLが `ArticleSubset` と本番runtimeを保持する
+- テスター一時CSSが候補へ入る
+- 候補から `article-render-sha256` を外し、本番同期済みHTMLと区別する
+- 通常静的ファイルへのPOSTは引き続き拒否する
+- 設定値・ブロックIDの範囲を検証する
 
-1倍PNGと同一環境のガイドなし紙面DOMのスクリーンショットを比較したところ、2,993,536画素中42画素に差がありました。RGBA成分あたりの平均絶対差は約0.0000307（0〜255尺度）。全画素一致とはしていません。生データは `results.json` を参照してください。
+### ブラウザ
 
-## 試験経路の区別
+`tests/layout-tester/browser.mjs` もdemo.mdではなく実記事04を開きます。
 
-この作業環境ではブラウザからloopback HTTPへの直接遷移が `ERR_BLOCKED_BY_ADMINISTRATOR` になりました。この制約は回避していません。ブラウザ試験は、ローカルの本番JS本体とCSSをメモリ上のページへ注入し、demo.md/defaults.jsonだけを模擬fetchで返すハーネスで実行しました。アプリ内の画像選択、組版、PNG/ZIP生成、ブラウザの実ダウンロードは実際に動かしています。
+確認項目：
 
-NodeのHTTPサーバーは実ポートを使用した52件側の試験で検証していますが、HTTPで配信したES moduleの読込からUIまでの一貫試験はこの環境では未完了です。利用者のWindows Chrome/Edge、CodeSwing、vscode.devも実機未確認です。メモリ上の検証をこれらの成功へ置き換えません。
+- 正本記事が初期表示される
+- `article-source-contract=1`
+- `layout-tester-candidate=1`
+- `.fixed-page` が1456×2056
+- ArticleSubset使用
+- `auditArticleComposition()` 成功
+- 本番 `data-source` / `data-figure` の実寸取得
+- 一時CSS変更後に同じ本番rendererで再組版
+- PNGが本番候補 `.fixed-page` の直接スクリーンショットで1456×2056
+- 未処理ブラウザエラーなし
 
-既存記事の全画像を読み込んだ校了検査や、従来テスト群の再実行は行っていません。202603・202604と従来の組版実装は本変更の対象外です。
+Chromium sandboxは有効のままです。テストのために `--no-sandbox` を追加しません。
 
-## 再実行
-
-通常環境ではブラウザ試験を実際のHTTP経路で実行します。
+## 実行
 
 ```sh
 npm ci
@@ -42,14 +61,39 @@ npx playwright install chromium
 npm run test:layout-tester
 ```
 
-純粋ロジックとHTTPサーバーだけなら追加パッケージは不要です。
+単体・HTTPのみ：
 
 ```sh
 node tests/layout-tester/unit.mjs
 ```
 
-ブラウザがインストール済みの別の場所にある場合は `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` を指定します。Playwright自体の場所を変更する場合だけ `PLAYWRIGHT_MODULE` にモジュールのパスを指定します。いずれも通常は不要です。
+既存Chromiumを使う場合：
 
-現行テストはChromiumのサンドボックスを有効にして、HTTP経路だけを検証します。環境側に拒否された場合は失敗として停止し、別の実行経路へ切り替えません。
+```sh
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:layout-tester
+```
 
-`TEST_OUTPUT_DIR` が指定されていればそこへ、未指定ならOS一時フォルダーへ試験PNG、ZIP、JSON、画面キャプチャを書きます。記事フォルダーや既存出力へ書き込みません。
+## 現時点の検証状態
+
+GitHub上の変更後ファイルについて、V8による構文確認は行っています。
+
+```text
+layout-tester/app.mjs                  syntax OK
+tools/layout_tester_server.mjs        syntax OK
+tests/layout-tester/unit.mjs          syntax OK
+tests/layout-tester/browser.mjs       syntax OK
+```
+
+ただし、この作業環境ではGitHubリポジトリをローカルcloneできず、loopback HTTPを使った現行版のNode/Chromium試験は実行できていません。
+
+したがって、現行本番組版テスターについて「ブラウザ試験N件成功」とはまだ記録しません。`results.json` も、旧結果を現行成功値として扱わない形に更新します。
+
+環境側がloopback HTTPを `ERR_BLOCKED_BY_ADMINISTRATOR` 等で拒否した場合、その保護を解除したり、メモリ注入経路へ切り替えて成功扱いにはしません。
+
+## 旧試験の履歴
+
+初版では、Linux / Chromium 144 / Node 22.16で、独自レンダラーを使うメモリ上ブラウザハーネス22件が成功しました。
+
+その後、メモリ注入経路とsandbox無効化指定を削除し、実HTTP経路だけを使う版では、ロジック・HTTP 55件が成功した一方、ブラウザはloopback遷移を管理環境に拒否され、試験開始前に停止しました。
+
+これらは、今回の「本番rendererを使うテスター」の合格証拠ではありません。

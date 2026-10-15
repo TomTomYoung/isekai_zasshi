@@ -1,5 +1,20 @@
 # 異世界雑誌：再開用ハンドオフ
 
+## 2026-10-15 組版テスター再構築
+
+旧 `layout-tester` は本番記事組版とは別のMarkdownパーサー／レンダラーを持っていたため、実記事のテスターとして不適切でした。現行入口を、本番の `tools/article_source.mjs`、`template.css`、記事埋込フォント、`paginate.js` をそのまま使う構成へ作り直しています。
+
+初期対象は `202604/04_聖職者花見乱痴気騒ぎ`。正本MDまたは画面内の一時差替えMDから本番候補HTMLをメモリ生成し、`data-source` / `data-figure` の実DOMを計測します。一時CSS設定を変更した場合も、本番 `paginate.js` が最初から改ページします。
+
+PNG/ZIPは旧 `foreignObject` 系の独自DOM出力を使わず、同じ候補HTMLをsandbox有効Chromiumで開き、`.fixed-page` を直接撮影する経路です。通常のリポジトリファイル配信は読取専用のままで、テスター用POSTはメモリ上のcompose/exportだけです。
+
+旧 `renderer.mjs` / `export.mjs` は現行入口から外しました。単体・ブラウザ試験もdemo.md中心から実記事04中心へ変更しています。仕様は [doc/HTML_LAYOUT_TESTER.md](doc/HTML_LAYOUT_TESTER.md)、操作は [layout-tester/README.md](layout-tester/README.md)。
+
+この変更では202604の正本MD、採用画像、保存済み `fixed_layout.html`、既存PNGを変更しません。候補HTMLからは `article-render-sha256` を外し、本番同期済みHTMLと区別します。
+
+---
+
+
 更新日：2026-10-04。開始時master：`85897e947f2decc421e140e3266a3853a31c9a26`。PR #9はマージ済みです。
 
 ## 現在地
