@@ -123,5 +123,18 @@ await test('instruction-region UI and export contract are present',async()=>{
   assert.match(exporter,/includeInstruction=false/);
   assert.match(exporter,/layout-instruction-region/);
 });
+await test('layout tester uses single scroll containers instead of nested block/iframe scrollbars',async()=>{
+  const html=await fs.readFile(path.join(ROOT,'layout-tester','index.html'),'utf8');
+  const css=await fs.readFile(path.join(ROOT,'layout-tester','ui.css'),'utf8');
+  const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
+  assert.match(html,/id="preview-frame"[^>]*scrolling="no"/);
+  assert.match(css,/\.block-list\{[^}]*overflow:visible;[^}]*max-height:none/);
+  assert.doesNotMatch(css,/\.block-list\{[^}]*max-height:420px/);
+  assert.match(css,/\.canvas\{[^}]*overflow:auto/);
+  assert.match(app,/function syncFrameExtent\(/);
+  assert.match(app,/function syncCurrentPageFromCanvas\(/);
+  assert.match(app,/canvas\.addEventListener\('scroll'/);
+  assert.doesNotMatch(app,/frame\.contentWindow\.scrollTo\(0,pages\[currentPage-1\]\.offsetTop\)/);
+});
 await test('browser runner keeps sandbox enabled and forbids dedicated API use',async()=>{const s=await fs.readFile(path.join(ROOT,'tests/layout-tester/browser.mjs'),'utf8');assert.match(s,/chromiumSandbox:true/);assert.doesNotMatch(s,/--no-sandbox|LAYOUT_TEST_MEMORY|page\.setContent|page\.addScriptTag/);assert.match(s,/dedicatedRequests/);});
 console.log(`PASS ${count} tests`);

@@ -13,7 +13,8 @@ document.body.append(transport);
 const read=transport.contentWindow.fetch.bind(transport.contentWindow);
 let source=null,settings=structuredClone(TESTER_DEFAULTS),articleData=null,pages=[],currentPage=1,selected=null,busy=false,dirty=true,ready=false,pendingJson=false,generation=0;
 let instructionMode=false,instruction=null,instructionDrag=null;
-const frame=$('preview-frame');
+let frameContentHeight=2056,canvasScrollRaf=0,suppressCanvasPageSync=false;
+const frame=$('preview-frame'),canvas=$('canvas'),frameHolder=$('frame-holder');
 
 function status(text,state='ok'){$('status').textContent=text;$('status').dataset.state=state;}
 function setPath(obj,path,value){
@@ -526,15 +527,61 @@ async function saveInstructionPng(){
   download(blob,`${fileStem()}-p${String(instruction.page).padStart(3,'0')}-instruction.png`);
   status('赤枠つき指示PNGを保存しました。','ok');
 }
-function updatePreview(){
+function syncFrameExtent(){
+  const doc=frame.contentDocument;if(!doc||!pages.length)return;
+  const last=pages.at(-1);
+  const measured=Math.max(
+    doc.documentElement?.scrollHeight||0,
+    doc.body?.scrollHeight||0,
+    (last?.offsetTop||0)+(last?.offsetHeight||2056)+24
+  );
+  frameContentHeight=Math.max(2056,Math.ceil(measured));
+  frame.style.height=frameContentHeight+'px';
+  frame.setAttribute('scrolling','no');
+  if(doc.documentElement)doc.documentElement.style.overflow='hidden';
+  if(doc.body)doc.body.style.overflow='hidden';
+  try{frame.contentWindow.scrollTo(0,0);}catch{}
+}
+function updatePageIndicator(){
+  if(!ready||!pages.length){$('page-number').textContent='—';buttons();return;}
+  currentPage=Math.max(1,Math.min(currentPage,pages.length));
+  $('page-number').textContent=`${String(currentPage).padStart(2,'0')} / ${String(pages.length).padStart(2,'0')}`;
+  buttons();
+}
+function scrollCanvasToCurrentPage(){
+  if(!ready||!pages.length)return;
+  const zoom=Number($('zoom').value)/100;
+  const page=pages[currentPage-1];if(!page)return;
+  const target=Math.max(0,frameHolder.offsetTop+page.offsetTop*zoom-8);
+  suppressCanvasPageSync=true;
+  canvas.scrollTo({top:target,behavior:'auto'});
+  requestAnimationFrame(()=>{suppressCanvasPageSync=false;});
+}
+function syncCurrentPageFromCanvas(){
+  canvasScrollRaf=0;
+  if(suppressCanvasPageSync||!ready||!pages.length)return;
+  const zoom=Number($('zoom').value)/100;
+  const probe=(canvas.scrollTop-frameHolder.offsetTop+canvas.clientHeight*.35)/Math.max(.01,zoom);
+  let next=1;
+  for(let i=0;i<pages.length;i++){
+    if(pages[i].offsetTop<=probe)next=i+1;
+    else break;
+  }
+  next=Math.max(1,Math.min(next,pages.length));
+  if(next!==currentPage){
+    currentPage=next;updatePageIndicator();updateSelection();
+  }
+}
+function updatePreview({scrollToPage=true}={}){
   if(!ready||!pages.length){$('page-number').textContent='—';buttons();return;}
   currentPage=Math.max(1,Math.min(currentPage,pages.length));
   const zoom=Number($('zoom').value)/100;$('zoom-value').value=`${Math.round(zoom*100)}%`;
   frame.style.transform=`scale(${zoom})`;frame.style.transformOrigin='top left';
-  $('frame-holder').style.width=`${1456*zoom}px`;$('frame-holder').style.height=`${2056*zoom}px`;
-  requestAnimationFrame(()=>frame.contentWindow.scrollTo(0,pages[currentPage-1].offsetTop));
-  $('page-number').textContent=`${String(currentPage).padStart(2,'0')} / ${String(pages.length).padStart(2,'0')}`;
-  $('paper-size').textContent='紙面 1456 × 2056 px / 本番DOM';updateSelectionOutline();renderInstructionOverlay();applyInstructionMode();buttons();
+  frameHolder.style.width=`${1456*zoom}px`;frameHolder.style.height=`${frameContentHeight*zoom}px`;
+  updatePageIndicator();
+  $('paper-size').textContent='紙面 1456 × 2056 px / 本番DOM';
+  updateSelectionOutline();renderInstructionOverlay();applyInstructionMode();
+  if(scrollToPage)requestAnimationFrame(scrollCanvasToCurrentPage);
 }
 function showDiagnostics(report,error){
   const host=$('diagnostics');host.replaceChildren();
@@ -563,7 +610,8 @@ async function setFrameHtml(html,token){
 }
 function clearPreview(error){
   clearInstruction({keepMode:false});
-  ready=false;pages=[];articleData=null;selected=null;
+  ready=false;pages=[];articleData=null;selected=null;frameContentHeight=2056;
+  frame.style.height='2056px';frameHolder.style.height='';
   frame.removeAttribute('src');frame.srcdoc='<!doctype html><html><body style="margin:0;background:#fff"></body></html>';
   $('block-list').replaceChildren();$('block-count').textContent='0件';$('page-number').textContent='—';$('render-source').textContent='—';
   showDiagnostics(null,error);updateSelection();
@@ -579,6 +627,7 @@ async function compose(){
     pages=[...doc.querySelectorAll('.fixed-page')];if(!pages.length)throw new Error('fixed-pageが生成されませんでした');
     const report=frame.contentWindow.auditArticleComposition();if(!report.ok)throw new Error(report.errors.join('\n'));
     ready=true;dirty=false;currentPage=Math.min(currentPage,pages.length)||1;
+    syncFrameExtent();
     if(!articleData.blocks.some(b=>b.id===selected))selected=articleData.blocks[0]?.id||null;buildBlockList();
     doc.addEventListener('click',event=>{if(instructionMode)return;const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
     installInstructionHandlers(doc);applyInstructionMode();updateInstructionPanel();
@@ -625,7 +674,8 @@ $('load-path').onclick=loadSource;$('compose').onclick=compose;
 $('folder-files').onchange=async e=>{const files=[...e.target.files];try{if(files.length)await loadFolder(files);}finally{$('folder-files').value='';}};
 $('markdown').addEventListener('input',()=>invalidate());
 $('md-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>1_200_000)throw new Error('原稿は120万文字以下にしてください');$('markdown').value=await file.text();invalidate(`${file.name} を一時差替えしました。本番組版してください。`);}catch(error){status(error.message,'error');}finally{$('md-file').value='';}};
-$('zoom').oninput=updatePreview;$('guides').onchange=()=>{updateSelectionOutline();updateSelection();};
+$('zoom').oninput=()=>updatePreview({scrollToPage:true});$('guides').onchange=()=>{updateSelectionOutline();updateSelection();};
+canvas.addEventListener('scroll',()=>{if(canvasScrollRaf)cancelAnimationFrame(canvasScrollRaf);canvasScrollRaf=requestAnimationFrame(syncCurrentPageFromCanvas);},{passive:true});
 $('instruction-mode').onclick=()=>setInstructionMode(!instructionMode);
 $('clear-instruction').onclick=()=>clearInstruction({keepMode:true});
 $('copy-instruction').onclick=async()=>{try{await copyInstruction();}catch(error){status(error.message,'error');}};

@@ -1,5 +1,16 @@
 # 異世界雑誌：再開用ハンドオフ
 
+## 2026-10-15 組版テスター：二重スクロール解消
+
+左ペインのblock-list内部スクロールを撤去し、左ペイン全体の1本へ統一。ブロック行はmin-heightを持つ通常リストへ変更。
+
+中央はiframe内部スクロールを廃止。組版後の文書全高を測り、iframe自体を全ページ高へ伸ばす。外側canvasだけをスクロールし、手動スクロールからcurrentPageを追従更新する。
+
+iframeには `scrolling="no"` を付け、内部html/body overflowもhiddenにする。ページ送りは `contentWindow.scrollTo` ではなくcanvas.scrollToを使う。
+
+---
+
+
 ## 2026-10-15 組版テスター：ChatGPT指示範囲
 
 紙面上の任意矩形を「ここ」と指定する機能を追加。上部の「指示範囲」を有効化してiframe内をドラッグする。

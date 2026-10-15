@@ -62,6 +62,40 @@ try{
     assert.match(s.fontFamily,/ArticleSubset/);
   });
 
+  await test('preview uses outer canvas scrolling and no iframe scrollbar',async()=>{
+    const v=await page.evaluate(()=>{
+      const frame=document.querySelector('#preview-frame'),canvas=document.querySelector('#canvas'),holder=document.querySelector('#frame-holder'),doc=frame.contentDocument;
+      return{
+        frameHeight:frame.getBoundingClientRect().height,
+        frameCssHeight:parseFloat(getComputedStyle(frame).height),
+        holderHeight:holder.getBoundingClientRect().height,
+        canvasClientHeight:canvas.clientHeight,
+        canvasScrollHeight:canvas.scrollHeight,
+        innerScrollHeight:doc.documentElement.scrollHeight,
+        innerClientHeight:doc.documentElement.clientHeight,
+        innerScrollY:frame.contentWindow.scrollY
+      };
+    });
+    assert.ok(v.frameCssHeight>2056*2);
+    assert.ok(v.canvasScrollHeight>v.canvasClientHeight);
+    assert.equal(v.innerScrollY,0);
+    assert.ok(v.innerScrollHeight<=v.frameCssHeight+2);
+  });
+
+  await test('manual canvas scroll updates current page',async()=>{
+    const before=await page.evaluate(()=>window.layoutTester.currentPage);
+    assert.equal(before,1);
+    await page.evaluate(()=>{
+      const canvas=document.querySelector('#canvas'),holder=document.querySelector('#frame-holder'),frame=document.querySelector('#preview-frame'),doc=frame.contentDocument;
+      const pages=[...doc.querySelectorAll('.fixed-page')],zoom=Number(document.querySelector('#zoom').value)/100;
+      canvas.scrollTop=holder.offsetTop+pages[2].offsetTop*zoom+20;
+    });
+    await page.waitForFunction(()=>window.layoutTester.currentPage>=3);
+    assert.ok((await page.evaluate(()=>window.layoutTester.currentPage))>=3);
+    await page.evaluate(()=>{window.layoutTester.selectBlock('b001',1);});
+    await page.waitForFunction(()=>window.layoutTester.currentPage===1);
+  });
+
   await test('no dedicated API endpoint is requested',()=>assert.deepEqual(dedicatedRequests,[]));
 
   await test('Explorer folder without font.json loads with shared fallback and legacy figures',async()=>{
