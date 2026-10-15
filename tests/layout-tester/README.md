@@ -17,6 +17,7 @@
 - 一時設定の型・範囲
 - ブラウザ用 `parseArticle()` と本番 `parseArticle()` の関数本体完全一致
 - 実記事04に対する解析結果完全一致
+- `layout-source.json` がある202604本文24件をすべて互換parserで解析
 - 04記事が45 blocks / 5 figures / 5 groups
 - `layout-tester/app.mjs` に `/__layout-tester/` 依存がない
 - 本番 `layout-source.json` とbrowser exportを使う構造
@@ -43,7 +44,8 @@
 実記事04で確認する項目：
 
 1. `layout-source.json` と正本MDを静的GETできる。
-2. エクスプローラ記事フォルダー入力へ実記事04ディレクトリを渡し、正本MD・記事フォント・採用画像をローカルFileから読める。
+2. エクスプローラ記事フォルダー入力へ、記事専用font.json/article.woffを持たない03ディレクトリを渡し、正本MD・採用画像をローカルFileから読める。
+3. 記事専用フォントがない03では04の共通ArticleSubset fallbackを使う。
 3. リポジトリ入力では候補に `layout-tester-candidate=static-browser`、フォルダー入力では `folder-browser` が付く。
 4. 候補に `article-source-contract=1` がある。
 5. 45 blocks / 5 figures / 5 groups。
