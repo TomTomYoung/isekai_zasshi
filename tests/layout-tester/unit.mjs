@@ -8,7 +8,7 @@ import {parseMarkdown, inline, inlineText, mergeSettings, validateSettings, asse
 import {startServer} from '../../tools/layout_tester_server.mjs';
 import {parseArticle} from '../../tools/article_parse.mjs';
 import {parseArticle as parseProductionArticle} from '../../tools/article_source.mjs';
-import {validateTesterSettings,TESTER_DEFAULTS} from '../../layout-tester/production_settings.mjs';
+import {validateTesterSettings,TESTER_DEFAULTS,cssForTesterSettings} from '../../layout-tester/production_settings.mjs';
 import {parseArticleForTester} from '../../layout-tester/article_compat.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const defaults=JSON.parse(await fs.readFile(path.join(ROOT,'layout-tester/defaults.json'),'utf8'));
@@ -43,6 +43,33 @@ try{
   await test('HTTP rejects a symlink outside root',async()=>{const outside=path.join(os.tmpdir(),`isekai-outside-${process.pid}.md`);await fs.writeFile(outside,'secret');try{await fs.symlink(outside,path.join(tmp,'escape.md'));assert.equal((await request('/escape.md')).status,403);}finally{await fs.rm(outside,{force:true});}});
 }finally{await new Promise(r=>server.close(r));await fs.rm(tmp,{recursive:true,force:true});}
 await test('production tester settings are bounded',()=>{assert.equal(validateTesterSettings(TESTER_DEFAULTS).body.fontSize,28);assert.throws(()=>validateTesterSettings({version:1,body:{fontSize:999}}),/fontSize/);assert.throws(()=>validateTesterSettings({version:1,blocks:{x:{width:100}}}),/本番ブロックID/);});
+await test('magazine finishing settings are validated and rendered as CSS',()=>{
+  const value=validateTesterSettings({
+    version:1,
+    magazine:{
+      paperColor:'#fffaf2',
+      accentColor:'#9a2f36',
+      textureStrength:7,
+      paragraphGap:10,
+      cards:{
+        enabled:true,
+        heading:'見どころ',
+        one:{title:'甲',text:'説明'},
+        two:{title:'乙',text:'説明'},
+        three:{title:'丙',text:'説明'}
+      }
+    },
+    blocks:{}
+  });
+  assert.equal(value.magazine.cards.enabled,true);
+  assert.equal(value.magazine.cards.two.title,'乙');
+  const css=cssForTesterSettings(value);
+  assert.match(css,/magazine-quick-strip/);
+  assert.match(css,/background-image:radial-gradient/);
+  assert.match(css,/paragraphGap|margin-bottom:10px/);
+  assert.throws(()=>validateTesterSettings({version:1,magazine:{paperColor:'red'},blocks:{}}),/RRGGBB/);
+  assert.throws(()=>validateTesterSettings({version:1,magazine:{cards:{enabled:'yes'}},blocks:{}}),/true\/false/);
+});
 const articleMd=await fs.readFile(path.join(ROOT,'202604','04_聖職者花見乱痴気騒ぎ','聖職者花見乱痴気騒ぎ.md'),'utf8');
 await test('browser parser is the same function body and result as production',()=>{
   assert.equal(parseArticle.toString(),parseProductionArticle.toString());
@@ -70,6 +97,8 @@ await test('stable compatibility paginator handles text-only sections without so
   assert.match(runtime,/!page\.querySelector\('img'\)/);
   assert.match(runtime,/scene\?\.dataset\.figure/);
   assert.match(runtime,/page\.dataset\.textOnly = 'true'/);
+  assert.match(runtime,/function magazineQuickStrip\(/);
+  assert.match(runtime,/source\.testerSettings\?\.magazine\?\.cards/);
   assert.doesNotMatch(compat,/adaptRuntimeForTextSections/);
   assert.doesNotMatch(app,/adaptRuntimeForTextSections/);
   assert.match(app,/layout-tester\/paginate_compat\.js/);
@@ -108,6 +137,13 @@ await test('Explorer article-folder picker is present and wired',async()=>{
   assert.match(app,/function loadFolderArticle\(/);
   assert.match(app,/\$\('folder-files'\)\.onchange/);
   assert.match(app,/kind:'folder'/);
+  assert.match(app,/layout-tester\.json/);
+});
+await test('uniform catalog ships an automatic magazine preset',async()=>{
+  const preset=JSON.parse(await fs.readFile(path.join(ROOT,'202604','01_王都女学院春の制服名鑑','layout-tester.json'),'utf8'));
+  const checked=validateTesterSettings(preset);
+  assert.equal(checked.magazine.cards.enabled,true);
+  assert.equal(checked.magazine.cards.one.title,'王都桜花学園');
 });
 await test('instruction-region UI and export contract are present',async()=>{
   const html=await fs.readFile(path.join(ROOT,'layout-tester','index.html'),'utf8');
