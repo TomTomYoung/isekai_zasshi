@@ -49,6 +49,15 @@ export function normalizeArticleMarkdown(markdown){
 export function parseArticleForTester(markdown){
   const normalized=normalizeArticleMarkdown(markdown);
   const lines=normalized.markdown.split('\n');
+  let syntheticSubtitle=false;
+  const first=lines.findIndex(line=>line.trim());
+  if(first>=0&&/^#\s+/.test(lines[first].trim())){
+    let second=first+1;while(second<lines.length&&!lines[second].trim())second++;
+    if(second>=lines.length||!/^##\s+/.test(lines[second].trim())){
+      lines.splice(first+1,0,'## LAYOUT TESTER SUBTITLE');
+      syntheticSubtitle=true;
+    }
+  }
   const h2=[];for(let i=0;i<lines.length;i++)if(/^##\s+/.test(lines[i].trim()))h2.push(i);
   const starts=[0,...h2.slice(1)],insertions=[];
   let textOnlySections=0,splitFigureSections=0,syntheticSeq=0;
@@ -75,11 +84,12 @@ export function parseArticleForTester(markdown){
   const staged=parseArticle(lines.join('\n'));
   const syntheticFigure=/^\.\/__layout_tester_missing_\d+\.png$/;
   const syntheticHeading=/^LAYOUT TESTER IMAGE SPLIT \d+$/;
+  const syntheticSubtitleHeading=/^LAYOUT TESTER SUBTITLE$/;
   const groups=[];
   for(const stagedGroup of staged.groups){
     const kept=stagedGroup.filter(block=>!(
       (block.type==='figure'&&syntheticFigure.test(block.src))||
-      (block.type==='h2'&&syntheticHeading.test(block.text))
+      (block.type==='h2'&&(syntheticHeading.test(block.text)||syntheticSubtitleHeading.test(block.text)))
     ));
     if(kept.length)groups.push(kept);
   }
@@ -96,7 +106,8 @@ export function parseArticleForTester(markdown){
     normalizedQuoteGaps:normalized.quoteGaps,
     normalizedDividers:normalized.dividers,
     textOnlySections,
-    splitFigureSections
+    splitFigureSections,
+    syntheticSubtitle
   };
 }
 
