@@ -5,7 +5,9 @@ import path from 'node:path';
 import http from 'node:http';
 import {fileURLToPath} from 'node:url';
 import {parseMarkdown, inline, inlineText, mergeSettings, validateSettings, assetPath, makeZip, crc32} from '../../layout-tester/core.mjs';
-import {startServer,validateTesterSettings,TESTER_DEFAULTS} from '../../tools/layout_tester_server.mjs';
+import {startServer} from '../../tools/layout_tester_server.mjs';
+import {parseArticle} from '../../tools/article_parse.mjs';
+import {validateTesterSettings,TESTER_DEFAULTS} from '../../layout-tester/production_settings.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const defaults=JSON.parse(await fs.readFile(path.join(ROOT,'layout-tester/defaults.json'),'utf8'));
 let count=0;async function test(name,run){await run();console.log(`ok ${++count} - ${name}`);}
@@ -39,13 +41,19 @@ try{
   await test('HTTP rejects a symlink outside root',async()=>{const outside=path.join(os.tmpdir(),`isekai-outside-${process.pid}.md`);await fs.writeFile(outside,'secret');try{await fs.symlink(outside,path.join(tmp,'escape.md'));assert.equal((await request('/escape.md')).status,403);}finally{await fs.rm(outside,{force:true});}});
 }finally{await new Promise(r=>server.close(r));await fs.rm(tmp,{recursive:true,force:true});}
 await test('production tester settings are bounded',()=>{assert.equal(validateTesterSettings(TESTER_DEFAULTS).body.fontSize,28);assert.throws(()=>validateTesterSettings({version:1,body:{fontSize:999}}),/fontSize/);assert.throws(()=>validateTesterSettings({version:1,blocks:{x:{width:100}}}),/本番ブロックID/);});
-const prod=await startServer({port:0,root:ROOT}),prodPort=prod.address().port;
-const prodRequest=(url,{method='GET',body,headers={}}={})=>new Promise((resolve,reject)=>{const data=body===undefined?null:Buffer.from(JSON.stringify(body));const req=http.request({hostname:'127.0.0.1',port:prodPort,path:url,method,headers:{...headers,...(data?{'Content-Type':'application/json','Content-Length':data.length}:{})}},res=>{const chunks=[];res.on('data',c=>chunks.push(c));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));});req.on('error',reject);if(data)req.write(data);req.end();});
-try{
-  let loaded;
-  await test('production source endpoint reads canonical 202604 article',async()=>{const r=await prodRequest('/__layout-tester/source?article='+encodeURIComponent('202604/04_聖職者花見乱痴気騒ぎ'));assert.equal(r.status,200);loaded=JSON.parse(r.body.toString('utf8'));assert.equal(loaded.source,'聖職者花見乱痴気騒ぎ.md');assert.match(loaded.markdown,/^# /m);assert.equal(loaded.settings.body.fontSize,28);});
-  await test('production compose uses article_source template and tester CSS only as overlay',async()=>{const r=await prodRequest('/__layout-tester/compose',{method:'POST',body:{article:loaded.article,markdown:loaded.markdown,settings:{version:1,body:{fontSize:27,lineHeight:42},image:{landscapeHeight:885,portraitHeight:1030},blocks:{}}}});assert.equal(r.status,200);const html=r.body.toString('utf8');assert.match(html,/name="article-source-contract" content="1"/);assert.match(html,/font-family:ArticleSubset/);assert.match(html,/id="layout-tester-overrides"/);assert.match(html,/\.article-body\{font-size:27px;line-height:42px\}/);assert.match(html,/window\.__articleComposition/);assert.doesNotMatch(html,/article-render-sha256/);});
-  await test('production endpoints reject noncanonical paths and static writes stay read-only',async()=>{assert.equal((await prodRequest('/__layout-tester/source?article='+encodeURIComponent('../outside'))).status,400);assert.equal((await prodRequest('/layout-tester/index.html',{method:'POST',body:{}})).status,405);});
-}finally{await new Promise(r=>prod.close(r));}
-await test('browser runner keeps sandbox enabled and uses HTTP only',async()=>{const s=await fs.readFile(path.join(ROOT,'tests/layout-tester/browser.mjs'),'utf8');assert.match(s,/chromiumSandbox:true/);assert.doesNotMatch(s,/--no-sandbox|LAYOUT_TEST_MEMORY|page\.setContent|page\.addScriptTag/);});
+const articleMd=await fs.readFile(path.join(ROOT,'202604','04_聖職者花見乱痴気騒ぎ','聖職者花見乱痴気騒ぎ.md'),'utf8');
+await test('shared production parser reads the real 04 article',()=>{
+  const parsed=parseArticle(articleMd);
+  assert.equal(parsed.blocks.length,45);
+  assert.equal(parsed.blocks.filter(b=>b.type==='figure').length,5);
+  assert.equal(parsed.groups.length,5);
+});
+await test('layout tester entry has no dedicated API dependency',async()=>{
+  const app=await fs.readFile(path.join(ROOT,'layout-tester','app.mjs'),'utf8');
+  assert.doesNotMatch(app,/\/__layout-tester\//);
+  assert.match(app,/layout-source\.json/);
+  assert.match(app,/article_parse\.mjs/);
+  assert.match(app,/production_export\.mjs/);
+});
+await test('browser runner keeps sandbox enabled and forbids dedicated API use',async()=>{const s=await fs.readFile(path.join(ROOT,'tests/layout-tester/browser.mjs'),'utf8');assert.match(s,/chromiumSandbox:true/);assert.doesNotMatch(s,/--no-sandbox|LAYOUT_TEST_MEMORY|page\.setContent|page\.addScriptTag/);assert.match(s,/dedicatedRequests/);});
 console.log(`PASS ${count} tests`);
