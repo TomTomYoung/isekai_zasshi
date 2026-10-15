@@ -8,7 +8,7 @@ import {parseMarkdown, inline, inlineText, mergeSettings, validateSettings, asse
 import {startServer} from '../../tools/layout_tester_server.mjs';
 import {parseArticle} from '../../tools/article_parse.mjs';
 import {parseArticle as parseProductionArticle} from '../../tools/article_source.mjs';
-import {validateTesterSettings,TESTER_DEFAULTS,cssForTesterSettings} from '../../layout-tester/production_settings.mjs';
+import {validateTesterSettings,mergeTesterSettings,TESTER_DEFAULTS,cssForTesterSettings} from '../../layout-tester/production_settings.mjs';
 import {parseArticleForTester} from '../../layout-tester/article_compat.mjs';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const defaults=JSON.parse(await fs.readFile(path.join(ROOT,'layout-tester/defaults.json'),'utf8'));
@@ -43,6 +43,12 @@ try{
   await test('HTTP rejects a symlink outside root',async()=>{const outside=path.join(os.tmpdir(),`isekai-outside-${process.pid}.md`);await fs.writeFile(outside,'secret');try{await fs.symlink(outside,path.join(tmp,'escape.md'));assert.equal((await request('/escape.md')).status,403);}finally{await fs.rm(outside,{force:true});}});
 }finally{await new Promise(r=>server.close(r));await fs.rm(tmp,{recursive:true,force:true});}
 await test('production tester settings are bounded',()=>{assert.equal(validateTesterSettings(TESTER_DEFAULTS).body.fontSize,28);assert.throws(()=>validateTesterSettings({version:1,body:{fontSize:999}}),/fontSize/);assert.throws(()=>validateTesterSettings({version:1,blocks:{x:{width:100}}}),/本番ブロックID/);});
+await test('magazine presets merge onto neutral defaults',()=>{
+  const merged=mergeTesterSettings({version:1,magazine:{textureStrength:5,cards:{enabled:true,one:{title:'甲'}}}});
+  assert.equal(merged.magazine.paperColor,TESTER_DEFAULTS.magazine.paperColor);
+  assert.equal(merged.magazine.cards.one.title,'甲');
+  assert.equal(merged.magazine.cards.two.title,'');
+});
 await test('magazine finishing settings are validated and rendered as CSS',()=>{
   const value=validateTesterSettings({
     version:1,
