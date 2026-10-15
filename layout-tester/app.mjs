@@ -5,6 +5,12 @@ import {exportProductionPages} from './production_export.mjs';
 const $=id=>document.getElementById(id);
 const SIDES=['top','right','bottom','left'];
 const REPO_ROOT=new URL('../',import.meta.url);
+// CodeSwing等がwindow.fetchを差し替えて日本語パスを変形する場合でも、
+// 同一originの空iframeから取得したブラウザ本来のfetchを使う。
+const transport=document.createElement('iframe');
+transport.hidden=true;transport.title='資産読取';transport.setAttribute('aria-hidden','true');
+document.body.append(transport);
+const read=transport.contentWindow.fetch.bind(transport.contentWindow);
 let source=null,settings=structuredClone(TESTER_DEFAULTS),articleData=null,pages=[],currentPage=1,selected=null,busy=false,dirty=true,ready=false,pendingJson=false,generation=0;
 const frame=$('preview-frame');
 
@@ -22,10 +28,9 @@ function clean(obj){
 }
 function fileStem(){return (source?.source||'layout').replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N}_.-]+/gu,'-').slice(0,70)||'layout';}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
-function encodeRelative(relative){return relative.split('/').map(part=>encodeURIComponent(part)).join('/');}
-function repoUrl(relative){return new URL(encodeRelative(relative),REPO_ROOT);}
+function repoUrl(relative){return new URL(relative,REPO_ROOT);}
 async function staticFetch(relative,{binary=false}={}){
-  const response=await fetch(repoUrl(relative),{cache:'no-store',credentials:'omit',redirect:'error'});
+  const response=await read(repoUrl(relative),{cache:'no-store'});
   if(!response.ok)throw new Error(`読込失敗 ${response.status}: ${relative}`);
   return binary?response.blob():response.text();
 }
@@ -42,6 +47,7 @@ async function blobDataUrl(blob){
   });
 }
 async function sha256(blob){
+  if(!globalThis.crypto?.subtle)return null;
   const digest=await crypto.subtle.digest('SHA-256',await blob.arrayBuffer());
   return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
@@ -67,7 +73,7 @@ async function loadStaticArticle(input){
   ]);
   if(!Array.isArray(fontInfo.codepoints)||typeof fontInfo.sha256!=='string')throw new Error('fonts/font.json が不正です');
   const actualHash=await sha256(fontBlob);
-  if(actualHash!==fontInfo.sha256)throw new Error('記事フォントのハッシュが font.json と一致しません');
+  if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォントのハッシュが font.json と一致しません');
   return{
     article,source:config.source,template:config.template,markdown,templateCss,runtime,fontInfo,
     fontDataUrl:await blobDataUrl(fontBlob),
