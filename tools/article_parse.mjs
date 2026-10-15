@@ -1,12 +1,12 @@
-// Browser-safe production Markdown parser shared by article generation and the layout tester.
-// Deliberately restricted dialect: unsupported notation fails with a line number.
-// No general-purpose HTML is executed and no unrecognized source is discarded.
+// Browser copy of the production parseArticle() function.
+// tests/layout-tester/unit.mjs compares its output with tools/article_source.mjs on the real article.
+// Keep this file browser-safe: no node:* imports.
 export function parseArticle(markdown) {
   const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
   const blocks = [];
   const fail = (i, why) => { throw new Error(`Markdown line ${i + 1}: ${why}`); };
   const plain = (text, i) => {
-    if (/[<>&*_\`\[\]\\]/.test(text) || /^\s*(?:[-+]|\d+[.)])\s|^\s*[-=]{3,}\s*$/.test(text)) {
+    if (/[<>&*_`\[\]\\]/.test(text) || /^\s*(?:[-+]|\d+[.)])\s|^\s*[-=]{3,}\s*$/.test(text)) {
       fail(i, 'unsupported markup; extend the constrained parser explicitly before publishing.');
     }
     return text;
