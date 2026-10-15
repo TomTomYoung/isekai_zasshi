@@ -134,11 +134,52 @@
     return strip;
   }
 
+  function tryAutoFitFirstPage(context, blocks, groupIndex) {
+    const magazine = source.testerSettings?.magazine;
+    if (
+      groupIndex !== 0 ||
+      !magazine?.packFirstPage ||
+      !magazine?.autoFitFirstPage ||
+      !context.page.querySelector('.scene-image')
+    ) return false;
+
+    const nodes = blocks.map(block => render(block));
+    context.body.append(...nodes);
+    const strip = magazineQuickStrip();
+    if (strip) context.body.append(strip);
+
+    const pageBottomLimit = 1936;
+    let overflow = Math.max(0, metrics(context.page).bottom - pageBottomLimit);
+    const imageNode = context.page.querySelector('.scene-image');
+    const originalHeight = imageNode.getBoundingClientRect().height;
+    const minHeight = Math.min(originalHeight, Number(magazine.firstPageMinImageHeight) || originalHeight);
+    const availableShrink = Math.max(0, originalHeight - minHeight);
+
+    if (overflow > 0 && overflow <= availableShrink) {
+      imageNode.style.height = Math.max(minHeight, originalHeight - overflow - 2) + 'px';
+      overflow = Math.max(0, metrics(context.page).bottom - pageBottomLimit);
+    }
+
+    const ok = overflow <= 0;
+    if (!ok) {
+      imageNode.style.height = '';
+      if (strip) strip.remove();
+      nodes.forEach(node => node.remove());
+      return false;
+    }
+
+    context.page.dataset.autoFitFirstPage = 'true';
+    context.page.dataset.autoFitShrink = String(Math.max(0, originalHeight - imageNode.getBoundingClientRect().height));
+    return true;
+  }
+
   function paginate(group, image, groupIndex) {
     const figure = group.find(b => b.type === 'figure') || null;
     const leadBlocks = group[0]?.type === 'h1' && group[1]?.type === 'h2' ? group.slice(0, 2) : [];
     const blocks = group.filter(b => b.type !== 'figure' && !leadBlocks.includes(b));
     let context = newPage(figure, image, false, leadBlocks), headings = [];
+
+    if (tryAutoFitFirstPage(context, blocks, groupIndex)) return;
     const firstContext = context;
     const keepQuickStrip = groupIndex === 0 && Boolean(magazineQuickStrip());
     let quickStripPlaced = false;
@@ -319,7 +360,9 @@
         ...m,
         figure: scene?.dataset.figure || null,
         repeated: scene?.dataset.repeated === 'true',
-        textOnly: !scene
+        textOnly: !scene,
+        autoFitFirstPage: page.dataset.autoFitFirstPage === 'true',
+        autoFitShrink: Number(page.dataset.autoFitShrink || 0)
       };
     });
 
