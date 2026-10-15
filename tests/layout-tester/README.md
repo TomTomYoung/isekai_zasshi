@@ -43,19 +43,21 @@
 実記事04で確認する項目：
 
 1. `layout-source.json` と正本MDを静的GETできる。
-2. 候補に `article-source-contract=1` がある。
-3. `layout-tester-candidate=static-browser` である。
-4. 45 blocks / 5 figures / 5 groups。
-5. 本番ArticleSubset使用。
-6. 本番paginate.jsで6ページ。
-7. audit成功。
-8. `.fixed-page` が1456×2056。
-9. 本番blockをクリックして実寸を取得。
-10. 一時CSS変更後に本番paginateで再組版。
-11. 現在DOMからブラウザ内PNGをダウンロード。
-12. PNGが1456×2056。
-13. PNG出力後も専用endpoint requestが0件。
-14. 未処理browser errorが0件。
+2. エクスプローラ記事フォルダー入力へ実記事04ディレクトリを渡し、正本MD・記事フォント・採用画像をローカルFileから読める。
+3. リポジトリ入力では候補に `layout-tester-candidate=static-browser`、フォルダー入力では `folder-browser` が付く。
+4. 候補に `article-source-contract=1` がある。
+5. 45 blocks / 5 figures / 5 groups。
+6. 本番ArticleSubset使用。
+7. フォルダー入力のscene-imageがすべてローカルblob URLから正常ロードされる。
+8. 本番paginate.jsで6ページ。
+9. audit成功。
+10. `.fixed-page` が1456×2056。
+11. 本番blockをクリックして実寸を取得。
+12. 一時CSS変更後に本番paginateで再組版。
+13. フォルダー入力状態の現在DOMからブラウザ内PNGをダウンロード。
+14. PNGが1456×2056。
+15. PNG出力後も専用endpoint requestが0件。
+16. 未処理browser errorが0件。
 
 ## 実行コマンド
 

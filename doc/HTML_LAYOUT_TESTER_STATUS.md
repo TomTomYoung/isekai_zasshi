@@ -1,5 +1,16 @@
 # 組版テスター 作業状況
 
+## 2026-10-15 エクスプローラ記事フォルダー入力の復旧
+
+専用API撤廃版で、リポジトリ相対パス入力と「手元のMDで一時差替え」は残っていたが、旧版にあった記事フォルダーの `webkitdirectory` 入力が削除されていたことを実画面で確認した。
+
+修正版ではフォルダー選択を復旧し、`layout-source.json`、正本MD、記事フォント、採用画像をローカルFileから読む。CSS・paginate.jsは本番リポジトリの同じ実装を共用する。
+
+実記事04フォルダーをdirectory inputへ投入するブラウザ試験を追加した。専用endpointには依存しない。
+
+---
+
+
 ## 2026-10-15 専用API撤廃版
 
 実機画面で `Cannot GET /__layout-tester/source` が確認された。原因は、PR #13版が `tools/layout_tester_server.mjs` の動的endpointを起動済みであることを利用条件にしていたため。

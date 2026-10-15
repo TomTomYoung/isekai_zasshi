@@ -1,5 +1,20 @@
 # 異世界雑誌：再開用ハンドオフ
 
+## 2026-10-15 組版テスター：エクスプローラ記事フォルダー選択を復旧
+
+本番組版経路への作り直し時に、旧テスターの `webkitdirectory` 記事フォルダー入力を「旧rendererの部品」と誤って削除していた。内部組版方式と入力UIは別問題なので機能退行として復旧した。
+
+現行UIには「記事フォルダーをエクスプローラで選択」を追加。選択フォルダーから `layout-source.json` を1つ検出し、その `source` が指す正本MD、`fonts/font.json`、`fonts/article.woff`、figureで参照された採用画像をブラウザFileから読む。
+
+本番 `template.css` と `paginate.js` はリポジトリ上の共通ファイルを使用するため、リポジトリパス入力とエクスプローラ入力は入力元だけが異なり、組版器は同じ。
+
+ローカル採用画像はblob URL化し、候補article-source内のfigure srcも同じblob URLへ変換して、本番auditの画像identity検査を通す。入力元を切り替える際はblob URLをrevokeする。
+
+ブラウザ試験では実記事04フォルダーをdirectory inputへ渡し、45 blocks / 5 figures / 5 groups / 6 pages、ArticleSubset、全scene-imageロード、blob画像、audit成功、およびその状態から1456×2056 PNG出力を確認する構成にした。
+
+---
+
+
 ## 2026-10-15 組版テスター：専用サーバー依存を撤廃
 
 PR #13の本番renderer直結方針は維持するが、利用者が `npm run layout:tester` で専用ローカルサーバーを起動する前提は撤廃した。実画面で `Cannot GET /__layout-tester/source` が発生し、静的プレビューでは正本MDを読む前に停止したため。

@@ -36,6 +36,10 @@ tools/article-layout/paginate.js
 
 ## 読み込み
 
+入力方法は2系統を維持します。
+
+### リポジトリの記事パスから読む
+
 記事欄へ、たとえば次を指定します。
 
 ```text
@@ -58,6 +62,26 @@ tools/article-layout/paginate.js
 `/__layout-tester/source` のような動的エンドポイントは使用しません。
 
 CodeSwing等で `window.fetch` が差し替えられて日本語パスが変形される問題を避けるため、資産読込には同一originの空iframeから取得したブラウザ本来の `fetch` を使用します。
+
+### エクスプローラから記事フォルダーを選ぶ
+
+「記事フォルダーをエクスプローラで選択」では、Chrome/Edgeのフォルダー選択を使い、選択フォルダー内の次をブラウザのFileオブジェクトから直接読みます。
+
+```text
+layout-source.json
+正本Markdown
+fonts/font.json
+fonts/article.woff
+Markdownで採用された画像
+```
+
+正本MDは `layout-source.json.source` から決めます。MDを名前で推測しません。
+
+画像は、正本MDのfigureで指定されたファイルを選択フォルダーから解決します。フォルダーに画像がなければエラーで停止します。
+
+本番 `template.css` と `paginate.js` はリポジトリ上の同じファイルを使うため、入力経路がリポジトリ指定でもエクスプローラ指定でも組版器は同じです。
+
+エクスプローラ入力を選んだ状態でも「手元のMDで一時差替え」は利用でき、画像・フォントは選択中の記事フォルダーを引き続き使います。
 
 ## Markdown parser
 
@@ -170,14 +194,15 @@ Cannot GET /__layout-tester/source
 最低合格条件：
 
 1. 専用APIへ一度もアクセスせず正本MDを読める。
-2. ブラウザparserと本番parserの関数本体が一致する。
-3. 実記事04が45 blocks / 5 figures / 5 groupsになる。
-4. 本番ArticleSubsetを使用する。
-5. 本番 `paginate.js` で6ページになる。
-6. `auditArticleComposition()` が成功する。
-7. 本番DOMをクリックして実寸を取得できる。
-8. 設定変更後に本番paginateをやり直す。
-9. ブラウザ内PNGが1456×2056になる。
-10. 正本MD、画像、保存済み `fixed_layout.html`、既存PNGを変更しない。
+2. エクスプローラから実記事フォルダーを選び、layout-source.json・正本MD・記事フォント・採用画像をローカルFileから解決できる。
+3. ブラウザparserと本番parserの関数本体が一致する。
+4. 実記事04が45 blocks / 5 figures / 5 groupsになる。
+5. 本番ArticleSubsetを使用する。
+6. 本番 `paginate.js` で6ページになる。
+7. `auditArticleComposition()` が成功する。
+8. 本番DOMをクリックして実寸を取得できる。
+9. 設定変更後に本番paginateをやり直す。
+10. エクスプローラ入力の状態でもPNGが1456×2056になる。
+11. 正本MD、画像、保存済み `fixed_layout.html`、既存PNGを変更しない。
 
 自動ブラウザ試験では、`/__layout-tester/` へのrequestを記録し、1件でも発生したら失敗とします。

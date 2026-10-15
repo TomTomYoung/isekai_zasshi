@@ -75,10 +75,68 @@ async function loadStaticArticle(input){
   const actualHash=await sha256(fontBlob);
   if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォントのハッシュが font.json と一致しません');
   return{
-    article,source:config.source,template:config.template,markdown,templateCss,runtime,fontInfo,
+    kind:'repo',article,source:config.source,template:config.template,markdown,templateCss,runtime,fontInfo,
     fontDataUrl:await blobDataUrl(fontBlob),
     articleBase:repoUrl(article+'/')
   };
+}
+function folderSelection(fileList){
+  const entries=[...fileList].map(file=>({
+    file,
+    path:String(file.webkitRelativePath||file.name||'').replace(/\\/g,'/')
+  })).filter(x=>x.path);
+  const configs=entries.filter(x=>x.path==='layout-source.json'||x.path.endsWith('/layout-source.json'));
+  if(configs.length!==1)throw new Error(configs.length?'記事フォルダー単位で選択してください。layout-source.json が複数あります':'選択したフォルダーに layout-source.json がありません');
+  const root=configs[0].path.slice(0,-'layout-source.json'.length);
+  const folderName=(root.replace(/\/$/,'').split('/').pop()||'記事フォルダー');
+  const files=new Map();
+  for(const entry of entries){
+    if(!entry.path.startsWith(root))continue;
+    const relative=entry.path.slice(root.length);
+    if(relative&&!files.has(relative))files.set(relative,entry.file);
+  }
+  return{folderName,files};
+}
+async function localText(files,path,max,label=path){
+  const file=files.get(path);
+  if(!file)throw new Error(`記事フォルダーに ${label} がありません`);
+  if(file.size>max)throw new Error(`${label} が大きすぎます`);
+  return file.text();
+}
+async function loadFolderArticle(fileList){
+  const {folderName,files}=folderSelection(fileList);
+  let config;
+  try{config=JSON.parse(await localText(files,'layout-source.json',1_000_000));}
+  catch(error){if(error instanceof SyntaxError)throw new Error('layout-source.json をJSONとして読めません');throw error;}
+  if(config?.version!==1||config?.template!=='illustrated-article-v1'||typeof config.source!=='string'||!config.source||/[\\/]/.test(config.source)||config.source.startsWith('.'))throw new Error('layout-source.json が本番Markdown記事の形式ではありません');
+  const [markdown,templateCss,runtime,fontInfoText,fontBlob]=await Promise.all([
+    localText(files,config.source,1_200_000,'正本MD '+config.source),
+    staticFetch('tools/article-layout/template.css'),
+    staticFetch('tools/article-layout/paginate.js'),
+    localText(files,'fonts/font.json',1_000_000,'fonts/font.json'),
+    Promise.resolve(files.get('fonts/article.woff'))
+  ]);
+  if(!fontBlob)throw new Error('記事フォルダーに fonts/article.woff がありません');
+  let fontInfo;
+  try{fontInfo=JSON.parse(fontInfoText);}catch{throw new Error('fonts/font.json をJSONとして読めません');}
+  if(!Array.isArray(fontInfo.codepoints)||typeof fontInfo.sha256!=='string')throw new Error('fonts/font.json が不正です');
+  const actualHash=await sha256(fontBlob);
+  if(actualHash!==null&&actualHash!==fontInfo.sha256)throw new Error('記事フォルダーの article.woff と font.json のハッシュが一致しません');
+  return{
+    kind:'folder',article:folderName,folderName,source:config.source,template:config.template,markdown,
+    templateCss,runtime,fontInfo,fontDataUrl:await blobDataUrl(fontBlob),files,assetUrls:new Map()
+  };
+}
+function releaseSourceAssets(value){
+  if(value?.assetUrls)for(const url of value.assetUrls.values())URL.revokeObjectURL(url);
+}
+function localAssetUrl(src){
+  const relative=src.replace(/^\.\//,'');
+  const file=source.files?.get(relative);
+  if(!file)throw new Error(`記事フォルダーに採用画像がありません: ${relative}`);
+  let url=source.assetUrls.get(relative);
+  if(!url){url=URL.createObjectURL(file);source.assetUrls.set(relative,url);}
+  return url;
 }
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function safeJson(value){return JSON.stringify(value).replace(/</g,'\\u003c');}
@@ -90,20 +148,28 @@ function validateSourceForFont(markdown,parsed){
   if(missing.length)throw new Error(`埋込フォント未収録文字: ${missing.map(c=>`U+${c.toString(16).toUpperCase()}`).join(', ')}`);
   for(const block of parsed.blocks.filter(b=>b.type==='figure')){
     if(!/^\.\/[A-Za-z0-9_.-]+\.(?:png|jpg|jpeg|webp)$/i.test(block.src))throw new Error(`本番画像パス形式ではありません: ${block.src}`);
+    if(source.kind==='folder'&&!source.files.has(block.src.replace(/^\.\//,'')))throw new Error(`記事フォルダーに採用画像がありません: ${block.src}`);
   }
 }
-function candidateHtml(markdown,rawSettings){
+async function candidateHtml(markdown,rawSettings){
   const parsed=parseArticle(markdown),validated=validateTesterSettings(rawSettings);
   validateSourceForFont(markdown,parsed);
   const selectedImages=[...new Set(parsed.blocks.filter(b=>b.type==='figure').map(b=>b.src))];
+  let rendered=parsed;
+  if(source.kind==='folder'){
+    const blocks=parsed.blocks.map(block=>block.type==='figure'?{...block,originalSrc:block.src,src:localAssetUrl(block.src)}:{...block});
+    const byId=new Map(blocks.map(block=>[block.id,block]));
+    rendered={blocks,groups:parsed.groups.map(group=>group.map(block=>byId.get(block.id)))};
+  }
   const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo};
-  const data=safeJson({...parsed,manifest});
+  const data=safeJson({...rendered,manifest});
   const runtime=source.runtime.replace(/<\/script/gi,'<\\/script');
   const overrides=cssForTesterSettings(validated);
+  const baseHref=source.kind==='repo'?source.articleBase.href:document.baseURI;
   return{
     parsed,settings:validated,
     html:`<!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=1456"><meta name="article-source-contract" content="1"><meta name="layout-tester-candidate" content="static-browser"><base href="${escapeHtml(source.articleBase.href)}"><title>${escapeHtml(parsed.blocks[0].text)}</title>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=1456"><meta name="article-source-contract" content="1"><meta name="layout-tester-candidate" content="${source.kind==='folder'?'folder-browser':'static-browser'}"><base href="${escapeHtml(baseHref)}"><title>${escapeHtml(parsed.blocks[0].text)}</title>
 <style>@font-face{font-family:ArticleSubset;src:url("${source.fontDataUrl}") format('woff');font-weight:100 900;font-display:block}
 ${source.templateCss}
 ${overrides}</style></head><body><main id="article-pages"></main>
@@ -238,7 +304,7 @@ async function compose(){
   if(!source||busy)return;if(pendingJson){status('設定JSONが未適用です。JSONを適用してください。','error');return;}
   const token=++generation;busy=true;ready=false;buttons();status('本番parser・CSS・埋込フォント・paginate.jsでブラウザ内組版しています…','busy');
   try{
-    const candidate=candidateHtml($('markdown').value,clean(settings));settings=candidate.settings;syncSettingsUI();
+    const candidate=await candidateHtml($('markdown').value,clean(settings));settings=candidate.settings;syncSettingsUI();
     await setFrameHtml(candidate.html,token);if(token!==generation)return;
     const doc=frame.contentDocument;articleData=JSON.parse(doc.getElementById('article-source').textContent);
     pages=[...doc.querySelectorAll('.fixed-page')];if(!pages.length)throw new Error('fixed-pageが生成されませんでした');
@@ -246,8 +312,8 @@ async function compose(){
     ready=true;dirty=false;currentPage=Math.min(currentPage,pages.length)||1;
     if(!articleData.blocks.some(b=>b.id===selected))selected=articleData.blocks[0]?.id||null;buildBlockList();
     doc.addEventListener('click',event=>{const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
-    showDiagnostics(report);$('render-source').textContent='静的GET + parseArticle + template.css + ArticleSubset + paginate.js';
-    status(`${source.source} · ${pages.length}ページ · 本番組版OK`,'ok');updatePreview();updateSelection();
+    showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + ArticleSubset + paginate.js';
+    status(`${source.kind==='folder'?'エクスプローラ: ':''}${source.source} · ${pages.length}ページ · 本番組版OK`,'ok');updatePreview();updateSelection();
   }catch(error){
     if(token===generation){dirty=false;clearPreview(error.message);status(error.message,'error');}
   }finally{busy=false;buttons();}
@@ -256,11 +322,22 @@ async function loadSource(){
   if(busy)return;const token=++generation;busy=true;buttons();status('layout-source.json と正本MDを直接読込中です…','busy');
   try{
     const loaded=await loadStaticArticle($('source-path').value.trim());if(token!==generation)return;
-    source=loaded;settings=structuredClone(TESTER_DEFAULTS);
+    releaseSourceAssets(source);source=loaded;settings=structuredClone(TESTER_DEFAULTS);
     $('markdown').value=loaded.markdown;$('source-name').textContent=loaded.source;$('source-article').textContent=loaded.article;$('source-path').value=loaded.article;
     selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
   }catch(error){
-    if(token===generation){source=null;dirty=true;clearPreview(error.message);status(error.message,'error');}
+    if(token===generation){releaseSourceAssets(source);source=null;dirty=true;clearPreview(error.message);status(error.message,'error');}
+  }finally{busy=false;buttons();}
+}
+async function loadFolder(fileList){
+  if(busy)return;const token=++generation;busy=true;buttons();status('記事フォルダーの layout-source.json・正本MD・画像・フォントを読込中です…','busy');
+  try{
+    const loaded=await loadFolderArticle(fileList);if(token!==generation)return;
+    releaseSourceAssets(source);source=loaded;settings=structuredClone(TESTER_DEFAULTS);
+    $('markdown').value=loaded.markdown;$('source-name').textContent=loaded.source;$('source-article').textContent='エクスプローラ: '+loaded.folderName;
+    selected=null;currentPage=1;syncSettingsUI();dirty=true;busy=false;await compose();
+  }catch(error){
+    if(token===generation){releaseSourceAssets(source);source=null;dirty=true;clearPreview(error.message);status(error.message,'error');}
   }finally{busy=false;buttons();}
 }
 async function exportOutput(all){
@@ -275,6 +352,7 @@ async function exportOutput(all){
 }
 
 $('load-path').onclick=loadSource;$('compose').onclick=compose;
+$('folder-files').onchange=async e=>{const files=[...e.target.files];try{if(files.length)await loadFolder(files);}finally{$('folder-files').value='';}};
 $('markdown').addEventListener('input',()=>invalidate());
 $('md-file').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>1_200_000)throw new Error('原稿は120万文字以下にしてください');$('markdown').value=await file.text();invalidate(`${file.name} を一時差替えしました。本番組版してください。`);}catch(error){status(error.message,'error');}finally{$('md-file').value='';}};
 $('zoom').oninput=updatePreview;$('guides').onchange=()=>{updateSelectionOutline();updateSelection();};
@@ -298,6 +376,6 @@ $('png').onclick=()=>exportOutput(false);$('zip').onclick=()=>exportOutput(true)
 window.layoutTester={
   get ready(){return ready;},get dirty(){return dirty;},get source(){return source;},get settings(){return settings;},
   get articleData(){return articleData;},get pages(){return pages;},get currentPage(){return currentPage;},
-  compose,loadSource,selectBlock
+  compose,loadSource,loadFolder,selectBlock
 };
 syncSettingsUI();loadSource();
