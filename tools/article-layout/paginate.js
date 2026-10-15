@@ -35,7 +35,7 @@
     const image = page.querySelector('img'), box = image.getBoundingClientRect();
     const scale = Math.min(box.width / image.naturalWidth, box.height / image.naturalHeight);
     const imageArea = image.naturalWidth * image.naturalHeight * scale * scale;
-    const textArea = [...page.querySelectorAll('.running-head,.folio,figcaption,.article-body > *')].reduce((sum, node) => sum + area(node), 0);
+    const textArea = [...page.querySelectorAll('.running-head,.folio,figcaption,.article-lead > *,.article-body > *')].reduce((sum, node) => sum + area(node), 0);
     const body = page.querySelector('.article-body');
     const children = [...body.children];
     const bottom = children.length ? children.at(-1).getBoundingClientRect().bottom - page.getBoundingClientRect().top : 0;
@@ -48,10 +48,12 @@
     return m.bottom <= 1936 && m.imageArea > m.textArea;
   }
   let pageNumber = 0;
-  function newPage(figure, image, repeated) {
+  function newPage(figure, image, repeated, leadBlocks = []) {
     const page = el('section', 'fixed-page');
     const head = el('header', 'running-head');
     head.append(el('span', '', '異世界丸見え実話'), el('span', '', '2026 / 04　現地取材'));
+    const lead = leadBlocks.length ? el('div', 'article-lead') : null;
+    if (lead) lead.append(...leadBlocks.map(block => render(block)));
     const scene = el('figure', 'scene' + (image.naturalHeight > image.naturalWidth ? ' portrait' : ''));
     scene.dataset.figure = figure.id;
     scene.dataset.repeated = String(repeated);
@@ -59,7 +61,9 @@
     scene.append(img, el('figcaption', '', figure.caption));
     const body = el('div', 'article-body');
     const folio = el('footer', 'folio', String(++pageNumber).padStart(3, '0'));
-    page.append(head, scene, body, folio); root.append(page);
+    page.append(head);
+    if (lead) page.append(lead);
+    page.append(scene, body, folio); root.append(page);
     return { page, body };
   }
   function candidate(context, headings, block, start, end) {
@@ -71,8 +75,9 @@
   }
   function paginate(group, image) {
     const figure = group.find(b => b.type === 'figure');
-    const blocks = group.filter(b => b.type !== 'figure');
-    let context = newPage(figure, image, false), headings = [];
+    const leadBlocks = group[0]?.type === 'h1' && group[1]?.type === 'h2' ? group.slice(0, 2) : [];
+    const blocks = group.filter(b => b.type !== 'figure' && !leadBlocks.includes(b));
+    let context = newPage(figure, image, false, leadBlocks), headings = [];
     const nextPage = () => { context = newPage(figure, image, true); };
     for (const block of blocks) {
       if (/^h[123]$/.test(block.type)) { headings.push(block); continue; }
@@ -138,7 +143,7 @@
     const reports = pages.map((page, index) => {
       const children = [...page.querySelector('.article-body').children];
       if (!children.length || /^H[123]$/.test(children.at(-1)?.tagName)) errors.push(`page ${index + 1}: empty body or orphan heading`);
-      const ordered = [page.querySelector('.running-head'), page.querySelector('.scene'), ...children, page.querySelector('.folio')];
+      const ordered = [page.querySelector('.running-head'), page.querySelector('.article-lead'), page.querySelector('.scene'), ...children, page.querySelector('.folio')].filter(Boolean);
       for (let i = 1; i < ordered.length; i++) {
         if (ordered[i].getBoundingClientRect().top < ordered[i - 1].getBoundingClientRect().bottom - .1) errors.push(`page ${index + 1}: component overlap`);
       }
