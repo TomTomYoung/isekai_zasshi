@@ -1,69 +1,84 @@
 {
   "date": "2026-10-15",
   "current": {
-    "architecture": "production article renderer",
-    "status": "not-run-after-rebuild",
-    "syntaxCheck": {
-      "layout-tester/app.mjs": "passed",
-      "tools/layout_tester_server.mjs": "passed",
-      "tests/layout-tester/unit.mjs": "passed",
-      "tests/layout-tester/browser.mjs": "passed"
+    "architecture": "static browser; no dedicated /__layout-tester endpoints",
+    "status": "runtime-not-run-in-current-tool-environment",
+    "sourceChecks": {
+      "dedicatedApiDependency": false,
+      "productionArticleSourceUnchanged": true,
+      "browserParserParityTestAdded": true,
+      "browserExport": true
     },
-    "runtime": "not executed in this environment",
-    "reason": "Repository clone/network and loopback Chromium execution were unavailable in the current tool environment. Do not count historical generic-renderer tests as current passes."
+    "syntaxCheck": "app/settings/export/parser/server/unit/browser passed V8 syntax checks",
+    "acceptance": "browser suite records every request and fails on any /__layout-tester/* request"
   },
   "historical": {
     "date": "2026-10-15",
-    "node": "v22.16.0",
     "current": {
-      "unitPassed": 55,
-      "syntaxCheck": "7 mjs files passed",
-      "browser": {
-        "chromiumSandbox": true,
-        "mode": "HTTP",
-        "status": "blocked-before-tests",
-        "error": "page.goto: net::ERR_BLOCKED_BY_ADMINISTRATOR on loopback HTTP",
-        "passed": 0
+      "architecture": "production article renderer",
+      "status": "not-run-after-rebuild",
+      "syntaxCheck": {
+        "layout-tester/app.mjs": "passed",
+        "tools/layout_tester_server.mjs": "passed",
+        "tests/layout-tester/unit.mjs": "passed",
+        "tests/layout-tester/browser.mjs": "passed"
       },
-      "originalSuites": "not rerun",
-      "windows": "not verified"
+      "runtime": "not executed in this environment",
+      "reason": "Repository clone/network and loopback Chromium execution were unavailable in the current tool environment. Do not count historical generic-renderer tests as current passes."
     },
-    "initialVersion": {
-      "mode": "in-memory module-body harness",
-      "browser": "144.0.7559.96",
+    "historical": {
+      "date": "2026-10-15",
       "node": "v22.16.0",
-      "tests": [
-        "sample: two pages and no diagnostics",
-        "image frame versus aspect-preserving visible image",
-        "PNG actual download and 1x dimensions",
-        "guides and zoom do not change exported pixels",
-        "PNG versus clean DOM screenshot",
-        "all-page ZIP actual download",
-        "2x export scale independent of screen zoom",
-        "settings JSON actual download and import roundtrip",
-        "block width, asymmetric margin and padding",
-        "cover clips without distorting the image",
-        "oversized atomic image disables PNG",
-        "long styled paragraph splits with no Unicode loss",
-        "two-column pagination uses both columns",
-        "heading is kept with a following text line",
-        "stale block override is visible",
-        "missing image blocks output without reusing old success",
-        "unsupported HTML is rejected and never executed",
-        "invalid JSON cannot be accepted by pressing compose",
-        "rapid edits keep only the latest composition",
-        "folder input resolves identical basenames by exact relative path",
-        "blank numeric setting stays invalid instead of becoming zero",
-        "no unhandled browser errors"
-      ],
-      "passed": 22,
-      "unitPassed": 52,
-      "pixelComparison": {
-        "changed": 42,
-        "total": 2993536,
-        "mean": 0.00003073288579125155
+      "current": {
+        "unitPassed": 55,
+        "syntaxCheck": "7 mjs files passed",
+        "browser": {
+          "chromiumSandbox": true,
+          "mode": "HTTP",
+          "status": "blocked-before-tests",
+          "error": "page.goto: net::ERR_BLOCKED_BY_ADMINISTRATOR on loopback HTTP",
+          "passed": 0
+        },
+        "originalSuites": "not rerun",
+        "windows": "not verified"
       },
-      "date": "2026-10-15"
+      "initialVersion": {
+        "mode": "in-memory module-body harness",
+        "browser": "144.0.7559.96",
+        "node": "v22.16.0",
+        "tests": [
+          "sample: two pages and no diagnostics",
+          "image frame versus aspect-preserving visible image",
+          "PNG actual download and 1x dimensions",
+          "guides and zoom do not change exported pixels",
+          "PNG versus clean DOM screenshot",
+          "all-page ZIP actual download",
+          "2x export scale independent of screen zoom",
+          "settings JSON actual download and import roundtrip",
+          "block width, asymmetric margin and padding",
+          "cover clips without distorting the image",
+          "oversized atomic image disables PNG",
+          "long styled paragraph splits with no Unicode loss",
+          "two-column pagination uses both columns",
+          "heading is kept with a following text line",
+          "stale block override is visible",
+          "missing image blocks output without reusing old success",
+          "unsupported HTML is rejected and never executed",
+          "invalid JSON cannot be accepted by pressing compose",
+          "rapid edits keep only the latest composition",
+          "folder input resolves identical basenames by exact relative path",
+          "blank numeric setting stays invalid instead of becoming zero",
+          "no unhandled browser errors"
+        ],
+        "passed": 22,
+        "unitPassed": 52,
+        "pixelComparison": {
+          "changed": 42,
+          "total": 2993536,
+          "mean": 0.00003073288579125155
+        },
+        "date": "2026-10-15"
+      }
     }
   }
 }

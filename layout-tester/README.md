@@ -2,206 +2,182 @@
 
 更新日：2026-10-15。
 
+## 利用者側の前提
+
+**専用ローカルサーバーの起動、`npm run layout:tester`、専用APIへの接続は不要です。**
+
+リポジトリを既存の静的プレビュー環境で開き、`layout-tester/index.html` を表示すれば、そのまま正本Markdownを読み、組版・計測・PNG出力まで行う構成です。
+
+`npm run layout:tester` は自動試験や単純なローカル静的配信に使える補助コマンドとして残していますが、利用手順ではありません。
+
 ## 目的
 
-このテスターは、独自のMarkdownレンダラーで誌面を再現するものではありません。
-
-`layout-source.json` を持つ本番記事について、
+Markdownを正本とする記事について、本番で使う組版処理そのものをブラウザ上で動かし、そのDOMを計測します。
 
 ```text
-正本Markdown
+layout-source.json
   ↓
-tools/article_source.mjs の parseArticle
+正本 Markdown
+  ↓
+本番 parseArticle と同一の parser
   ↓
 tools/article-layout/template.css
   ↓
-記事内の埋込 ArticleSubset フォント
+記事内 fonts/article.woff
   ↓
 tools/article-layout/paginate.js
   ↓
 .fixed-page
+  ↓
+計測・調整・PNG/ZIP
 ```
 
-という本番組版経路をそのまま使い、そのDOMへ計測UIを重ねます。
+テスター専用のページ分割器で本番を再現する方式には戻しません。
 
-本文・画像・既存 `fixed_layout.html`・既存PNGはテスターから上書きしません。画面内で編集したMarkdownと設定値はメモリ上の候補にだけ適用されます。
+## 読み込み
 
-## 起動
-
-リポジトリ直下で実行します。
-
-```sh
-npm run layout:tester
-```
-
-ブラウザで次を開きます。
-
-```text
-http://127.0.0.1:4173/layout-tester/
-```
-
-初期対象は、現在本番Markdown同期が通っている次の記事です。
+記事欄へ、たとえば次を指定します。
 
 ```text
 202604/04_聖職者花見乱痴気騒ぎ
 ```
 
-「記事ディレクトリ または 正本MD」には、たとえば次のどちらかを指定できます。
+ブラウザは同じ静的Webルートから直接、
 
 ```text
-202604/04_聖職者花見乱痴気騒ぎ
+202604/04_聖職者花見乱痴気騒ぎ/layout-source.json
 202604/04_聖職者花見乱痴気騒ぎ/聖職者花見乱痴気騒ぎ.md
+tools/article-layout/template.css
+tools/article-layout/paginate.js
+202604/04_聖職者花見乱痴気騒ぎ/fonts/font.json
+202604/04_聖職者花見乱痴気騒ぎ/fonts/article.woff
 ```
 
-MDパスを直接指定した場合は、その記事の `layout-source.json` が指す正本MDと一致していることを確認します。
+をGETします。
 
-## 何が本番と共通か
+`/__layout-tester/source` のような動的エンドポイントは使用しません。
 
-候補HTMLは `prepareArticle()` が生成した本番HTMLを土台にします。
+CodeSwing等で `window.fetch` が差し替えられて日本語パスが変形される問題を避けるため、資産読込には同一originの空iframeから取得したブラウザ本来の `fetch` を使用します。
 
-本番と共通なのは次です。
+## Markdown parser
 
-- 制約付きMarkdownパーサー `parseArticle`
+Node側の本番 `tools/article_source.mjs` 自体は変更しません。変更すると既存 `fixed_layout.html` の依存ハッシュ契約が変わるためです。
+
+ブラウザではNode依存を持たない `tools/article_parse.mjs` を使用します。このファイルの `parseArticle()` 関数本体は本番側と同一に保ち、単体試験で
+
+```text
+parseArticle.toString()
+```
+
+の一致と、実記事04の解析結果一致を検査します。
+
+したがってブラウザだけ別のMarkdown仕様へ拡張することは認めません。
+
+## 本番組版
+
+ブラウザ内で候補HTMLをメモリ生成します。
+
+使用するものはリポジトリ上の本番資産です。
+
 - `template.css`
-- 記事に同梱された `fonts/article.woff`
 - `paginate.js`
-- 採用画像
-- `auditArticleComposition()`
-- `.fixed-page` 1456×2056px
-- 本文分割、表分割、見出し孤立防止、画像再掲、画像/文字面積判定
+- 記事同梱の `article.woff`
+- Markdownで明示された採用画像
 
-テスター固有なのは次だけです。
+`paginate.js` が生成した本文要素の `data-source="bNNN"` と、画像figureの `data-figure="bNNN"` を計測キーとして使います。
 
-- Markdown本文のメモリ上差替え
-- 一時CSS調整
-- 選択枠
-- W/H、x/y、margin、padding、紙面端距離の表示
-- PNG/ZIPのダウンロードUI
+## 計測
 
-候補HTMLでは、保存済みHTMLの正当性を示す `article-render-sha256` を外し、`layout-tester-candidate=1` を付けます。したがって候補を「同期済み fixed_layout.html」と誤認しません。
-
-## Markdown編集
-
-左側のテキスト欄を編集して「このMDで本番組版」を押すと、保存せずに本番パーサーへ再投入します。
-
-「手元のMDで一時差替え」は、現在選択中の記事の画像・フォント・テンプレートを使ったまま、ローカルMDの本文だけを候補へ差し替えます。
-
-本番パーサーで未対応の記法、節ごとのfigure数不整合、画像欠落、埋込フォント未収録文字は、本番と同じく停止理由です。テスター専用パーサーへフォールバックしません。
-
-## 寸法確認
-
-本番 `paginate.js` は本文要素へ `data-source="bNNN"`、画像figureへ `data-figure="bNNN"` を付けています。
-
-テスターはこれを使ってブロックを選択し、現在の本番DOMから次を取得します。
+選択した本番DOMについて、少なくとも次を表示します。
 
 - W / H
 - x / y
 - margin 上右下左
 - padding 上右下左
 - 紙面端までの距離
+- ページ番号
 - 画像枠
 - 元画像寸法
-- object-fit後の可視範囲
+- 縦横比を保った可視範囲
 
-値は画面ズーム前のCSS pxです。
+画面上の縮小表示は計測値へ影響しません。
 
-## 一時設定JSON
+## 一時調整
 
-設定JSONは候補HTMLへCSSオーバーライドとして注入されます。そのCSSが効いた状態で、同じ `paginate.js` が最初から改ページをやり直します。
+本文文字サイズ、行高、画像枠高、および本番ブロック単位の幅・margin・padding等を一時設定できます。
 
-現在のversionは1です。
+設定変更後は、既に組んだ紙面の見た目だけを変えるのではなく、変更後CSSを含む候補HTMLを作り直し、本番 `paginate.js` を最初から実行します。
 
-```json
-{
-  "version": 1,
-  "body": {
-    "fontSize": 28,
-    "lineHeight": 42
-  },
-  "image": {
-    "landscapeHeight": 885,
-    "portraitHeight": 1030
-  },
-  "blocks": {
-    "b003": {
-      "width": 1200,
-      "fontSize": 30,
-      "lineHeight": 44,
-      "imageHeight": 700,
-      "margin": {"top": 0, "right": 0, "bottom": 18, "left": 0},
-      "padding": {"top": 0, "right": 0, "bottom": 0, "left": 0}
-    }
-  }
-}
-```
-
-個別設定は本番DOMの `data-source` / `data-figure` に対して適用します。
-
-このJSONは現時点では**テスター候補の調整値**です。保存済み本番HTMLへ自動反映・自動上書きはしません。採用する値が決まった後、本番テンプレートまたは記事仕様へ反映する工程は別にします。
+設定JSONも正本や本番HTMLを自動上書きしません。
 
 ## PNG / ZIP
 
-「このページをPNG」「全ページZIP」は、画面用の別レンダラーから画像化しません。
+PNG生成にも専用HTTPエンドポイントやPlaywrightサーバーを要求しません。
 
-サーバー側で同じ候補HTMLをもう一度生成し、sandboxを有効にしたChromiumで候補ページを開き、`.fixed-page` を直接スクリーンショットします。
+表示中の本番 `.fixed-page` DOMを複製し、
 
-1ページは必ず次の寸法を検査します。
+1. 選択枠を除去
+2. 使用画像をdata URLへ自己完結化
+3. 本番CSSと埋込フォントを保持
+4. SVG `foreignObject` 経由でCanvasへラスタライズ
+5. 1456×2056 PNGとしてダウンロード
 
-```text
-1456 × 2056 px
-```
+します。
 
-全ページZIPも、その同じPNGをページ順に格納します。
+「全ページZIP」は同じ方法で各ページをPNG化し、ブラウザ内でZIPを作ります。
 
-PNG出力にはPlaywright Chromiumが必要です。プレビュー自体は、本番候補HTMLをブラウザ内iframeへ表示します。
+これは旧版の「独自rendererで別紙面を作ってからPNG化」とは異なります。PNG化の入力は、画面で検査した本番 `.fixed-page` DOMそのものです。
 
-## 安全性
+## 専用APIの廃止
 
-付属サーバーは127.0.0.1限定です。
-
-通常ファイルはGET/HEADの読取専用です。POSTを受け付けるのは次のメモリ処理だけです。
-
-```text
-/__layout-tester/compose
-/__layout-tester/export
-```
-
-これらは原稿や出力をリポジトリへ書き込みません。
-
-cross-site要求、異なるOrigin、リポジトリ外パス、正本でないMD指定を拒否します。
-
-## 旧試作コード
-
-次のファイルは初版の汎用独自レンダラー実装として残っていますが、現在の `layout-tester/index.html` からは使用しません。
+PR #13で一度、次のローカル専用エンドポイントを導入しました。
 
 ```text
-layout-tester/renderer.mjs
-layout-tester/export.mjs
-layout-tester/defaults.json
+GET  /__layout-tester/source
+POST /__layout-tester/compose
+POST /__layout-tester/export
 ```
 
-`core.mjs` はZIP生成など一部の共通処理のみ利用しています。
+この方式は、利用者が `tools/layout_tester_server.mjs` を起動することを暗黙の前提にしていました。
 
-旧試作の成功件数を、本番組版テスターの成功実績へ合算しません。
+静的プレビュー環境では、
 
-## 検証
-
-```sh
-npm run test:layout-tester
+```text
+Cannot GET /__layout-tester/source
 ```
 
-単体試験は、実際の04記事について正本MD読込と候補HTML生成まで確認します。
+となり、画面は開けても正本MDを読めませんでした。
 
-ブラウザ試験は、HTTP経路から04記事を開き、
+現行版ではこの依存を廃止しています。`tools/layout_tester_server.mjs` にも動的エンドポイントはなく、必要なら自動試験用の読取専用静的サーバーとしてだけ使えます。
 
-- 本番source contract
-- 本番fixed-page DOM
-- ArticleSubset
-- auditArticleComposition
-- ブロック実測
-- 一時CSSによる本番再組版
-- 1456×2056 PNG出力
+## 初期対象と合格条件
 
-を確認します。
+初期対象：
 
-環境側がloopback HTTPを拒否した場合は、その制限を迂回して成功扱いにはしません。
+```text
+202604/04_聖職者花見乱痴気騒ぎ
+```
+
+既知の正本構成：
+
+```text
+45 blocks
+5 figures
+5 groups
+6 pages
+```
+
+最低合格条件：
+
+1. 専用APIへ一度もアクセスせず正本MDを読める。
+2. ブラウザparserと本番parserの関数本体が一致する。
+3. 実記事04が45 blocks / 5 figures / 5 groupsになる。
+4. 本番ArticleSubsetを使用する。
+5. 本番 `paginate.js` で6ページになる。
+6. `auditArticleComposition()` が成功する。
+7. 本番DOMをクリックして実寸を取得できる。
+8. 設定変更後に本番paginateをやり直す。
+9. ブラウザ内PNGが1456×2056になる。
+10. 正本MD、画像、保存済み `fixed_layout.html`、既存PNGを変更しない。
+
+自動ブラウザ試験では、`/__layout-tester/` へのrequestを記録し、1件でも発生したら失敗とします。
