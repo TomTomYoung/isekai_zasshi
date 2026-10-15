@@ -94,7 +94,7 @@ async function resolveArticle(realRoot,input){
   if(relative.startsWith('/')||relative.includes('\0')||relative.includes(':')||relative.split('/').some(x=>!x||x==='.'||x==='..'||x.startsWith('.')))throw new Error('リポジトリ内の相対パスを指定してください');
   let expectedSource=null;
   if(/\.md$/i.test(relative)){expectedSource=path.posix.basename(relative);relative=path.posix.dirname(relative);}
-  if(!/^20\\d{4}\\/[^/]+$/.test(relative))throw new Error('記事は YYYYMM/記事フォルダー の形で指定してください');
+  if(!/^20\d{4}\/[^/]+$/.test(relative))throw new Error('記事は YYYYMM/記事フォルダー の形で指定してください');
   const articleDir=path.resolve(realRoot,...relative.split('/'));
   if(!within(realRoot,articleDir))throw new Error('記事パスがリポジトリ外です');
   const realArticle=await fs.realpath(articleDir);
