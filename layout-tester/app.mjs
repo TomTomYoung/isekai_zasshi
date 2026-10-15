@@ -1,6 +1,6 @@
 import {parseArticleForTester} from './article_compat.mjs';
 import {TESTER_DEFAULTS,validateTesterSettings,cssForTesterSettings} from './production_settings.mjs';
-import {exportProductionPages} from './production_export.mjs';
+import {exportProductionPages,pagePng} from './production_export.mjs';
 
 const $=id=>document.getElementById(id);
 const SIDES=['top','right','bottom','left'];
@@ -12,6 +12,7 @@ transport.hidden=true;transport.title='資産読取';transport.setAttribute('ari
 document.body.append(transport);
 const read=transport.contentWindow.fetch.bind(transport.contentWindow);
 let source=null,settings=structuredClone(TESTER_DEFAULTS),articleData=null,pages=[],currentPage=1,selected=null,busy=false,dirty=true,ready=false,pendingJson=false,generation=0;
+let instructionMode=false,instruction=null,instructionDrag=null;
 const frame=$('preview-frame');
 
 function status(text,state='ok'){$('status').textContent=text;$('status').dataset.state=state;}
