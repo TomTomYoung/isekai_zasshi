@@ -152,7 +152,7 @@
     };
     const nextPage = () => {
       if (context === firstContext) placeQuickStrip();
-      context = newPage(figure, image, true);
+      context = newPage(null, null, false);
     };
 
     for (const block of blocks) {
@@ -227,12 +227,8 @@
       if (block.type === 'figure') {
         const figures = [...root.querySelectorAll('[data-figure]')]
           .filter(n => n.dataset.figure === block.id);
-        if (
-          !figures.length ||
-          figures[0].dataset.repeated !== 'false' ||
-          figures.slice(1).some(n => n.dataset.repeated !== 'true')
-        ) {
-          errors.push(`${block.id}: figure missing or repeat identity invalid`);
+        if (figures.length !== 1 || figures[0].dataset.repeated !== 'false') {
+          errors.push(`${block.id}: figure missing or duplicated`);
         }
         for (const figure of figures) {
           const image = figure.querySelector('img');
