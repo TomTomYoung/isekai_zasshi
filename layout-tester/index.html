@@ -43,6 +43,7 @@
     <button id="next" aria-label="次ページ">→</button>
     <label class="zoom-label">表示 <input id="zoom" type="range" min="20" max="100" step="5" value="35"><output id="zoom-value">35%</output></label>
     <label class="check"><input id="guides" type="checkbox" checked>選択枠</label>
+    <button id="instruction-mode" type="button" aria-pressed="false">指示範囲</button>
   </div>
   <div class="legend"><span>表示しているのは fixed_layout.html と同じ本番DOMです。</span><span>寸法は1456×2056紙面上のCSS pxです。</span></div>
   <div id="canvas" class="canvas">
@@ -82,7 +83,20 @@
     </details>
   </section>
 
-  <h2><span>04</span> 本番CSS一時調整</h2>
+  <section class="instruction-panel">
+    <h2><span>04</span> ChatGPT指示範囲</h2>
+    <div id="instruction-name">「指示範囲」を押して紙面上をドラッグ</div>
+    <pre id="instruction-metrics">空白部分を含め、紙面上の任意の矩形を指定できます。</pre>
+    <textarea id="instruction-note" spellcheck="false" placeholder="任意：この範囲について伝えたい指示。例）この空白を詰めたい"></textarea>
+    <div class="instruction-actions">
+      <button id="copy-instruction" class="primary" disabled>ChatGPT用にコピー</button>
+      <button id="save-instruction" disabled>指示PNG保存</button>
+      <button id="clear-instruction" disabled>解除</button>
+    </div>
+    <p class="hint">記事・ページ・紙面座標・重なるブロック・直前直後のブロックを一緒にコピーします。対応ブラウザでは赤枠つきPNGもクリップボードへ載せます。</p>
+  </section>
+
+  <h2><span>05</span> 本番CSS一時調整</h2>
   <form id="settings-form" class="settings-form">
     <label>本文文字<input data-key="body.fontSize" type="number" min="8" max="120"></label>
     <label>本文行高<input data-key="body.lineHeight" type="number" min="10" max="180"></label>
