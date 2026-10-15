@@ -1,5 +1,24 @@
 # 異世界雑誌：再開用ハンドオフ
 
+## 2026-10-15 組版テスター：専用サーバー依存を撤廃
+
+PR #13の本番renderer直結方針は維持するが、利用者が `npm run layout:tester` で専用ローカルサーバーを起動する前提は撤廃した。実画面で `Cannot GET /__layout-tester/source` が発生し、静的プレビューでは正本MDを読む前に停止したため。
+
+現行入口は `/__layout-tester/source` / `compose` / `export` を一切呼ばない。既存静的プレビューから、`layout-source.json`、正本MD、`template.css`、`paginate.js`、記事フォントを直接GETし、ブラウザ内で候補HTMLを生成する。
+
+Node本番の `article_source.mjs` は依存ハッシュ契約を変えないため未変更。ブラウザ用 `tools/article_parse.mjs` の `parseArticle()` 本体を本番関数と同一にし、単体試験で `toString()` と実記事04の解析結果を比較する。
+
+PNG/ZIPも専用Playwright endpointを使わない。表示中の本番 `.fixed-page` DOMをcloneし、画像をdata URL化、本番CSSとArticleSubsetを保持したままSVG foreignObject経由で1456×2056 PNGへ変換する。
+
+`tools/layout_tester_server.mjs` から動的endpointは削除し、必要なら自動試験で使う読取専用静的サーバーだけに戻した。利用者の正規操作は既存プレビューで開くことだけ。
+
+ブラウザ試験は `/__layout-tester/*` requestを記録し、1件でも発生したら失敗とする。初期実記事04について45 blocks / 5 figures / 5 groups / 6 pages、audit成功、実寸取得、ブラウザ内PNG 1456×2056を合格条件とする。
+
+仕様は [doc/HTML_LAYOUT_TESTER.md](doc/HTML_LAYOUT_TESTER.md)、操作は [layout-tester/README.md](layout-tester/README.md)。
+
+---
+
+
 ## 2026-10-15 組版テスター再構築
 
 旧 `layout-tester` は本番記事組版とは別のMarkdownパーサー／レンダラーを持っていたため、実記事のテスターとして不適切でした。現行入口を、本番の `tools/article_source.mjs`、`template.css`、記事埋込フォント、`paginate.js` をそのまま使う構成へ作り直しています。
