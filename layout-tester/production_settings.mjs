@@ -54,6 +54,18 @@ function validateCard(value,label){
   if(value.text!==undefined){text(value.text,240,`${label}.text`);out.text=value.text;}
   return out;
 }
+function mergeObjects(base,patch){
+  const out=structuredClone(base);
+  for(const [key,value] of Object.entries(patch)){
+    if(value&&typeof value==='object'&&!Array.isArray(value)&&out[key]&&typeof out[key]==='object'&&!Array.isArray(out[key]))out[key]=mergeObjects(out[key],value);
+    else out[key]=structuredClone(value);
+  }
+  return out;
+}
+export function mergeTesterSettings(raw={}){
+  object(raw,'設定');
+  return validateTesterSettings(mergeObjects(TESTER_DEFAULTS,raw));
+}
 
 export function validateTesterSettings(raw){
   const value=raw??TESTER_DEFAULTS;object(value,'設定');allowedKeys(value,['version','body','image','magazine','blocks'],'設定');
