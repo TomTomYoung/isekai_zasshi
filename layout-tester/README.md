@@ -25,7 +25,7 @@ tools/article-layout/template.css
   ↓
 記事内 fonts/article.woff
   ↓
-tools/article-layout/paginate.js
+layout-tester/paginate_compat.js
   ↓
 .fixed-page
   ↓
@@ -52,7 +52,7 @@ tools/article-layout/paginate.js
 202604/04_聖職者花見乱痴気騒ぎ/layout-source.json
 202604/04_聖職者花見乱痴気騒ぎ/聖職者花見乱痴気騒ぎ.md
 tools/article-layout/template.css
-tools/article-layout/paginate.js
+layout-tester/paginate_compat.js
 202604/04_聖職者花見乱痴気騒ぎ/fonts/font.json
 202604/04_聖職者花見乱痴気騒ぎ/fonts/article.woff
 ```
@@ -79,7 +79,7 @@ Markdownで採用された画像
 
 画像は、正本MDのfigureで指定されたファイルを選択フォルダーから解決します。フォルダーに画像がなければエラーで停止します。
 
-本番 `template.css` と `paginate.js` はリポジトリ上の同じファイルを使うため、入力経路がリポジトリ指定でもエクスプローラ指定でも組版器は同じです。
+本番 `template.css` はそのまま共用し、ページ分割は `layout-tester/paginate_compat.js` を使います。これは本番 `paginate.js` の分割・監査ロジックを移植し、202604に必要な画像なし節対応だけを追加した安定版です。入力経路がリポジトリ指定でもエクスプローラ指定でも同じ互換ページネータを使います。
 
 エクスプローラ入力を選んだ状態でも「手元のMDで一時差替え」は利用でき、画像・フォントは選択中の記事フォルダーを引き続き使います。
 
@@ -94,6 +94,12 @@ Markdownで採用された画像
 `font.json` だけ、または `article.woff` だけが存在する半端な状態はエラーです。
 
 これにより、202604の記事フォルダーへ一律にフォントsubsetを複製しなくても読み込めます。
+
+## 安定版ページネータ
+
+文字列置換で本番 `paginate.js` を改造する方式は使いません。以前この方式で `paginate.js互換処理を適用できません` が発生したため撤廃しました。
+
+現行は `layout-tester/paginate_compat.js` という実ファイルを直接読みます。本番 `paginate.js` の本文分割、表分割、見出し孤立防止、figure再掲、監査処理を基礎にし、画像のない節ではsceneを作らず本文だけを流せるようにしています。
 
 ## 202604既存Markdownの互換処理
 
@@ -133,7 +139,7 @@ parseArticle.toString()
 - 記事同梱の `article.woff`
 - Markdownで明示された採用画像
 
-`paginate.js` が生成した本文要素の `data-source="bNNN"` と、画像figureの `data-figure="bNNN"` を計測キーとして使います。
+`paginate_compat.js` が生成した本文要素の `data-source="bNNN"` と、画像figureの `data-figure="bNNN"` を計測キーとして使います。
 
 ## 計測
 
@@ -155,7 +161,7 @@ parseArticle.toString()
 
 本文文字サイズ、行高、画像枠高、および本番ブロック単位の幅・margin・padding等を一時設定できます。
 
-設定変更後は、既に組んだ紙面の見た目だけを変えるのではなく、変更後CSSを含む候補HTMLを作り直し、本番 `paginate.js` を最初から実行します。
+設定変更後は、既に組んだ紙面の見た目だけを変えるのではなく、変更後CSSを含む候補HTMLを作り直し、`paginate_compat.js` を最初から実行します。
 
 設定JSONも正本や本番HTMLを自動上書きしません。
 
@@ -223,10 +229,10 @@ Cannot GET /__layout-tester/source
 3. ブラウザparserと本番parserの関数本体が一致する。
 4. 実記事04が45 blocks / 5 figures / 5 groupsになる。
 5. 本番ArticleSubsetを使用する。
-6. 本番 `paginate.js` で6ページになる。
+6. `paginate_compat.js` で04記事が6ページになる。
 7. `auditArticleComposition()` が成功する。
 8. 本番DOMをクリックして実寸を取得できる。
-9. 設定変更後に本番paginateをやり直す。
+9. 設定変更後に互換ページネータで改ページをやり直す。
 10. エクスプローラ入力の状態でもPNGが1456×2056になる。
 11. 正本MD、画像、保存済み `fixed_layout.html`、既存PNGを変更しない。
 

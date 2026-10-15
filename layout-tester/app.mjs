@@ -1,4 +1,4 @@
-import {parseArticleForTester,adaptRuntimeForTextSections} from './article_compat.mjs';
+import {parseArticleForTester} from './article_compat.mjs';
 import {TESTER_DEFAULTS,validateTesterSettings,cssForTesterSettings} from './production_settings.mjs';
 import {exportProductionPages} from './production_export.mjs';
 
@@ -91,7 +91,7 @@ async function loadStaticArticle(input){
   const [markdown,templateCss,runtime,font]=await Promise.all([
     staticFetch(`${article}/${config.source}`),
     staticFetch('tools/article-layout/template.css'),
-    staticFetch('tools/article-layout/paginate.js'),
+    staticFetch('layout-tester/paginate_compat.js'),
     optionalStaticFont(article)
   ]);
   return{
@@ -132,7 +132,7 @@ async function loadFolderArticle(fileList){
   const [markdown,templateCss,runtime]=await Promise.all([
     localText(files,config.source,1_200_000,'正本MD '+config.source),
     staticFetch('tools/article-layout/template.css'),
-    staticFetch('tools/article-layout/paginate.js')
+    staticFetch('layout-tester/paginate_compat.js')
   ]);
   const localInfoFile=files.get('fonts/font.json'),localFontBlob=files.get('fonts/article.woff');
   let fontInfo,fontBlob,fontMode;
@@ -191,7 +191,7 @@ async function candidateHtml(markdown,rawSettings){
   }
   const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo,fontMode:source.fontMode,normalizedLegacyFigure:adapted.normalizedLegacyFigure,normalizedInlineMarkup:adapted.normalizedInlineMarkup,normalizedListMarkup:adapted.normalizedListMarkup,normalizedQuoteGaps:adapted.normalizedQuoteGaps,normalizedDividers:adapted.normalizedDividers,textOnlySections:adapted.textOnlySections,splitFigureSections:adapted.splitFigureSections,syntheticSubtitle:adapted.syntheticSubtitle};
   const data=safeJson({...rendered,manifest});
-  const runtime=adaptRuntimeForTextSections(source.runtime).replace(/<\/script/gi,'<\\/script');
+  const runtime=source.runtime.replace(/<\/script/gi,'<\\/script');
   const overrides=cssForTesterSettings(validated);
   const baseHref=source.kind==='repo'?source.articleBase.href:document.baseURI;
   return{
@@ -340,7 +340,7 @@ async function compose(){
     ready=true;dirty=false;currentPage=Math.min(currentPage,pages.length)||1;
     if(!articleData.blocks.some(b=>b.id===selected))selected=articleData.blocks[0]?.id||null;buildBlockList();
     doc.addEventListener('click',event=>{const n=event.target.closest?.('[data-source],[data-figure]');if(!n)return;event.preventDefault();selectBlock(n.dataset.source||n.dataset.figure,pageIndexFor(n));});
-    showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + '+(source.fontMode==='article'?'記事ArticleSubset':'共通フォントfallback')+' + paginate.js互換';
+    showDiagnostics(report);$('render-source').textContent=(source.kind==='folder'?'エクスプローラ選択 + ':'静的GET + ')+'parseArticle + template.css + '+(source.fontMode==='article'?'記事ArticleSubset':'共通フォントfallback')+' + paginate_compat.js';
     status(`${source.kind==='folder'?'エクスプローラ: ':''}${source.source} · ${pages.length}ページ · 本番組版OK${source.fontMode==='article'?'':' · 記事フォントなし→共通fallback'}`,'ok');updatePreview();updateSelection();
   }catch(error){
     if(token===generation){dirty=false;clearPreview(error.message);status(error.message,'error');}

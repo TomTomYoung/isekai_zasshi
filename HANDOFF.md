@@ -1,5 +1,16 @@
 # 異世界雑誌：再開用ハンドオフ
 
+## 2026-10-15 組版テスター：paginate文字列パッチ撤廃
+
+実画面で `paginate.js互換処理を適用できません` が発生。原因は `article_compat.mjs` が本番paginate.jsのソース断片を完全一致で探してreplaceしていたこと。
+
+文字列パッチ方式を撤廃し、`layout-tester/paginate_compat.js` を追加。appはこの実ファイルを直接読み込む。本番paginateの主要ロジックを移植し、画像なし節だけ追加対応。04の画像あり記事も同じ互換ページネータを通す。
+
+`adaptRuntimeForTextSections` は削除済み。今後runtime変更への追従は、文字列置換パターン追加ではなく `paginate_compat.js` 自体を更新してテストする。
+
+---
+
+
 ## 2026-10-15 組版テスター：202604全記事読込互換
 
 202604のlayout-source追加後、04以外に記事専用font.json/article.woffがないためテスターが停止していた。記事フォントを必須から外し、ない場合は04のArticleSubsetを共通fallbackとして利用する。記事専用フォントがある場合だけcodepoint収録検査を行う。

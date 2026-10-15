@@ -52,7 +52,7 @@ paginate.js
 202604/04_聖職者花見乱痴気騒ぎ/layout-source.json
 202604/04_聖職者花見乱痴気騒ぎ/聖職者花見乱痴気騒ぎ.md
 tools/article-layout/template.css
-tools/article-layout/paginate.js
+layout-tester/paginate_compat.js
 202604/04_聖職者花見乱痴気騒ぎ/fonts/font.json
 202604/04_聖職者花見乱痴気騒ぎ/fonts/article.woff
 ```
@@ -81,7 +81,7 @@ figureで指定された採用画像
 
 正本MD・フォント・画像をリポジトリ側の同名ファイルへ勝手に差し替えない。
 
-一方、組版器である `template.css` と `paginate.js` はリポジトリ上の本番ファイルを共用する。
+本番 `template.css` は共用する。ページ分割は `layout-tester/paginate_compat.js` を使う。これは本番 `paginate.js` のアルゴリズムを基礎にした実ファイルで、画像なし節対応を追加する。
 
 選択フォルダー内の画像はblob URLへ変換し、候補article-sourceのfigure srcにも同じblob URLを入れることで、本番 `auditArticleComposition()` の画像identity検査を維持する。
 
@@ -169,7 +169,7 @@ parseArticle.toString()
 </style>
 <main id="article-pages"></main>
 <script id="article-source" type="application/json">...</script>
-<script>本番 paginate.js</script>
+<script>layout-tester/paginate_compat.js</script>
 ```
 
 フォントは記事の `article.woff` をdata URLとして候補HTMLへ埋め込む。
@@ -178,7 +178,13 @@ parseArticle.toString()
 
 ## 9. 本番組版
 
-本番 `paginate.js` をそのまま実行する。
+### 文字列置換禁止
+
+本番 `paginate.js` のソース文字列を検索し、断片置換して互換化する方式は禁止する。改行・空白・小変更で適用不能になるためである。
+
+テスターの互換差分は `layout-tester/paginate_compat.js` の実ファイルとして管理し、構文検査とブラウザ試験の対象にする。
+
+`layout-tester/paginate_compat.js` を実行する。文字列検索・置換で本番 `paginate.js` を実行時改造してはならない。
 
 本文要素：
 
@@ -243,7 +249,7 @@ margin.top/right/bottom/left
 padding.top/right/bottom/left
 ```
 
-設定変更後は、旧DOMへCSSだけ後付けせず、候補HTMLを再構築して本番 `paginate.js` を最初から実行する。
+設定変更後は、旧DOMへCSSだけ後付けせず、候補HTMLを再構築して `paginate_compat.js` を最初から実行する。
 
 ## 12. 組版検査
 
@@ -358,10 +364,10 @@ Cannot GET /__layout-tester/source
 6. ブラウザparserと本番parserの関数本体が一致する.
 7. 04記事が45 blocks / 5 figures / 5 groupsになる。
 8. ArticleSubsetがロードされる。
-9. 本番paginate.jsで6ページになる。
+9. `paginate_compat.js` で04記事が6ページになる。
 10. `auditArticleComposition()` が成功する。
 11. 本番DOMの実寸を取得できる。
-12. 一時設定後に本番paginateを再実行する。
+12. 一時設定後に互換ページネータを再実行する。
 13. エクスプローラ入力の状態でも現在ページのPNGが1456×2056になる。
 14. PNG出力後も `/__layout-tester/*` requestが0件である。
 15. 正本・既存HTML・既存PNGを変更しない。

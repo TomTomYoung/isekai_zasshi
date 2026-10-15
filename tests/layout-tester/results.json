@@ -38,6 +38,30 @@
       "runtimeAdapter": "current paginate.js compatibility replacements applied successfully",
       "syntax": "app/article_compat/unit/browser syntax checks passed",
       "browserRuntime": "not executed in current tool environment"
+    },
+    "stablePaginator": {
+      "status": "implemented; browser runtime not executed in current tool environment",
+      "removed": "runtime source-fragment replacement / adaptRuntimeForTextSections",
+      "runtime": "layout-tester/paginate_compat.js",
+      "checks": {
+        "oldRuntimeErrorStringAbsent": true,
+        "appLoadsCompatPaginatorDirectly": true,
+        "appDoesNotLoadProductionPaginatorForRuntime": true,
+        "appAndCompatSyntaxPassed": true,
+        "paginatorSyntaxPassed": true,
+        "article03Parser": {
+          "blocks": 49,
+          "figures": 5,
+          "groups": 6,
+          "textOnlySections": 1
+        },
+        "article04Parser": {
+          "blocks": 45,
+          "figures": 5,
+          "groups": 5,
+          "textOnlySections": 0
+        }
+      }
     }
   },
   "historical": {
