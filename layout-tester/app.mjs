@@ -187,7 +187,7 @@ async function candidateHtml(markdown,rawSettings){
     const byId=new Map(blocks.map(block=>[block.id,block]));
     rendered={blocks,groups:parsed.groups.map(group=>group.map(block=>byId.get(block.id)))};
   }
-  const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo,fontMode:source.fontMode,normalizedLegacyFigure:adapted.normalizedLegacyFigure,textOnlySections:adapted.textOnlySections};
+  const manifest={version:1,source:source.source,template:source.template,blockCount:parsed.blocks.length,selectedImages,font:source.fontInfo,fontMode:source.fontMode,normalizedLegacyFigure:adapted.normalizedLegacyFigure,normalizedInlineMarkup:adapted.normalizedInlineMarkup,normalizedListMarkup:adapted.normalizedListMarkup,normalizedQuoteGaps:adapted.normalizedQuoteGaps,normalizedDividers:adapted.normalizedDividers,textOnlySections:adapted.textOnlySections,splitFigureSections:adapted.splitFigureSections,syntheticSubtitle:adapted.syntheticSubtitle};
   const data=safeJson({...rendered,manifest});
   const runtime=adaptRuntimeForTextSections(source.runtime).replace(/<\/script/gi,'<\\/script');
   const overrides=cssForTesterSettings(validated);
